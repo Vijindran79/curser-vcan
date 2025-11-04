@@ -2,6 +2,7 @@
   "loading": {"authenticating": "प्रमाणित कर रहा है...", "loading": "लोड हो रहा है..."},
   "toast": {"pro_coming_soon": "Pro सदस्यता जल्द ही आ रही है! असीमित ट्रैकिंग और प्राथमिकता समर्थन के लिए बने रहें।"},
   "header": {"track": "ट्रैक करें", "services": "सेवाएं", "help": "मदद", "login": "लॉगिन / साइन अप"},
+  "floating": {"chat": "चैट", "menu": "मेनू", "help": "मदद"},
   "aria": {"change_locale": "क्षेत्र और भाषा बदलें", "toggle_theme": "थीम बदलें", "close_auth_modal": "बंद करें", "back": "वापस", "show_password": "पासवर्ड दिखाएं", "hide_password": "पासवर्ड छुपाएं"},
   "sidebar": {"services": "सभी सेवाएं", "parcel": "पार्सल", "baggage": "सामान", "fcl": "पूर्ण कंटेनर", "lcl": "आंशिक कंटेनर", "airfreight": "हवाई माल", "vehicle": "वाहन शिपिंग", "railway": "रेलवे परिवहन", "inland": "अंतर्देशीय परिवहन", "bulk": "थोक कार्गो", "rivertug": "नदी सेवाएं", "warehouse": "भंडारण", "schedules": "समय सारणी", "ecommerce": "ई-कॉमर्स हब", "tradeFinance": "व्यापार वित्त", "partner": "साझेदार बनें", "apiHub": "API हब", "helpCenter": "सहायता केंद्र"},
   "mobile_menu": {"menu": "मेनू", "home": "होम", "dashboard": "डैशबोर्ड", "address_book": "पता पुस्तिका", "account_settings": "सेटिंग्स", "api_hub": "API हब", "help": "मदद", "region_language": "क्षेत्र और भाषा", "theme": "थीम", "logout": "लॉगआउट", "login": "लॉगिन"},

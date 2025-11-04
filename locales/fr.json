@@ -2,6 +2,7 @@
   "loading": {"authenticating": "Authentification...", "loading": "Chargement..."},
   "toast": {"pro_coming_soon": "L'abonnement Pro arrive bientôt ! Restez à l'écoute pour un suivi illimité et un support prioritaire."},
   "header": {"track": "Suivre", "services": "Services", "help": "Aide", "login": "Connexion / Inscription"},
+  "floating": {"chat": "Chat", "menu": "Menu", "help": "Aide"},
   "aria": {"change_locale": "Changer de région et de langue", "toggle_theme": "Changer le thème", "close_auth_modal": "Fermer", "back": "Retour", "show_password": "Afficher le mot de passe", "hide_password": "Masquer le mot de passe"},
   "sidebar": {"services": "Tous les services", "parcel": "Colis", "baggage": "Bagages", "fcl": "Conteneur complet", "lcl": "Groupage", "airfreight": "Fret aérien", "vehicle": "Transport de véhicules", "railway": "Transport ferroviaire", "inland": "Transport routier", "bulk": "Vrac", "rivertug": "Services fluviaux", "warehouse": "Entreposage", "schedules": "Horaires", "ecommerce": "E-commerce", "tradeFinance": "Financement commercial", "partner": "Devenir partenaire", "apiHub": "Hub API", "helpCenter": "Centre d'aide"},
   "mobile_menu": {"menu": "Menu", "home": "Accueil", "dashboard": "Tableau de bord", "address_book": "Carnet d'adresses", "account_settings": "Paramètres", "api_hub": "Hub API", "help": "Aide", "region_language": "Région et langue", "theme": "Thème", "logout": "Déconnexion", "login": "Connexion"},

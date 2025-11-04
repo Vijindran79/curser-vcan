@@ -178,7 +178,7 @@ async function invokeAiFunction(functionName: string, payload: object): Promise<
 }
 
 /**
- * Gets a response from the chatbot via the backend.
+ * Gets a response from the chatbot using direct AI (no Firebase Function needed - faster & more reliable!)
  * @param message The user's current message.
  * @param history The conversation history.
  * @returns The chatbot's response text.
@@ -188,31 +188,91 @@ export async function getChatbotResponse(message: string, history: { role: 'user
     console.log('[CHAT DEBUG] Conversation history length:', history.length);
     
     try {
-        // The backend function will likely expect the message and history for context.
-        console.log('[CHAT DEBUG] Calling invokeAiFunction for get-chatbot-response');
-        const response = await invokeAiFunction('get-chatbot-response', { message, history });
-        console.log('[CHAT DEBUG] Received response:', typeof response, response);
+        // Use direct AI instead of Firebase Function (faster, no CORS issues, no function deployment needed)
+        const { State } = await import('./state');
         
-        // The backend should return a string directly.
-        // If it returns an object like { text: "..." }, this handles it.
-        if (typeof response === 'string') {
-            console.log('[CHAT DEBUG] Returning string response');
-            return response;
-        }
-        if (response && typeof response.text === 'string') {
-            console.log('[CHAT DEBUG] Returning response.text');
-            return response.text;
+        if (!State.api) {
+            throw new Error("AI service not available. Please refresh the page.");
         }
         
-        // Fallback if the response format is unexpected
-        console.error('[CHAT DEBUG] Invalid response format from chatbot API:', response);
-        throw new Error("Invalid response format from chatbot API.");
+        // Create system prompt for helpful logistics assistant
+        const systemPrompt = `You are a helpful, friendly logistics assistant for Vcanship - a global freight forwarding and shipping platform.
 
-    } catch (error) {
-        // Errors are already handled by invokeAiFunction (which calls handleFirebaseError)
-        // but we'll re-throw a user-friendly message for the UI to catch.
+Your role:
+- Answer questions about shipping services (Air Freight, Sea Freight FCL/LCL, Parcel, Baggage, Bulk, Railway, Inland Transport, Warehouse, etc.)
+- Help users understand shipping terms (FCL vs LCL, container types, transit times, customs, HS codes)
+- Guide users through the platform features
+- Provide general logistics advice
+- Be warm, professional, and solution-oriented
+
+Services we offer:
+1. Air Freight - Fast international shipping by air
+2. Sea Freight (FCL & LCL) - Container shipping, full or shared
+3. Parcel Shipping - Small packages worldwide
+4. Baggage Shipping - Personal luggage transport
+5. Bulk Cargo - Large loose cargo
+6. Railway Transport - Rail freight services
+7. Inland Transport - Domestic trucking
+8. Warehouse - Storage and fulfillment
+9. Ecommerce Fulfillment - Online store integration
+10. Trade Finance - Invoice/PO financing
+11. Compliance & Documentation
+12. Vehicle Transport
+13. River & Tug services
+14. Tanker transport
+
+Platform features:
+- Instant AI quotes from multiple carriers
+- Real-time tracking
+- Compare prices from DHL, FedEx, UPS, Maersk, CMA CGM, MSC, and more
+- Secure Stripe payments
+- 24/7 support
+
+Keep responses concise (2-3 sentences max unless user asks for details). Use friendly tone. If you don't know something, offer to connect them with support team.`;
+
+        // Format conversation history for Gemini
+        const chatHistory = history.map(h => ({
+            role: h.role,
+            parts: [{ text: h.text }]
+        }));
+        
+        // Create generative model for chat
+        const model = State.api.getGenerativeModel({ model: 'gemini-1.5-flash-8b' });
+        const chat = model.startChat({
+            history: [
+                { role: 'user', parts: [{ text: systemPrompt }] },
+                { role: 'model', parts: [{ text: 'Hello! I\'m your Vcanship logistics assistant. I\'m here to help with shipping questions, quote explanations, service selection, and platform guidance. How can I assist you today?' }] },
+                ...chatHistory
+            ]
+        });
+        
+        // Send user's message and get response
+        const result = await chat.sendMessage(message);
+        const responseText = result.response.text();
+        
+        console.log('[CHAT DEBUG] ✅ AI response received:', responseText.substring(0, 100) + '...');
+        return responseText;
+        
+    } catch (error: any) {
         console.error("[CHAT DEBUG] getChatbotResponse failed:", error);
-        throw new Error("Sorry, I'm having trouble connecting. Please try again later.");
+        
+        // Friendly fallback responses based on message content
+        const messageLower = message.toLowerCase();
+        
+        if (messageLower.includes('service') || messageLower.includes('offer')) {
+            return "We offer 17+ logistics services including Air Freight, Sea Freight (FCL/LCL), Parcel Shipping, Warehouse, and more! Browse the services on our homepage or tell me what you need to ship.";
+        }
+        if (messageLower.includes('track')) {
+            return "You can track your shipment by clicking the 'Track' button in the header. You'll need your tracking number. Need help finding it?";
+        }
+        if (messageLower.includes('price') || messageLower.includes('cost') || messageLower.includes('quote')) {
+            return "Get instant quotes by selecting a service from our homepage! We compare prices from multiple carriers to find you the best deal.";
+        }
+        if (messageLower.includes('fcl') || messageLower.includes('lcl')) {
+            return "FCL (Full Container Load) = you rent an entire container. LCL (Less than Container Load) = you share container space with others, great for smaller shipments! Which suits your needs?";
+        }
+        
+        return "I'm having a brief connection issue. Try asking again, or contact our support team at vg@vcanresources.com for immediate help!";
     }
 }
 

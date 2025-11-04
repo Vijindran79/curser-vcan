@@ -12,7 +12,7 @@ type Location = {
 
 type Schedule = {
   id: string;
-  mode: 'SEA' | 'AIR';
+  mode: 'SEA' | 'AIR' | 'RAIL';
   carrier: string;
   origin: Location;
   destination: Location;
@@ -23,7 +23,8 @@ type Schedule = {
   reliability_pct: number;
   vessel?: string;
   flight?: string;
-  capacity_left?: string; // e.g., “12 TEU” or “2 t”
+  train?: string;
+  capacity_left?: string; // e.g., "12 TEU" or "2 t"
 };
 
 // Expanded mock data with structured origin/destination
@@ -38,6 +39,14 @@ const mockSchedules: Schedule[] = [
   { id: 's8', mode: 'AIR', carrier: 'Cathay Cargo', origin: { code: 'HKG', name: 'Hong Kong'}, destination: { code: 'LHR', name: 'London' }, route: 'HKG → LHR', etd: '2024-07-28', eta: '2024-07-29', transit_days: 1, reliability_pct: 93, flight: 'CX251', capacity_left: '5 t' },
   { id: 's9', mode: 'SEA', carrier: 'ONE', origin: { code: 'JPYOK', name: 'Yokohama'}, destination: { code: 'SGSIN', name: 'Singapore' }, route: 'Yokohama → Singapore', etd: '2024-08-01', eta: '2024-08-09', transit_days: 8, reliability_pct: 94, vessel: 'ONE Competence', capacity_left: '30 TEU' },
   { id: 's10', mode: 'AIR', carrier: 'Emirates SkyCargo', origin: { code: 'DXB', name: 'Dubai'}, destination: { code: 'ORD', name: 'Chicago O\'Hare' }, route: 'DXB → ORD', etd: '2024-07-26', eta: '2024-07-27', transit_days: 1, reliability_pct: 96, flight: 'EK9911', capacity_left: '8 t' },
+  
+  // Railway Schedules
+  { id: 'r1', mode: 'RAIL', carrier: 'China Railway Express', origin: { code: 'CNCKG', name: 'Chongqing'}, destination: { code: 'DEDUI', name: 'Duisburg' }, route: 'Chongqing → Duisburg', etd: '2024-07-28', eta: '2024-08-12', transit_days: 15, reliability_pct: 88, train: 'CRE-4521', capacity_left: '20 TEU' },
+  { id: 'r2', mode: 'RAIL', carrier: 'China Railway Express', origin: { code: 'CNXIY', name: 'Xi\'an'}, destination: { code: 'DEHAM', name: 'Hamburg' }, route: 'Xi\'an → Hamburg', etd: '2024-07-26', eta: '2024-08-11', transit_days: 16, reliability_pct: 85, train: 'CRE-4522', capacity_left: '15 TEU' },
+  { id: 'r3', mode: 'RAIL', carrier: 'China Railway Express', origin: { code: 'CNWUH', name: 'Wuhan'}, destination: { code: 'PLWAW', name: 'Warsaw' }, route: 'Wuhan → Warsaw', etd: '2024-07-29', eta: '2024-08-14', transit_days: 16, reliability_pct: 90, train: 'CRE-4523', capacity_left: '18 TEU' },
+  { id: 'r4', mode: 'RAIL', carrier: 'DB Cargo', origin: { code: 'DEHAM', name: 'Hamburg'}, destination: { code: 'ITMIL', name: 'Milan' }, route: 'Hamburg → Milan', etd: '2024-07-27', eta: '2024-07-30', transit_days: 3, reliability_pct: 92, train: 'DB-7812', capacity_left: '25 TEU' },
+  { id: 'r5', mode: 'RAIL', carrier: 'Union Pacific', origin: { code: 'USLAX', name: 'Los Angeles'}, destination: { code: 'USCHI', name: 'Chicago' }, route: 'Los Angeles → Chicago', etd: '2024-07-26', eta: '2024-07-30', transit_days: 4, reliability_pct: 94, train: 'UP-5521', capacity_left: '40 containers' },
+  { id: 'r6', mode: 'RAIL', carrier: 'CN Rail', origin: { code: 'CAVAN', name: 'Vancouver'}, destination: { code: 'CATOR', name: 'Toronto' }, route: 'Vancouver → Toronto', etd: '2024-07-28', eta: '2024-08-02', transit_days: 5, reliability_pct: 91, train: 'CN-2145', capacity_left: '35 containers' },
 ];
 
 function renderSchedulesPage() {
@@ -48,14 +57,14 @@ function renderSchedulesPage() {
         <button class="back-btn">Back to Services</button>
         <div class="service-page-header">
             <h2>Schedules & Trade Lanes</h2>
-            <p class="subtitle">Explore global shipping schedules for major sea and air carriers.</p>
+            <p class="subtitle">Explore global shipping schedules for sea, air, and railway freight.</p>
         </div>
         <div class="schedules-container">
             <aside class="schedules-filters-card card">
                  <h3>Filters</h3>
                  <div class="input-wrapper"><label for="schedules-origin-input">Origin</label><input type="text" id="schedules-origin-input" placeholder="e.g., Shanghai or CNSHA"></div>
                  <div class="input-wrapper"><label for="schedules-dest-input">Destination</label><input type="text" id="schedules-dest-input" placeholder="e.g., Rotterdam or NLRTM"></div>
-                 <div class="input-wrapper"><label for="schedules-mode-select">Mode</label><select id="schedules-mode-select"><option value="">All Modes</option><option value="SEA">Sea</option><option value="AIR">Air</option></select></div>
+                 <div class="input-wrapper"><label for="schedules-mode-select">Mode</label><select id="schedules-mode-select"><option value="">All Modes</option><option value="SEA">Sea</option><option value="AIR">Air</option><option value="RAIL">Railway</option></select></div>
                  <div class="input-wrapper"><label for="schedules-carrier-select">Carrier</label><select id="schedules-carrier-select"><option value="">All Carriers</option></select></div>
                  <button id="schedules-reset-btn" class="secondary-btn">Reset Filters</button>
             </aside>
@@ -80,38 +89,39 @@ function renderSchedulesPage() {
  * @param schedules The array of schedules to render.
  */
 // Get carrier logo or fallback icon
-function getCarrierIcon(carrierName: string): string {
+function getCarrierIcon(carrierName: string, mode?: 'SEA' | 'AIR' | 'RAIL'): string {
     const logoUrl = getLogisticsProviderLogo(carrierName);
     
-    if (logoUrl) {
-        return `<img src="${logoUrl}" alt="${carrierName}" class="carrier-logo" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\'fa-solid fa-box-open\\'></i>';">`;
-    }
-    
-    // Fallback to Font Awesome icon if logo not found
-    const carrierLower = carrierName.toLowerCase();
-    const iconMap: { [key: string]: string } = {
-        'maersk': '<i class="fa-solid fa-ship"></i>',
-        'cma cgm': '<i class="fa-solid fa-ship"></i>',
-        'msc': '<i class="fa-solid fa-ship"></i>',
-        'atlas': '<i class="fa-solid fa-plane"></i>',
-        'hapag': '<i class="fa-solid fa-ship"></i>',
-        'lufthansa': '<i class="fa-solid fa-plane"></i>',
-        'evergreen': '<i class="fa-solid fa-ship"></i>',
-        'cathay': '<i class="fa-solid fa-plane"></i>',
-        'one': '<i class="fa-solid fa-ship"></i>',
-        'emirates': '<i class="fa-solid fa-plane"></i>',
-        'dhl': '<i class="fa-solid fa-box"></i>',
-        'fedex': '<i class="fa-solid fa-truck-fast"></i>',
-        'ups': '<i class="fa-solid fa-truck"></i>'
-    };
-    
-    for (const [key, icon] of Object.entries(iconMap)) {
-        if (carrierLower.includes(key)) {
-            return icon;
+    // Determine mode-based icon
+    let fallbackIcon = 'fa-box-open';
+    if (mode === 'AIR') {
+        fallbackIcon = 'fa-plane';
+    } else if (mode === 'RAIL') {
+        fallbackIcon = 'fa-train';
+    } else if (mode === 'SEA') {
+        fallbackIcon = 'fa-ship';
+    } else {
+        // Auto-detect from carrier name
+        const carrierLower = carrierName.toLowerCase();
+        if (carrierLower.includes('rail') || carrierLower.includes('railway') || carrierLower.includes('express')) {
+            fallbackIcon = 'fa-train';
+        } else if (carrierLower.includes('air') || carrierLower.includes('cargo') || 
+                   carrierLower.includes('lufthansa') || carrierLower.includes('emirates') || 
+                   carrierLower.includes('cathay') || carrierLower.includes('atlas')) {
+            fallbackIcon = 'fa-plane';
+        } else {
+            fallbackIcon = 'fa-ship';
         }
     }
     
-    return '<i class="fa-solid fa-box-open"></i>';
+    if (logoUrl) {
+        return `<img src="${logoUrl}" alt="${carrierName}" class="carrier-logo" 
+                     onerror="this.onerror=null; this.outerHTML='<i class=\\'fa-solid ${fallbackIcon}\\'></i>';" 
+                     loading="lazy">`;
+    }
+    
+    // Fallback to Font Awesome icon if logo not found
+    return `<i class="fa-solid ${fallbackIcon}"></i>`;
 }
 
 function renderScheduleCards(schedules: Schedule[]) {
@@ -132,9 +142,10 @@ function renderScheduleCards(schedules: Schedule[]) {
     cardList.innerHTML = ''; // Clear previous results
     emptyState.classList.add('hidden');
 
-    const modeIcons = {
+    const modeIcons: { [key: string]: string } = {
         SEA: `<i class="fa-solid fa-ship mode-icon"></i>`,
         AIR: `<i class="fa-solid fa-plane-up mode-icon"></i>`,
+        RAIL: `<i class="fa-solid fa-train mode-icon"></i>`,
     };
 
     schedules.forEach(s => {
@@ -142,7 +153,10 @@ function renderScheduleCards(schedules: Schedule[]) {
         const carrierName = s.carrier || 'Carrier';
 
         // Get icon for carrier instead of blocked Clearbit logo
-        const carrierIcon = getCarrierIcon(carrierName);
+        const carrierIcon = getCarrierIcon(carrierName, s.mode);
+        
+        // Get transport number (vessel/flight/train)
+        const transportNumber = s.vessel || s.flight || s.train || 'N/A';
 
         const card = document.createElement('div');
         card.className = 'schedule-card';
@@ -151,9 +165,9 @@ function renderScheduleCards(schedules: Schedule[]) {
                 <div class="carrier-logo-fallback">${carrierIcon}</div>
                 <div class="carrier-info">
                     <h4>${carrierName}</h4>
-                    <span>${s.vessel || s.flight || 'N/A'}</span>
+                    <span>${transportNumber}</span>
                 </div>
-                ${modeIcons[s.mode]}
+                ${modeIcons[s.mode] || ''}
             </div>
             <div class="schedule-card-route">
                 <div class="route-point">

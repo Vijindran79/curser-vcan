@@ -247,7 +247,7 @@ export function renderHelpPage() {
                         <i class="fa-solid fa-phone"></i>
                         <span data-i18n="help_page.call_support">Call Support</span>
                     </a>
-                    <a href="mailto:support@vcanresources.com" class="main-submit-btn">
+                    <a href="mailto:vg@vcanresources.com" class="main-submit-btn">
                         <i class="fa-regular fa-envelope"></i>
                         <span data-i18n="help_page.email_support">Email Support</span>
                     </a>
@@ -255,7 +255,7 @@ export function renderHelpPage() {
                 <div class="contact-support-fallback">
                     <span data-i18n="help_page.copy_email_desc">Or copy our email:</span>
                     <div class="api-key-display" style="margin-top: 0.5rem; justify-content: center;">
-                        <code id="support-email-text">support@vcanresources.com</code>
+                        <code id="support-email-text">vg@vcanresources.com</code>
                         <button class="secondary-btn copy-btn" data-copy-target="#support-email-text">
                             <i class="fa-regular fa-copy"></i>
                             <span data-i18n="help_page.copy">Copy</span>
@@ -603,6 +603,10 @@ export function renderTermsPage() {
 }
 
 export function initializeStaticPages() {
+    // CRITICAL: Render the landing page on initial app load
+    console.log('[LANDING DEBUG] Rendering landing page on app initialization');
+    renderLandingPage();
+    
     // Inject the new ticker banner content
     const tickerBanner = document.getElementById('top-ticker-banner');
     if (tickerBanner) {

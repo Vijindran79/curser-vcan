@@ -2,6 +2,7 @@
   "loading": {"authenticating": "正在验证...", "loading": "加载中..."},
   "toast": {"pro_coming_soon": "Pro 订阅即将推出！敬请期待无限追踪和优先支持。"},
   "header": {"track": "追踪", "services": "服务", "help": "帮助", "login": "登录 / 注册"},
+  "floating": {"chat": "聊天", "menu": "菜单", "help": "帮助"},
   "aria": {"change_locale": "更改地区和语言", "toggle_theme": "切换主题", "close_auth_modal": "关闭认证窗口", "back": "返回", "show_password": "显示密码", "hide_password": "隐藏密码"},
   "sidebar": {"services": "所有服务", "parcel": "包裹", "baggage": "行李", "fcl": "整柜货运", "lcl": "拼箱货运", "airfreight": "空运", "vehicle": "车辆运输", "railway": "铁路运输", "inland": "内陆运输", "bulk": "散货", "rivertug": "河运拖轮", "warehouse": "仓储", "schedules": "时刻表", "ecommerce": "电商中心", "tradeFinance": "贸易融资", "partner": "成为合作伙伴", "apiHub": "API中心", "helpCenter": "帮助中心"},
   "mobile_menu": {"menu": "菜单", "home": "首页", "dashboard": "仪表板", "address_book": "地址簿", "account_settings": "账户设置", "api_hub": "API中心", "help": "帮助中心", "region_language": "地区和语言", "theme": "主题", "logout": "退出登录", "login": "登录"},

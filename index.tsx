@@ -18,26 +18,29 @@ import { makeDraggable } from './utils';
 import { getChatbotResponse } from './api';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
+// Expose switchPage to global scope for HTML onclick handlers
+(window as any).switchPage = switchPage;
+
 // --- Global state for chat ---
 let conversationHistory: { role: 'user' | 'model', text: string }[] = [];
 
 // --- Chat Window Helpers ---
 function openChatWindow() {
     const chatWindow = document.getElementById('chat-window');
-    const fabContainer = document.getElementById('multi-fab-container');
     const input = document.getElementById('chat-input') as HTMLInputElement;
-    if (chatWindow && fabContainer && input) {
+    if (chatWindow) {
         chatWindow.classList.remove('hidden');
-        fabContainer.classList.add('hidden');
-        input.focus();
+        if (input) {
+            setTimeout(() => input.focus(), 100);
+        }
+    } else {
+        console.error('[CHAT] Chat window element not found!');
     }
 }
 function closeChatWindow() {
     const chatWindow = document.getElementById('chat-window');
-    const fabContainer = document.getElementById('multi-fab-container');
-    if (chatWindow && fabContainer) {
+    if (chatWindow) {
         chatWindow.classList.add('hidden');
-        fabContainer.classList.remove('hidden');
     }
 }
 
@@ -45,6 +48,33 @@ function closeChatWindow() {
 function applyTheme(theme: 'light' | 'dark') {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('vcanship-theme', theme);
+    updateThemeIcons();
+}
+
+function updateThemeIcons() {
+    // Update all theme switch buttons to show correct icon
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+    
+    // Update icon opacity
+    document.querySelectorAll('.theme-switch-icons').forEach(icons => {
+        const sunIcon = icons.querySelector('.fa-sun') as HTMLElement;
+        const moonIcon = icons.querySelector('.fa-moon') as HTMLElement;
+        if (sunIcon && moonIcon) {
+            if (currentTheme === 'dark') {
+                sunIcon.style.opacity = '1';
+                moonIcon.style.opacity = '0.3';
+            } else {
+                sunIcon.style.opacity = '0.3';
+                moonIcon.style.opacity = '1';
+            }
+        }
+    });
+    
+    // Update theme mode text
+    const themeText = document.getElementById('theme-mode-text');
+    if (themeText) {
+        themeText.textContent = currentTheme === 'dark' ? 'Dark Mode' : 'Light Mode';
+    }
 }
 
 function initializeTheme() {
@@ -171,25 +201,248 @@ function populateMobileMenu() {
 }
 
 function initializeSimpleChatFab() {
-    console.log('[FAB DEBUG] Starting simple chat FAB initialization');
+    console.log('[FAB DEBUG] Initializing floating glass buttons');
     
-    // Simple Chat FAB - just opens chat
-    const chatBtn = document.getElementById('fab-chat-btn') as HTMLButtonElement;
-    console.log('[FAB DEBUG] Chat FAB button element:', chatBtn ? 'Found' : 'Not found');
-    
-    if (!chatBtn) {
-        console.error('[FAB DEBUG] Chat FAB button not found, checking if container exists');
-        const container = document.getElementById('simple-chat-fab');
-        console.log('[FAB DEBUG] Simple chat FAB container:', container ? 'Found' : 'Not found');
-        return;
+    // Glass FAB: Chat
+    const chatFab = document.getElementById('glass-fab-chat');
+    if (chatFab) {
+        let clickTimeout: any;
+        let isDragging = false;
+        
+        chatFab.addEventListener('mousedown', () => {
+            isDragging = false;
+            clickTimeout = setTimeout(() => { isDragging = true; }, 200);
+        });
+        
+        chatFab.addEventListener('mouseup', () => {
+            clearTimeout(clickTimeout);
+            if (!isDragging) {
+                console.log('[FAB] Chat button clicked');
+                openChatWindow();
+            }
+        });
+        
+        chatFab.addEventListener('touchstart', () => {
+            isDragging = false;
+            clickTimeout = setTimeout(() => { isDragging = true; }, 200);
+        });
+        
+        chatFab.addEventListener('touchend', (e) => {
+            clearTimeout(clickTimeout);
+            if (!isDragging) {
+                e.preventDefault();
+                console.log('[FAB] Chat button tapped');
+                openChatWindow();
+            }
+        });
+        
+        makeDraggable(chatFab, 'glass-fab-chat-position');
     }
     
-    chatBtn.addEventListener('click', () => {
-        console.log('[FAB DEBUG] Chat FAB clicked, opening chat window');
-        openChatWindow();
-    });
+    // Glass FAB: Settings
+    const settingsFab = document.getElementById('glass-fab-settings');
+    const settingsPanel = document.getElementById('glass-settings-panel');
+    const closeSettings = document.getElementById('close-settings-panel');
+    const backdrop = document.getElementById('glass-panel-backdrop');
     
-    console.log('[FAB DEBUG] Simple chat FAB initialization complete');
+    if (settingsFab && settingsPanel && backdrop) {
+        let clickTimeout: any;
+        let isDragging = false;
+        
+        settingsFab.addEventListener('mousedown', () => {
+            isDragging = false;
+            clickTimeout = setTimeout(() => { isDragging = true; }, 200);
+        });
+        
+        settingsFab.addEventListener('mouseup', async () => {
+            clearTimeout(clickTimeout);
+            if (!isDragging) {
+                console.log('[FAB] Settings button clicked');
+                settingsPanel.classList.remove('hidden');
+                backdrop.classList.remove('hidden');
+                // Refresh translations when panel opens
+                const { updateStaticUIText } = await import('./i18n');
+                updateStaticUIText();
+            }
+        });
+        
+        settingsFab.addEventListener('touchend', (e) => {
+            clearTimeout(clickTimeout);
+            if (!isDragging) {
+                e.preventDefault();
+                settingsPanel.classList.remove('hidden');
+                backdrop.classList.remove('hidden');
+            }
+        });
+        
+        makeDraggable(settingsFab, 'glass-fab-settings-position');
+    }
+    
+    if (closeSettings && settingsPanel && backdrop) {
+        closeSettings.addEventListener('click', () => {
+            settingsPanel.classList.add('hidden');
+            backdrop.classList.add('hidden');
+        });
+    }
+    
+    // Glass FAB: Contact
+    const contactFab = document.getElementById('glass-fab-contact');
+    const contactPanel = document.getElementById('glass-contact-panel');
+    const closeContact = document.getElementById('close-contact-panel');
+    
+    if (contactFab && contactPanel && backdrop) {
+        let clickTimeout: any;
+        let isDragging = false;
+        
+        contactFab.addEventListener('mousedown', () => {
+            isDragging = false;
+            clickTimeout = setTimeout(() => { isDragging = true; }, 200);
+        });
+        
+        contactFab.addEventListener('mouseup', () => {
+            clearTimeout(clickTimeout);
+            if (!isDragging) {
+                console.log('[FAB] Contact button clicked');
+                contactPanel.classList.remove('hidden');
+                backdrop.classList.remove('hidden');
+            }
+        });
+        
+        contactFab.addEventListener('touchend', (e) => {
+            clearTimeout(clickTimeout);
+            if (!isDragging) {
+                e.preventDefault();
+                contactPanel.classList.remove('hidden');
+                backdrop.classList.remove('hidden');
+            }
+        });
+        
+        makeDraggable(contactFab, 'glass-fab-contact-position');
+    }
+    
+    if (closeContact && contactPanel && backdrop) {
+        closeContact.addEventListener('click', () => {
+            contactPanel.classList.add('hidden');
+            backdrop.classList.add('hidden');
+        });
+    }
+    
+    // Close panels when backdrop is clicked
+    if (backdrop && settingsPanel && contactPanel) {
+        backdrop.addEventListener('click', () => {
+            settingsPanel.classList.add('hidden');
+            contactPanel.classList.add('hidden');
+            backdrop.classList.add('hidden');
+        });
+    }
+    
+    // Settings Panel: Locale button
+    const panelLocaleBtn = document.getElementById('panel-locale-btn');
+    const headerLocaleBtn = document.getElementById('header-locale-btn');
+    if (panelLocaleBtn && headerLocaleBtn) {
+        panelLocaleBtn.addEventListener('click', () => {
+            headerLocaleBtn.click(); // Trigger existing locale switcher
+        });
+    }
+    
+    // Settings Panel: Theme toggle
+    const panelThemeToggle = document.getElementById('panel-theme-toggle');
+    if (panelThemeToggle) {
+        panelThemeToggle.addEventListener('click', (e) => {
+            e.preventDefault();
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            applyTheme(newTheme);
+        });
+    }
+    
+    // Settings Panel: Login button
+    const panelLoginBtn = document.getElementById('panel-login-btn');
+    if (panelLoginBtn) {
+        panelLoginBtn.addEventListener('click', () => {
+            showAuthModal();
+            if (settingsPanel && backdrop) {
+                settingsPanel.classList.add('hidden');
+                backdrop.classList.add('hidden');
+            }
+        });
+    }
+    
+    // Settings Panel: Logout button
+    const panelLogoutBtn = document.getElementById('panel-logout-btn');
+    if (panelLogoutBtn) {
+        panelLogoutBtn.addEventListener('click', () => {
+            handleLogout();
+            if (settingsPanel && backdrop) {
+                settingsPanel.classList.add('hidden');
+                backdrop.classList.add('hidden');
+            }
+        });
+    }
+    
+    // Update panel UI based on auth state
+    updatePanelAuthState();
+    
+    console.log('[FAB DEBUG] Floating glass buttons initialized');
+}
+
+// Update settings panel to show user info or login button
+export function updatePanelAuthState() {
+    const panelUserInfo = document.getElementById('panel-user-info');
+    const panelLoginBtn = document.getElementById('panel-login-btn');
+    const panelUserName = document.getElementById('panel-user-name');
+    const panelUserAvatar = document.getElementById('panel-user-avatar');
+    
+    // Sync locale display
+    syncPanelLocale();
+    
+    if (!State.isLoggedIn || !State.currentUser) {
+        // User not logged in
+        panelUserInfo?.style.setProperty('display', 'none');
+        panelLoginBtn?.style.setProperty('display', 'flex');
+    } else {
+        // User logged in
+        panelUserInfo?.style.setProperty('display', 'block');
+        panelLoginBtn?.style.setProperty('display', 'none');
+        
+        if (panelUserName) {
+            panelUserName.textContent = State.currentUser.name || State.currentUser.email || 'User';
+        }
+        
+        if (panelUserAvatar) {
+            // Create initials from user name or email
+            const displayName = State.currentUser.name || State.currentUser.email || 'User';
+            const initials = displayName.substring(0, 2).toUpperCase();
+            panelUserAvatar.textContent = initials;
+            panelUserAvatar.style.backgroundImage = '';
+            panelUserAvatar.style.backgroundColor = 'var(--primary-orange)';
+            panelUserAvatar.style.color = 'white';
+        }
+    }
+}
+
+// Make function available globally for auth.ts to call
+(window as any).updatePanelAuthState = updatePanelAuthState;
+
+// Sync locale display in panel
+function syncPanelLocale() {
+    const panelFlag = document.getElementById('panel-locale-flag');
+    const panelLanguage = document.getElementById('panel-locale-language');
+    const panelCountry = document.getElementById('panel-locale-country');
+    
+    const headerFlag = document.getElementById('header-locale-flag');
+    const headerLanguage = document.getElementById('header-locale-language');
+    const headerCountry = document.getElementById('header-locale-country');
+    
+    if (panelFlag && headerFlag) {
+        panelFlag.textContent = headerFlag.textContent;
+    }
+    if (panelLanguage && headerLanguage) {
+        panelLanguage.textContent = headerLanguage.textContent;
+    }
+    if (panelCountry && headerCountry) {
+        panelCountry.textContent = headerCountry.textContent;
+    }
 }
 
 
@@ -525,13 +778,10 @@ function initializeHeaderAutoHide() {
 }
 
 function initializeFloatingFabEnhancements() {
-  console.log('[FAB DEBUG] Starting floating FAB initialization');
-  
   const fab = document.getElementById('main-fab-toggle') as HTMLButtonElement | null;
-  console.log('[FAB DEBUG] Main FAB element:', fab ? 'Found' : 'Not found');
   
   if (!fab) {
-    console.error('[FAB DEBUG] Main FAB element not found, aborting initialization');
+    // Legacy FAB element not found - this is expected, modern glass FABs are used instead
     return;
   }
   
@@ -646,15 +896,12 @@ function initializeFloatingFabEnhancements() {
   console.log('[FAB DEBUG] Attaching header FAB enhancements');
   
   if (document.readyState === 'loading') {
-    console.log('[FAB DEBUG] Document still loading, waiting for DOMContentLoaded');
     document.addEventListener('DOMContentLoaded', () => {
-      console.log('[FAB DEBUG] DOM loaded, initializing FAB enhancements');
       initializeHeaderAutoHide();
-      initializeFloatingFabEnhancements();
+      // initializeFloatingFabEnhancements(); // Disabled - element doesn't exist
     });
   } else {
-    console.log('[FAB DEBUG] Document already loaded, initializing FAB enhancements immediately');
     initializeHeaderAutoHide();
-    initializeFloatingFabEnhancements();
+    // initializeFloatingFabEnhancements(); // Disabled - element doesn't exist
   }
 })();

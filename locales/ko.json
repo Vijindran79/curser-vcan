@@ -2,6 +2,7 @@
   "loading": {"authenticating": "인증 중...", "loading": "로딩 중..."},
   "toast": {"pro_coming_soon": "Pro 구독이 곧 제공됩니다! 무제한 추적 및 우선 지원을 기대하세요."},
   "header": {"track": "추적", "services": "서비스", "help": "도움말", "login": "로그인 / 가입"},
+  "floating": {"chat": "채팅", "menu": "메뉴", "help": "도움말"},
   "aria": {"change_locale": "지역 및 언어 변경", "toggle_theme": "테마 전환", "close_auth_modal": "닫기", "back": "뒤로", "show_password": "비밀번호 표시", "hide_password": "비밀번호 숨기기"},
   "sidebar": {"services": "모든 서비스", "parcel": "소포", "baggage": "수하물", "fcl": "풀 컨테이너", "lcl": "혼적 화물", "airfreight": "항공 화물", "vehicle": "차량 운송", "railway": "철도 운송", "inland": "내륙 운송", "bulk": "벌크 화물", "rivertug": "강 서비스", "warehouse": "창고", "schedules": "일정", "ecommerce": "전자상거래 허브", "tradeFinance": "무역 금융", "partner": "파트너 되기", "apiHub": "API 허브", "helpCenter": "도움말 센터"},
   "mobile_menu": {"menu": "메뉴", "home": "홈", "dashboard": "대시보드", "address_book": "주소록", "account_settings": "설정", "api_hub": "API 허브", "help": "도움말", "region_language": "지역 및 언어", "theme": "테마", "logout": "로그아웃", "login": "로그인"},

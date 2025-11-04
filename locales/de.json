@@ -2,6 +2,7 @@
   "loading": {"authenticating": "Authentifizierung...", "loading": "Laden..."},
   "toast": {"pro_coming_soon": "Pro-Abonnement kommt bald! Bleiben Sie dran für unbegrenztes Tracking und Prioritätssupport."},
   "header": {"track": "Verfolgen", "services": "Dienste", "help": "Hilfe", "login": "Anmelden / Registrieren"},
+  "floating": {"chat": "Chat", "menu": "Menü", "help": "Hilfe"},
   "aria": {"change_locale": "Region und Sprache ändern", "toggle_theme": "Design wechseln", "close_auth_modal": "Schließen", "back": "Zurück", "show_password": "Passwort anzeigen", "hide_password": "Passwort verbergen"},
   "sidebar": {"services": "Alle Dienste", "parcel": "Paket", "baggage": "Gepäck", "fcl": "Vollcontainer", "lcl": "Sammelladung", "airfreight": "Luftfracht", "vehicle": "Fahrzeugtransport", "railway": "Bahntransport", "inland": "Inlandstransport", "bulk": "Massengut", "rivertug": "Flussdienste", "warehouse": "Lagerhaltung", "schedules": "Fahrpläne", "ecommerce": "E-Commerce-Hub", "tradeFinance": "Handelsfinanzierung", "partner": "Partner werden", "apiHub": "API-Hub", "helpCenter": "Hilfezentrum"},
   "mobile_menu": {"menu": "Menü", "home": "Startseite", "dashboard": "Dashboard", "address_book": "Adressbuch", "account_settings": "Einstellungen", "api_hub": "API-Hub", "help": "Hilfe", "region_language": "Region und Sprache", "theme": "Design", "logout": "Abmelden", "login": "Anmelden"},

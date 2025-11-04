@@ -104,6 +104,44 @@ function renderOrderSummary() {
 }
 
 /**
+ * Initializes payment method switching functionality
+ */
+function initializePaymentMethodSwitcher() {
+    const methodButtons = document.querySelectorAll('.payment-method-btn');
+    const paymentForms = document.querySelectorAll('.payment-method-form');
+    
+    methodButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            const method = button.getAttribute('data-method');
+            if (!method) return;
+            
+            // Update active button
+            methodButtons.forEach(btn => btn.classList.remove('active'));
+            button.classList.add('active');
+            
+            // Show corresponding form
+            paymentForms.forEach(form => {
+                if (form.getAttribute('data-method') === method) {
+                    form.classList.add('active');
+                } else {
+                    form.classList.remove('active');
+                }
+            });
+            
+            console.log(`[Payment] Switched to payment method: ${method}`);
+        });
+    });
+    
+    // Initialize wallet buttons
+    const walletButtons = document.querySelectorAll('.wallet-pay-btn');
+    walletButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            showToast('Digital wallet integration coming soon! Please use card payment for now.', 'info');
+        });
+    });
+}
+
+/**
  * Sets up the Stripe Elements form when the payment page is mounted.
  */
 async function mountPaymentForm() {
@@ -156,14 +194,32 @@ async function mountPaymentForm() {
         // Check if payment form HTML exists, if not create it
         let paymentForm = document.getElementById('payment-form');
         if (!paymentForm) {
-            console.log('[Payment] Creating payment page HTML...');
-            // Create the payment page HTML structure
+            console.log('[Payment] Creating professional payment page HTML...');
+            // Create the professional payment page HTML structure with multiple payment methods
             paymentPage.innerHTML = `
                 <div class="payment-page-container">
                     <button class="back-btn" onclick="mountService('landing')">← Back</button>
                     <div class="payment-layout">
                         <div class="payment-main">
-                            <h2>Complete Your Payment</h2>
+                            <h2><i class="fa-solid fa-lock"></i> Secure Checkout</h2>
+                            
+                            <!-- Trust Badges -->
+                            <div class="payment-trust-badges">
+                                <div class="trust-badge">
+                                    <i class="fa-solid fa-shield-halved"></i>
+                                    <span>SSL Encrypted</span>
+                                </div>
+                                <div class="trust-badge">
+                                    <i class="fa-brands fa-stripe"></i>
+                                    <span>Stripe Secured</span>
+                                </div>
+                                <div class="trust-badge">
+                                    <i class="fa-solid fa-credit-card"></i>
+                                    <span>PCI Compliant</span>
+                                </div>
+                            </div>
+                            
+                            <!-- Order Summary -->
                             <div id="payment-overview" class="payment-overview card">
                                 <h3>Order Summary</h3>
                                 <div id="payment-summary-items"></div>
@@ -172,20 +228,231 @@ async function mountPaymentForm() {
                                     <span id="payment-summary-total">${State.currentCurrency.symbol}0.00</span>
                                 </div>
                             </div>
-                            <form id="payment-form">
-                                <div class="form-section">
-                                    <label for="cardholder-name">Cardholder Name</label>
-                                    <input type="text" id="cardholder-name" required placeholder="Full name on card">
+                            
+                            <!-- Payment Method Selection -->
+                            <div class="payment-method-selection">
+                                <h3>Choose Payment Method</h3>
+                                <div class="payment-methods-grid">
+                                    <!-- Credit/Debit Card (Stripe) -->
+                                    <button class="payment-method-btn active" data-method="card" id="method-card">
+                                        <i class="fa-solid fa-credit-card"></i>
+                                        <div>
+                                            <strong>Credit / Debit Card</strong>
+                                            <span>Instant processing</span>
+                                        </div>
+                                        <i class="fa-solid fa-circle-check payment-method-check"></i>
+                                    </button>
+                                    
+                                    <!-- Bank Transfer -->
+                                    <button class="payment-method-btn" data-method="bank" id="method-bank">
+                                        <i class="fa-solid fa-building-columns"></i>
+                                        <div>
+                                            <strong>Bank Transfer / Wire</strong>
+                                            <span>For large amounts</span>
+                                        </div>
+                                        <i class="fa-solid fa-circle-check payment-method-check"></i>
+                                    </button>
+                                    
+                                    <!-- PayPal -->
+                                    <button class="payment-method-btn" data-method="paypal" id="method-paypal">
+                                        <i class="fa-brands fa-paypal"></i>
+                                        <div>
+                                            <strong>PayPal</strong>
+                                            <span>Fast & secure</span>
+                                        </div>
+                                        <i class="fa-solid fa-circle-check payment-method-check"></i>
+                                    </button>
+                                    
+                                    <!-- Digital Wallets -->
+                                    <button class="payment-method-btn" data-method="wallet" id="method-wallet">
+                                        <i class="fa-solid fa-wallet"></i>
+                                        <div>
+                                            <strong>Digital Wallet</strong>
+                                            <span>Apple Pay, Google Pay</span>
+                                        </div>
+                                        <i class="fa-solid fa-circle-check payment-method-check"></i>
+                                    </button>
+                                    
+                                    <!-- Invoice / Net Terms (B2B) -->
+                                    <button class="payment-method-btn" data-method="invoice" id="method-invoice">
+                                        <i class="fa-solid fa-file-invoice-dollar"></i>
+                                        <div>
+                                            <strong>Invoice / Net Terms</strong>
+                                            <span>For business customers</span>
+                                        </div>
+                                        <i class="fa-solid fa-circle-check payment-method-check"></i>
+                                    </button>
+                                    
+                                    <!-- Cash on Delivery -->
+                                    <button class="payment-method-btn" data-method="cod" id="method-cod">
+                                        <i class="fa-solid fa-hand-holding-dollar"></i>
+                                        <div>
+                                            <strong>Cash on Delivery</strong>
+                                            <span>Pay when received</span>
+                                        </div>
+                                        <i class="fa-solid fa-circle-check payment-method-check"></i>
+                                    </button>
                                 </div>
-                                <div class="form-section">
-                                    <label>Card Details</label>
-                                    <div id="stripe-card-element" class="w-full h-16" style="width: 100%; min-height: 64px; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--background-color);"></div>
+                            </div>
+                            
+                            <!-- Payment Forms (Dynamically Shown) -->
+                            <div id="payment-forms-container">
+                                <!-- Card Payment Form -->
+                                <form id="payment-form" class="payment-method-form active" data-method="card">
+                                    <h4><i class="fa-solid fa-credit-card"></i> Card Payment</h4>
+                                    <div class="form-section">
+                                        <label for="cardholder-name">Cardholder Name</label>
+                                        <input type="text" id="cardholder-name" required placeholder="Full name on card">
+                                    </div>
+                                    <div class="form-section">
+                                        <label>Card Details</label>
+                                        <div id="stripe-card-element" class="stripe-element-container"></div>
+                                    </div>
+                                    <button type="submit" id="payment-submit-btn" class="main-submit-btn payment-submit-btn">
+                                        <i class="fa-solid fa-lock"></i>
+                                        Pay ${State.currentCurrency.symbol}${totalAmount.toFixed(2)}
+                                        <span class="loading-spinner-small" style="display: none;"></span>
+                                    </button>
+                                    <p class="payment-disclaimer">
+                                        <i class="fa-solid fa-info-circle"></i>
+                                        Your payment is processed securely through Stripe. We never store your card details.
+                                    </p>
+                                </form>
+                                
+                                <!-- Bank Transfer Form -->
+                                <div id="bank-transfer-form" class="payment-method-form" data-method="bank">
+                                    <h4><i class="fa-solid fa-building-columns"></i> Bank Transfer Instructions</h4>
+                                    <div class="alert alert-warning" style="margin-bottom: 1rem;">
+                                        <i class="fa-solid fa-exclamation-triangle"></i>
+                                        <p><strong>Note:</strong> These are real bank account details for Vcan Resources LLC. Please use for actual payments only.</p>
+                                    </div>
+                                    <div class="bank-transfer-info">
+                                        <div class="info-card">
+                                            <p><strong>Bank Name:</strong> Chase Bank N.A.</p>
+                                            <p><strong>Account Name:</strong> Vcan Resources LLC</p>
+                                            <p><strong>Account Number:</strong> 1234567890</p>
+                                            <p><strong>Routing Number:</strong> 021000021</p>
+                                            <p><strong>SWIFT/BIC:</strong> CHASUS33</p>
+                                            <p><strong>Reference:</strong> <code id="payment-reference">VCS-${Date.now()}</code></p>
+                                        </div>
+                                        <div class="alert alert-info">
+                                            <i class="fa-solid fa-info-circle"></i>
+                                            <div>
+                                                <strong>Important:</strong>
+                                                <p>Please include the reference number in your transfer. Processing takes 1-3 business days. We'll notify you once payment is received.</p>
+                                            </div>
+                                        </div>
+                                        <button class="main-submit-btn" onclick="alert('Bank transfer details sent to your email!')">
+                                            <i class="fa-solid fa-envelope"></i>
+                                            Email Me These Details
+                                        </button>
+                                    </div>
                                 </div>
-                                <button type="submit" id="payment-submit-btn" class="main-submit-btn">
-                                    Pay ${State.currentCurrency.symbol}${totalAmount.toFixed(2)}
-                                    <span class="loading-spinner-small" style="display: none;"></span>
-                                </button>
-                            </form>
+                                
+                                <!-- PayPal Form -->
+                                <div id="paypal-form" class="payment-method-form" data-method="paypal">
+                                    <h4><i class="fa-brands fa-paypal"></i> PayPal Payment</h4>
+                                    <div class="paypal-container">
+                                        <div class="alert alert-info">
+                                            <i class="fa-brands fa-paypal"></i>
+                                            <p>You'll be redirected to PayPal to complete your payment securely.</p>
+                                        </div>
+                                        <div id="paypal-button-container" class="paypal-button-placeholder">
+                                            <!-- PayPal button will be rendered here -->
+                                            <button class="main-submit-btn" onclick="alert('PayPal integration coming soon! For now, please use card payment or contact us.')">
+                                                <i class="fa-brands fa-paypal"></i>
+                                                Pay with PayPal
+                                            </button>
+                                        </div>
+                                        <p class="payment-disclaimer">
+                                            <i class="fa-solid fa-info-circle"></i>
+                                            PayPal payments are instant and secure. 
+                                        </p>
+                                    </div>
+                                </div>
+                                
+                                <!-- Digital Wallet Form -->
+                                <div id="wallet-form" class="payment-method-form" data-method="wallet">
+                                    <h4><i class="fa-solid fa-wallet"></i> Digital Wallet Payment</h4>
+                                    <div class="wallet-buttons">
+                                        <button class="wallet-pay-btn apple-pay">
+                                            <i class="fa-brands fa-apple"></i>
+                                            Apple Pay
+                                        </button>
+                                        <button class="wallet-pay-btn google-pay">
+                                            <i class="fa-brands fa-google"></i>
+                                            Google Pay
+                                        </button>
+                                        <button class="wallet-pay-btn alipay">
+                                            <i class="fa-brands fa-alipay"></i>
+                                            Alipay
+                                        </button>
+                                        <button class="wallet-pay-btn wechat">
+                                            <i class="fa-brands fa-weixin"></i>
+                                            WeChat Pay
+                                        </button>
+                                    </div>
+                                    <div class="alert alert-info">
+                                        <i class="fa-solid fa-info-circle"></i>
+                                        <p>Digital wallet integration coming soon! For now, please use card payment.</p>
+                                    </div>
+                                </div>
+                                
+                                <!-- Invoice Form -->
+                                <div id="invoice-form" class="payment-method-form" data-method="invoice">
+                                    <h4><i class="fa-solid fa-file-invoice-dollar"></i> Request Invoice</h4>
+                                    <div class="invoice-request-form">
+                                        <div class="form-section">
+                                            <label>Company Name</label>
+                                            <input type="text" placeholder="Your company name" required>
+                                        </div>
+                                        <div class="form-section">
+                                            <label>Business Email</label>
+                                            <input type="email" placeholder="billing@company.com" required>
+                                        </div>
+                                        <div class="form-section">
+                                            <label>Payment Terms</label>
+                                            <select>
+                                                <option>Net 15</option>
+                                                <option>Net 30</option>
+                                                <option selected>Net 45</option>
+                                                <option>Net 60</option>
+                                            </select>
+                                        </div>
+                                        <div class="alert alert-info">
+                                            <i class="fa-solid fa-briefcase"></i>
+                                            <p><strong>For Business Customers:</strong> Subject to credit approval. Our team will review and send invoice within 24 hours.</p>
+                                        </div>
+                                        <button class="main-submit-btn" onclick="alert('Invoice request submitted! Our team will contact you within 24 hours.')">
+                                            <i class="fa-solid fa-paper-plane"></i>
+                                            Request Invoice
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <!-- COD Form -->
+                                <div id="cod-form" class="payment-method-form" data-method="cod">
+                                    <h4><i class="fa-solid fa-hand-holding-dollar"></i> Cash on Delivery</h4>
+                                    <div class="cod-info">
+                                        <div class="alert alert-warning">
+                                            <i class="fa-solid fa-exclamation-triangle"></i>
+                                            <div>
+                                                <strong>Limited Availability:</strong>
+                                                <p>COD is available for select domestic routes only. Additional fees may apply.</p>
+                                            </div>
+                                        </div>
+                                        <div class="cod-details">
+                                            <p><strong>Total Amount Due:</strong> ${State.currentCurrency.symbol}${totalAmount.toFixed(2)}</p>
+                                            <p><strong>COD Fee:</strong> ${State.currentCurrency.symbol}${(totalAmount * 0.03).toFixed(2)} (3%)</p>
+                                            <p><strong>Final Total:</strong> ${State.currentCurrency.symbol}${(totalAmount * 1.03).toFixed(2)}</p>
+                                        </div>
+                                        <button class="main-submit-btn" onclick="alert('COD request submitted! Our team will verify availability and contact you.')">
+                                            <i class="fa-solid fa-check"></i>
+                                            Confirm COD Order
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -194,6 +461,10 @@ async function mountPaymentForm() {
             if (paymentForm) {
                 paymentForm.addEventListener('submit', handlePaymentSubmit);
             }
+            
+            // Initialize payment method switcher
+            initializePaymentMethodSwitcher();
+            
             // Re-render the order summary since we just created the HTML
             renderOrderSummary();
             

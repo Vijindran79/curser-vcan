@@ -937,7 +937,7 @@ Important: These are ESTIMATES for customer reference. Actual rates may vary bas
         } catch (modelError: any) {
             try {
                 model = State.api.getGenerativeModel({
-                    model: 'gemini-1.5-flash',
+                    model: 'gemini-1.5-flash-8b',
                     generationConfig: {
                         responseMimeType: 'application/json',
                         responseSchema: responseSchema,

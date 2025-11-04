@@ -2,6 +2,7 @@
   "loading": {"authenticating": "Аутентификация...", "loading": "Загрузка..."},
   "toast": {"pro_coming_soon": "Подписка Pro скоро появится! Оставайтесь на связи для безлимитного отслеживания и приоритетной поддержки."},
   "header": {"track": "Отследить", "services": "Услуги", "help": "Помощь", "login": "Войти / Регистрация"},
+  "floating": {"chat": "Чат", "menu": "Меню", "help": "Помощь"},
   "aria": {"change_locale": "Изменить регион и язык", "toggle_theme": "Переключить тему", "close_auth_modal": "Закрыть", "back": "Назад", "show_password": "Показать пароль", "hide_password": "Скрыть пароль"},
   "sidebar": {"services": "Все услуги", "parcel": "Посылка", "baggage": "Багаж", "fcl": "Полный контейнер", "lcl": "Сборный груз", "airfreight": "Авиаперевозка", "vehicle": "Перевозка транспорта", "railway": "Ж/д перевозка", "inland": "Внутренняя перевозка", "bulk": "Навалочный груз", "rivertug": "Речные услуги", "warehouse": "Складирование", "schedules": "Расписание", "ecommerce": "Э-коммерция", "tradeFinance": "Торговое финансирование", "partner": "Стать партнером", "apiHub": "API Hub", "helpCenter": "Центр помощи"},
   "mobile_menu": {"menu": "Меню", "home": "Главная", "dashboard": "Панель", "address_book": "Адресная книга", "account_settings": "Настройки", "api_hub": "API Hub", "help": "Помощь", "region_language": "Регион и язык", "theme": "Тема", "logout": "Выйти", "login": "Войти"},

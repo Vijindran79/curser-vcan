@@ -162,9 +162,24 @@ export async function fetchSeaRatesQuotes(params: {
                 
                 const data: any = result.data;
                 
+                // Check for subscription/cache status messages
+                if (data?.subscription_required && data?.message) {
+                    showToast(data.message, 'warning', 8000);
+                }
+                
+                if (data?.cached && !data?.expired) {
+                    console.log('[SEA RATES] Using cached data (refreshed every 4 hours to save API calls)');
+                    showToast('📦 Showing cached rates (refreshed every 4 hours)', 'info', 4000);
+                }
+                
+                if (data?.cached && data?.expired) {
+                    console.log('[SEA RATES] Using expired cache - monthly limit reached');
+                    showToast('⚠️ Showing older rates. Upgrade to Pro for real-time updates!', 'warning', 8000);
+                }
+                
                 if (data && data.success && data.quotes && Array.isArray(data.quotes) && data.quotes.length > 0) {
                     // Transform Sea Rates API response to our Quote format
-                    return data.quotes.map((q: any) => ({
+                    const quotes = data.quotes.map((q: any) => ({
                         carrierName: q.carrier || q.carrier_name || 'Ocean Carrier',
                         carrierType: params.serviceType === 'fcl' ? 'FCL' 
                             : params.serviceType === 'lcl' ? 'LCL'
@@ -175,7 +190,9 @@ export async function fetchSeaRatesQuotes(params: {
                         estimatedTransitTime: q.transit_time || q.estimated_days 
                             ? `${q.estimated_days} days` 
                             : '15-30 days',
-                        serviceProvider: 'Sea Rates API',
+                        serviceProvider: data.cached 
+                            ? (data.expired ? 'Sea Rates (Cached - Expired)' : 'Sea Rates (Cached)')
+                            : 'Sea Rates API',
                         isSpecialOffer: false,
                         chargeableWeight: params.cargo?.weight || 0,
                         chargeableWeightUnit: params.cargo?.weight ? 'kg' : 'N/A',
@@ -188,6 +205,8 @@ export async function fetchSeaRatesQuotes(params: {
                             ourServiceFee: q.service_fee || 0
                         }
                     }));
+                    
+                    return quotes;
                 } else {
                     // API returned no quotes or error - fall back to AI
                     throw new Error(data?.error || data?.message || 'No quotes available from Sea Rates API');

@@ -47,6 +47,11 @@ export function updateUIForAuthState() {
             welcomeBanner.classList.add('hidden');
         }
     }
+    
+    // Update floating glass panel auth state
+    if (typeof (window as any).updatePanelAuthState === 'function') {
+        (window as any).updatePanelAuthState();
+    }
 }
 
 

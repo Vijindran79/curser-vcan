@@ -607,7 +607,7 @@ async function suggestHsCodeFromImage(file: File, inputElementId: string) {
         const imagePart = { inlineData: { mimeType: file.type, data: base64Data } };
         const textPart = { text: "Analyze this image of a product and suggest the most appropriate 6-digit Harmonized System (HS) code. Provide only the 6-digit code as a string." };
         
-        const model = State.api.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        const model = State.api.getGenerativeModel({ model: 'gemini-1.5-flash-8b' });
         const result = await model.generateContent([imagePart, textPart]);
 
         const hsCode = result.response.text().replace(/[^0-9]/g, '').slice(0, 6);
@@ -826,7 +826,7 @@ async function generateAndDownloadAirfreightCertificate(certType: string) {
         Provide a professional certificate in JSON format with: issuer, date, cargo details, certification statement, and signatory information.`;
         
         const model = State.api.getGenerativeModel({
-            model: 'gemini-1.5-flash',
+            model: 'gemini-1.5-flash-8b',
             generationConfig: { responseMimeType: 'application/json' }
         });
         const result = await model.generateContent(prompt);
