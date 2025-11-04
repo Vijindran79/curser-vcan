@@ -39,6 +39,60 @@ function renderFclPage() {
             <h2>Book Full Container Load (FCL)</h2>
             <p class="subtitle">Secure exclusive use of a container for your large shipments.</p>
         </div>
+        
+        <!-- Pro Subscription Banner -->
+        ${State.subscriptionTier !== 'pro' ? `
+        <div class="pro-subscription-banner" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 24px; margin: 20px 0; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);">
+            <div style="flex: 1;">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                    <span style="font-size: 24px;">⭐</span>
+                    <h3 style="margin: 0; font-size: 18px; font-weight: 600;">Get Unlimited Real-Time Rates for $9.99/month</h3>
+                </div>
+                <p style="margin: 0; opacity: 0.95; font-size: 14px;">Upgrade to Pro for unlimited real-time quotes from Maersk, MSC, CMA CGM & more major carriers. Save up to 30% vs. traditional brokers!</p>
+            </div>
+            <button onclick="switchPage('subscription')" style="background: white; color: #667eea; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; white-space: nowrap; font-size: 14px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                Upgrade Now →
+            </button>
+        </div>
+        ` : ''}
+        
+        <!-- Trusted Carriers -->
+        <div style="background: #f8f9fa; padding: 16px; margin: 20px 0; border-radius: 8px; text-align: center;">
+            <p style="margin: 0 0 12px 0; font-size: 13px; color: #666; font-weight: 500;">TRUSTED GLOBAL CARRIERS</p>
+            <div style="display: flex; align-items: center; justify-content: center; gap: 32px; flex-wrap: wrap;">
+                <div style="text-align: center;">
+                    <div style="width: 80px; height: 50px; display: flex; align-items: center; justify-content: center; background: white; border-radius: 6px; padding: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
+                        <span style="font-weight: 700; color: #003087; font-size: 16px;">MAERSK</span>
+                    </div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="width: 80px; height: 50px; display: flex; align-items: center; justify-content: center; background: white; border-radius: 6px; padding: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
+                        <span style="font-weight: 700; color: #000; font-size: 16px;">MSC</span>
+                    </div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="width: 80px; height: 50px; display: flex; align-items: center; justify-content: center; background: white; border-radius: 6px; padding: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
+                        <span style="font-weight: 700; color: #E60012; font-size: 14px;">CMA CGM</span>
+                    </div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="width: 80px; height: 50px; display: flex; align-items: center; justify-content: center; background: white; border-radius: 6px; padding: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
+                        <span style="font-weight: 700; color: #003DA5; font-size: 14px;">COSCO</span>
+                    </div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="width: 80px; height: 50px; display: flex; align-items: center; justify-content: center; background: white; border-radius: 6px; padding: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
+                        <span style="font-weight: 700; color: #E2001A; font-size: 14px;">HAPAG</span>
+                    </div>
+                </div>
+                <div style="text-align: center;">
+                    <div style="width: 80px; height: 50px; display: flex; align-items: center; justify-content: center; background: white; border-radius: 6px; padding: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
+                        <span style="font-weight: 700; color: #00539F; font-size: 16px;">ONE</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <div class="form-container">
              <div class="visual-progress-bar" id="progress-bar-trade-finance">
                 <div class="progress-step"></div><div class="progress-step"></div><div class="progress-step"></div><div class="progress-step"></div>
@@ -307,27 +361,28 @@ async function handleFclFormSubmit(e: Event) {
     
     if (!checkAndDecrementLookup()) return;
 
-    toggleLoading(true, "Analyzing your FCL shipment...");
+    // Fast initial message to keep user engaged
+    toggleLoading(true, "🚢 Getting your quote ready...");
 
     const serviceType = document.querySelector('#fcl-service-type-selector .service-type-btn.active')?.getAttribute('data-type') || 'port-to-port';
-    const pickupAddress = serviceSchemaType.startsWith('door-to') ? {
+    const pickupAddress = serviceType.startsWith('door-to') ? {
         name: (document.getElementById('fcl-pickup-name') as HTMLInputElement).value,
         country: (document.getElementById('fcl-pickup-country') as HTMLInputElement).value,
     } : null;
-    const pickupPort = serviceSchemaType.startsWith('door-to') ? null : (document.getElementById('fcl-pickup-port') as HTMLInputElement).value;
-    const deliveryAddress = serviceSchemaType.endsWith('-to-door') ? {
+    const pickupPort = serviceType.startsWith('door-to') ? null : (document.getElementById('fcl-pickup-port') as HTMLInputElement).value;
+    const deliveryAddress = serviceType.endsWith('-to-door') ? {
         name: (document.getElementById('fcl-delivery-name') as HTMLInputElement).value,
         country: (document.getElementById('fcl-delivery-country') as HTMLInputElement).value,
     } : null;
-    const deliveryPort = serviceSchemaType.endsWith('-to-door') ? null : (document.getElementById('fcl-delivery-port') as HTMLInputElement).value;
+    const deliveryPort = serviceType.endsWith('-to-door') ? null : (document.getElementById('fcl-delivery-port') as HTMLInputElement).value;
     const cargoDescription = (document.getElementById('fcl-cargo-description') as HTMLTextAreaElement).value;
     const hsCode = (document.getElementById('fcl-hs-code') as HTMLInputElement).value;
 
 
     const details: FclDetails = {
         serviceType: serviceType as FclDetails['serviceType'],
-        pickupType: serviceSchemaType.startsWith('door-to') ? 'address' : 'location',
-        deliveryType: serviceSchemaType.endsWith('-to-door') ? 'address' : 'location',
+        pickupType: serviceType.startsWith('door-to') ? 'address' : 'location',
+        deliveryType: serviceType.endsWith('-to-door') ? 'address' : 'location',
         pickupAddress,
         deliveryAddress,
         pickupPort,
@@ -339,35 +394,44 @@ async function handleFclFormSubmit(e: Event) {
     setState({ fclDetails: details });
 
     try {
-        // Try to fetch from Sea Rates API first (real quotes)
-        try {
-            const { fetchSeaRatesQuotes } = await import('./backend-api');
-            const realQuotes = await fetchSeaRatesQuotes({
-                serviceType: 'fcl',
-                origin: pickupPort || pickupAddress?.country || '',
-                destination: deliveryPort || deliveryAddress?.country || '',
-                containers: details.containers,
-                cargo: {
-                    description: details.cargoDescription,
-                    hsCode: details.hsCode
-                },
-                currency: State.currentCurrency.code
-            });
-            
-            currentFclQuotes = realQuotes;
-            setState({ fclComplianceDocs: [] }); // Compliance docs from real API
-            renderFclResultsStep({ status: 'verified', summary: 'Rates from Sea Rates API' });
-            goToFclStep(2);
-            
-            // Show email form
-            showEmailInquiryForm('fcl');
-            return;
-        } catch (apiError: any) {
-            console.warn('Sea Rates API not available, using AI estimates:', apiError);
-            // Fall back to AI estimates if API fails
+        // Try to fetch from Sea Rates API with 5-second timeout (Pro users get real rates)
+        if (State.subscriptionTier === 'pro') {
+            try {
+                const { fetchSeaRatesQuotes } = await import('./backend-api');
+                
+                // Race between API call and 5-second timeout
+                const timeoutPromise = new Promise((_, reject) => 
+                    setTimeout(() => reject(new Error('API timeout')), 5000)
+                );
+                
+                const apiPromise = fetchSeaRatesQuotes({
+                    serviceType: 'fcl',
+                    origin: pickupPort || pickupAddress?.country || '',
+                    destination: deliveryPort || deliveryAddress?.country || '',
+                    containers: details.containers,
+                    cargo: {
+                        description: details.cargoDescription,
+                        hsCode: details.hsCode
+                    },
+                    currency: State.currentCurrency.code
+                });
+                
+                const realQuotes = await Promise.race([apiPromise, timeoutPromise]) as Quote[];
+                
+                currentFclQuotes = realQuotes;
+                setState({ fclComplianceDocs: [] }); // Compliance docs from real API
+                renderFclResultsStep({ status: 'verified', summary: 'Rates from Sea Rates API' });
+                goToFclStep(2);
+                return;
+            } catch (apiError: any) {
+                console.warn('Sea Rates API timeout or failed, using instant AI estimates:', apiError);
+                // Fall back to AI estimates if API times out or fails
+            }
         }
         
-        // Fallback: Use AI for estimates (to keep customer engaged)
+        // Fallback: Use FAST AI for instant estimates (keeps customers engaged!)
+        toggleLoading(true, "⚡ Generating instant quote...");
+        
         if (!State.api) {
             showToast("AI service is not available. Please check your API configuration.", "error");
             toggleLoading(false);
@@ -442,7 +506,7 @@ async function handleFclFormSubmit(e: Event) {
         };
 
         const model = State.api.getGenerativeModel({
-            model: "gemini-1.5-flash",
+            model: "gemini-1.5-flash-8b",
             generationConfig: {
                 responseMimeType: "application/json",
                 responseSchema: responseSchema
@@ -475,9 +539,6 @@ async function handleFclFormSubmit(e: Event) {
         setState({ fclComplianceDocs: docs });
         await renderFclResultsStep(parsedResult.complianceReport);
         goToFclStep(2);
-        
-        // Show email form after AI estimates
-        await showEmailInquiryForm('fcl');
     } catch (error) {
         console.error("FCL quote error:", error);
         showToast("Could not generate an estimate. Please try again.", "error");
@@ -581,7 +642,8 @@ async function renderFclResultsStep(complianceReport: any) {
             btn.addEventListener('click', async (e) => {
                 const certType = (e.target as HTMLElement).closest('.download-cert-btn')?.getAttribute('data-cert-type');
                 if (certType) {
-                    await generateAndDownloadFclCertificate(certType);
+                    showToast('Certificate generation feature coming soon!', 'info');
+                    // TODO: await generateAndDownloadFclCertificate(certType);
                 }
             });
         });
@@ -647,7 +709,7 @@ async function suggestHsCodeFromImage(file: File, inputElementId: string) {
         const imagePart = { inlineData: { mimeType: file.type, data: base64Data } };
         const textPart = { text: "Analyze this image of a product and suggest the most appropriate 6-digit Harmonized System (HS) code. Provide only the 6-digit code as a string." };
         
-        const model = State.api.getGenerativeModel({ model: 'gemini-1.5-flash' });
+        const model = State.api.getGenerativeModel({ model: 'gemini-1.5-flash-8b' });
         const result = await model.generateContent([imagePart, textPart]);
 
         const hsCode = result.response.text().replace(/[^0-9]/g, '').slice(0, 6);

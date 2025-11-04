@@ -513,9 +513,27 @@ export const getSeaRates = functions.https.onCall(async (data: SeaRatesQuoteRequ
             estimated_days: quote.estimated_days || parseInt(quote.transit_time?.match(/\d+/)?.[0] || '20')
         }));
         
+        // Cache the results for 4 hours to maximize 50 API calls/month (12.5 days per call)
+        try {
+            await getDb().collection('sea_rates_cache').doc(cacheKey).set({
+                quotes: quotes,
+                timestamp: admin.firestore.FieldValue.serverTimestamp(),
+                expires_at: new Date(Date.now() + 4 * 60 * 60 * 1000), // 4 hours from now
+                service_type: service_type,
+                origin: origin,
+                destination: destination
+            });
+            console.log('Successfully cached Sea Rates quotes');
+        } catch (cacheError) {
+            console.error('Failed to cache Sea Rates quotes (non-fatal):', cacheError);
+            // Don't throw - caching failure shouldn't fail the request
+        }
+        
         return {
             success: true,
-            quotes: quotes
+            quotes: quotes,
+            cached: false,
+            subscription_required: !isSubscribed
         };
         
     } catch (error: any) {

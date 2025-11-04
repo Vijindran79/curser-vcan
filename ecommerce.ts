@@ -427,6 +427,65 @@ function renderEcomPageShell() {
     page.innerHTML = `
         <div class="ecom-page-container">
             <button class="back-btn" id="ecom-back-to-main-dashboard">${t('ecommerce.back_to_main_dashboard')}</button>
+            
+            <div class="service-page-header">
+                <h2>${t('ecommerce.title')}</h2>
+                <p class="subtitle">${t('ecommerce.subtitle')}</p>
+            </div>
+            
+            <!-- Pro Subscription Banner -->
+            ${State.subscriptionTier !== 'pro' ? `
+            <div class="pro-subscription-banner" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 24px; margin: 20px 0; border-radius: 12px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);">
+                <div style="flex: 1;">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                        <span style="font-size: 24px;">🚀</span>
+                        <h3 style="margin: 0; font-size: 18px; font-weight: 600;">Supercharge Your E-Commerce with Real-Time Shipping Rates</h3>
+                    </div>
+                    <p style="margin: 0; opacity: 0.95; font-size: 14px;">Upgrade to Pro for $9.99/month and get unlimited real-time shipping quotes to automate your fulfillment!</p>
+                </div>
+                <button onclick="switchPage('subscription')" style="background: white; color: #667eea; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; white-space: nowrap; font-size: 14px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                    Upgrade Now →
+                </button>
+            </div>
+            ` : ''}
+            
+            <!-- Marketplace Integrations -->
+            <div style="background: #f8f9fa; padding: 16px; margin: 20px 0; border-radius: 8px; text-align: center;">
+                <p style="margin: 0 0 12px 0; font-size: 13px; color: #666; font-weight: 500;">CONNECT YOUR MARKETPLACES</p>
+                <div style="display: flex; align-items: center; justify-content: center; gap: 24px; flex-wrap: wrap;">
+                    <div style="text-align: center;">
+                        <div style="width: 70px; height: 50px; display: flex; align-items: center; justify-content: center; background: white; border-radius: 6px; padding: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
+                            <span style="font-weight: 700; color: #FF9900; font-size: 18px;">Amazon</span>
+                        </div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="width: 70px; height: 50px; display: flex; align-items: center; justify-content: center; background: white; border-radius: 6px; padding: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
+                            <span style="font-weight: 700; color: #E53238; font-size: 18px;">eBay</span>
+                        </div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="width: 70px; height: 50px; display: flex; align-items: center; justify-content: center; background: white; border-radius: 6px; padding: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
+                            <span style="font-weight: 700; color: #96bf48; font-size: 16px;">Shopify</span>
+                        </div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="width: 70px; height: 50px; display: flex; align-items: center; justify-content: center; background: white; border-radius: 6px; padding: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
+                            <span style="font-weight: 700; color: #0071CE; font-size: 14px;">Walmart</span>
+                        </div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="width: 70px; height: 50px; display: flex; align-items: center; justify-content: center; background: white; border-radius: 6px; padding: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
+                            <span style="font-weight: 700; color: #F56400; font-size: 18px;">Etsy</span>
+                        </div>
+                    </div>
+                    <div style="text-align: center;">
+                        <div style="width: 70px; height: 50px; display: flex; align-items: center; justify-content: center; background: white; border-radius: 6px; padding: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);">
+                            <span style="font-weight: 700; color: #FF0050; font-size: 14px;">TikTok Shop</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
             <div id="ecom-content-container"></div>
         </div>
     `;

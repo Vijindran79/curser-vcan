@@ -106,7 +106,7 @@ async function handleBaggageFormSubmit(e: Event) {
     try {
         if (!State.api) throw new Error("AI API not initialized.");
         const model = State.api.getGenerativeModel({ 
-            model: 'gemini-1.5-flash'
+            model: 'gemini-1.5-flash-8b'
         });
         const result = await model.generateContent(prompt);
         const responseText = result.response.text();

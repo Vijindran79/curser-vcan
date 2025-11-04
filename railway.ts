@@ -3,10 +3,109 @@ import { State, setState, resetRailwayState } from './state';
 import { switchPage, updateProgressBar, showToast, toggleLoading } from './ui';
 import { MARKUP_CONFIG } from './pricing';
 
+// Global Railway Terminals Database
+type RailwayTerminal = {
+    code: string;
+    name: string;
+    city: string;
+    country: string;
+    region: string;
+};
+
+const RAILWAY_TERMINALS: RailwayTerminal[] = [
+    // China-Europe Railway Express
+    { code: 'CNCKG', name: 'Chongqing Railway Terminal', city: 'Chongqing', country: 'China', region: 'Asia' },
+    { code: 'CNXIY', name: 'Xi\'an Railway Terminal', city: 'Xi\'an', country: 'China', region: 'Asia' },
+    { code: 'CNZHZ', name: 'Zhengzhou Railway Terminal', city: 'Zhengzhou', country: 'China', region: 'Asia' },
+    { code: 'CNWUH', name: 'Wuhan Railway Terminal', city: 'Wuhan', country: 'China', region: 'Asia' },
+    { code: 'CNCDW', name: 'Chengdu Railway Terminal', city: 'Chengdu', country: 'China', region: 'Asia' },
+    { code: 'CNSUZ', name: 'Suzhou Railway Terminal', city: 'Suzhou', country: 'China', region: 'Asia' },
+    { code: 'CNYIW', name: 'Yiwu Railway Terminal', city: 'Yiwu', country: 'China', region: 'Asia' },
+    
+    // Europe - Germany
+    { code: 'DEDUI', name: 'Duisburg Railway Terminal', city: 'Duisburg', country: 'Germany', region: 'Europe' },
+    { code: 'DEHAM', name: 'Hamburg Railway Terminal', city: 'Hamburg', country: 'Germany', region: 'Europe' },
+    { code: 'DEBER', name: 'Berlin Railway Terminal', city: 'Berlin', country: 'Germany', region: 'Europe' },
+    { code: 'DEMUC', name: 'Munich Railway Terminal', city: 'Munich', country: 'Germany', region: 'Europe' },
+    { code: 'DESTU', name: 'Stuttgart Railway Terminal', city: 'Stuttgart', country: 'Germany', region: 'Europe' },
+    
+    // Europe - Other
+    { code: 'PLWAW', name: 'Warsaw Railway Terminal', city: 'Warsaw', country: 'Poland', region: 'Europe' },
+    { code: 'PLLDZ', name: 'Łódź Railway Terminal', city: 'Łódź', country: 'Poland', region: 'Europe' },
+    { code: 'RUMLO', name: 'Malaszewicze Terminal', city: 'Malaszewicze', country: 'Poland', region: 'Europe' },
+    { code: 'BYMNS', name: 'Minsk Railway Terminal', city: 'Minsk', country: 'Belarus', region: 'Europe' },
+    { code: 'RUTOS', name: 'Moscow Railway Terminal', city: 'Moscow', country: 'Russia', region: 'Europe' },
+    { code: 'RUVVO', name: 'Vorsino Railway Terminal', city: 'Vorsino', country: 'Russia', region: 'Europe' },
+    { code: 'RUYEK', name: 'Yekaterinburg Terminal', city: 'Yekaterinburg', country: 'Russia', region: 'Europe' },
+    { code: 'FRPAR', name: 'Paris Railway Terminal', city: 'Paris', country: 'France', region: 'Europe' },
+    { code: 'ITROM', name: 'Rome Railway Terminal', city: 'Rome', country: 'Italy', region: 'Europe' },
+    { code: 'ITMIL', name: 'Milan Railway Terminal', city: 'Milan', country: 'Italy', region: 'Europe' },
+    { code: 'ESBAR', name: 'Barcelona Railway Terminal', city: 'Barcelona', country: 'Spain', region: 'Europe' },
+    { code: 'ESMAD', name: 'Madrid Railway Terminal', city: 'Madrid', country: 'Spain', region: 'Europe' },
+    { code: 'NLRTM', name: 'Rotterdam Railway Terminal', city: 'Rotterdam', country: 'Netherlands', region: 'Europe' },
+    { code: 'BEANR', name: 'Antwerp Railway Terminal', city: 'Antwerp', country: 'Belgium', region: 'Europe' },
+    
+    // Central Asia
+    { code: 'KZALA', name: 'Almaty Railway Terminal', city: 'Almaty', country: 'Kazakhstan', region: 'Central Asia' },
+    { code: 'KZNQZ', name: 'Nur-Sultan Railway Terminal', city: 'Nur-Sultan', country: 'Kazakhstan', region: 'Central Asia' },
+    { code: 'UZTIP', name: 'Tashkent Railway Terminal', city: 'Tashkent', country: 'Uzbekistan', region: 'Central Asia' },
+    
+    // North America
+    { code: 'USCHI', name: 'Chicago Rail Hub', city: 'Chicago', country: 'USA', region: 'North America' },
+    { code: 'USLAX', name: 'Los Angeles Rail Terminal', city: 'Los Angeles', country: 'USA', region: 'North America' },
+    { code: 'USNYC', name: 'New York Rail Terminal', city: 'New York', country: 'USA', region: 'North America' },
+    { code: 'USHOU', name: 'Houston Rail Terminal', city: 'Houston', country: 'USA', region: 'North America' },
+    { code: 'CATOR', name: 'Toronto Rail Terminal', city: 'Toronto', country: 'Canada', region: 'North America' },
+    { code: 'CAVAN', name: 'Vancouver Rail Terminal', city: 'Vancouver', country: 'Canada', region: 'North America' },
+    { code: 'MXMEX', name: 'Mexico City Rail Terminal', city: 'Mexico City', country: 'Mexico', region: 'North America' },
+    
+    // India
+    { code: 'INMUN', name: 'Mumbai Railway Terminal', city: 'Mumbai', country: 'India', region: 'Asia' },
+    { code: 'INDEL', name: 'Delhi Railway Terminal', city: 'Delhi', country: 'India', region: 'Asia' },
+    { code: 'INBLR', name: 'Bangalore Railway Terminal', city: 'Bangalore', country: 'India', region: 'Asia' },
+    { code: 'INCHE', name: 'Chennai Railway Terminal', city: 'Chennai', country: 'India', region: 'Asia' },
+    
+    // Southeast Asia
+    { code: 'THBKK', name: 'Bangkok Railway Terminal', city: 'Bangkok', country: 'Thailand', region: 'Asia' },
+    { code: 'VNHAN', name: 'Hanoi Railway Terminal', city: 'Hanoi', country: 'Vietnam', region: 'Asia' },
+    { code: 'MYSEL', name: 'Selangor Railway Terminal', city: 'Selangor', country: 'Malaysia', region: 'Asia' },
+    
+    // Middle East
+    { code: 'TRIST', name: 'Istanbul Railway Terminal', city: 'Istanbul', country: 'Turkey', region: 'Middle East' },
+    { code: 'IRDUB', name: 'Tehran Railway Terminal', city: 'Tehran', country: 'Iran', region: 'Middle East' },
+];
+
 function goToRailwayStep(step: number) {
     updateProgressBar('trade-finance', step - 1);
     document.querySelectorAll('#page-railway .service-step').forEach(s => s.classList.remove('active'));
     document.getElementById(`railway-step-${step}`)?.classList.add('active');
+}
+
+// Generate dropdown options grouped by region
+function generateTerminalOptions(): string {
+    const regions: { [key: string]: RailwayTerminal[] } = {};
+    
+    // Group terminals by region
+    RAILWAY_TERMINALS.forEach(terminal => {
+        if (!regions[terminal.region]) {
+            regions[terminal.region] = [];
+        }
+        regions[terminal.region].push(terminal);
+    });
+    
+    // Generate optgroup HTML
+    let html = '';
+    Object.keys(regions).sort().forEach(region => {
+        html += `<optgroup label="${region}">`;
+        regions[region]
+            .sort((a, b) => a.name.localeCompare(b.name))
+            .forEach(terminal => {
+                html += `<option value="${terminal.city}, ${terminal.country}" data-code="${terminal.code}">${terminal.name} (${terminal.city}, ${terminal.country})</option>`;
+            });
+        html += `</optgroup>`;
+    });
+    
+    return html;
 }
 
 function renderRailwayPage() {
@@ -29,8 +128,20 @@ function renderRailwayPage() {
                 <form id="railway-details-form">
                     <h3>Route & Cargo</h3>
                     <div class="form-section two-column">
-                        <div class="input-wrapper"><label for="railway-origin">Origin Terminal</label><input type="text" id="railway-origin" required placeholder="e.g., Chongqing, China"></div>
-                        <div class="input-wrapper"><label for="railway-destination">Destination Terminal</label><input type="text" id="railway-destination" required placeholder="e.g., Duisburg, Germany"></div>
+                        <div class="input-wrapper">
+                            <label for="railway-origin">Origin Terminal</label>
+                            <select id="railway-origin" required>
+                                <option value="">Select Origin Terminal...</option>
+                                ${generateTerminalOptions()}
+                            </select>
+                        </div>
+                        <div class="input-wrapper">
+                            <label for="railway-destination">Destination Terminal</label>
+                            <select id="railway-destination" required>
+                                <option value="">Select Destination Terminal...</option>
+                                ${generateTerminalOptions()}
+                            </select>
+                        </div>
                     </div>
                      <div class="form-section">
                         <div class="input-wrapper">
@@ -43,7 +154,7 @@ function renderRailwayPage() {
                         </div>
                         <div class="input-wrapper"><label for="railway-cargo-weight">Cargo Weight (Tons)</label><input type="number" id="railway-cargo-weight" required min="1"></div>
                     </div>
-                    <div class="form-actions"><button type="submit" class="main-submit-btn">Get AI Estimate</button></div>
+                    <div class="form-actions"><button type="submit" class="main-submit-btn">Get Instant Quote</button></div>
                 </form>
             </div>
 
@@ -196,7 +307,7 @@ async function handleRailwayFormSubmit(e: Event) {
     try {
         if (!State.api) throw new Error("AI API not initialized.");
         const model = State.api.getGenerativeModel({ 
-            model: 'gemini-1.5-flash'
+            model: 'gemini-1.5-flash-8b'
         });
         const result = await model.generateContent(prompt);
         const responseText = result.response.text();

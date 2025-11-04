@@ -53,6 +53,11 @@
     "login": "Login / Sign Up",
     "loginSignup": "Login / Sign Up"
   },
+  "floating": {
+    "chat": "Chat",
+    "menu": "Menu",
+    "help": "Help"
+  },
   "aria": {
     "change_locale": "Change region and language",
     "toggle_theme": "Toggle dark/light theme",
@@ -190,8 +195,18 @@
     }
   },
   "landing": {
-    "hero_title": "Ship Smarter, Faster, Cheaper",
-    "hero_subtitle": "Your one-stop platform for global logistics—parcel, freight, bulk, and more.",
+    "hero_title": "Global Shipping, Intelligently Simplified",
+    "hero_subtitle": "Vcanship's AI-driven platform relentlessly finds the cheapest global shipping rates for parcels and freight.",
+    "promo_card_title": "Send a parcel — cheapest, fastest, and safest.",
+    "promo_card_cta": "Get a Quote",
+    "other_services_title": "Our Other Services",
+    "other_services_subtitle": "From a single document to a full container load, we've got you covered.",
+    "air_freight_title": "Air Freight",
+    "air_freight_subtitle": "Fast and reliable air cargo for time-sensitive shipments.",
+    "fcl_title": "Sea Freight FCL",
+    "fcl_subtitle": "Exclusive use of a full container for your goods.",
+    "lcl_title": "Sea Freight LCL",
+    "lcl_subtitle": "Cost-effective shared container space for smaller loads.",
     "get_quote": "Get Instant Quote",
     "or_track": "or track your shipment",
     "services_title": "Our Services",
@@ -427,7 +442,7 @@
       "save": "Save Address"
     },
     "settings": {
-      "title": "Account Settings",
+      "title": "Settings & Menu",
       "subtitle": "Manage your profile and communication preferences.",
       "profile_title": "Profile Information",
       "name_label": "Full Name",
@@ -435,7 +450,20 @@
       "password_title": "Change Password",
       "current_password_label": "Current Password",
       "new_password_label": "New Password",
-      "save": "Save Changes"
+      "save": "Save Changes",
+      "language_currency": "Language & Currency",
+      "appearance": "Appearance",
+      "theme": "Theme",
+      "account": "Account"
+    },
+    "contact": {
+      "title": "Get Help Now",
+      "subtitle": "Our team is here to help 24/7",
+      "whatsapp": "WhatsApp",
+      "call": "Call Us",
+      "email": "Email",
+      "hours": "Business Hours",
+      "hours_detail": "24/7 Support Available"
     }
   },
   "confirm": {

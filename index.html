@@ -66,52 +66,177 @@
     <a href="#page-container" class="skip-link">Skip to main content</a>
     <div id="top-ticker-banner"></div>
     <div id="app">
-        <header>
+        <!-- MINIMAL MOBILE-FRIENDLY HEADER: Only Logo + Track -->
+        <header class="minimal-header">
             <a href="#" class="logo static-link" data-page="landing" aria-label="VCanship Home">
                 <img src="./logo.svg" alt="VCanship Logo" class="logo-img">
             </a>
-            <nav class="header-main-nav" aria-label="Main navigation">
-                 <button class="header-btn static-link" id="header-dashboard-link" data-page="dashboard" style="display: none;">
-                    <i class="fa-solid fa-table-columns"></i> <span data-i18n="mobile_menu.dashboard">Dashboard</span>
-                </button>
-            </nav>
-            <div class="header-right-actions">
-                <button class="header-btn" id="track-btn">
-                    <i class="fa-solid fa-map-location-dot"></i> <span data-i18n="header.track">Track</span>
-                </button>
-                <div class="header-user-actions">
-                    <button class="header-btn locale-header-btn" id="header-locale-btn" aria-label="Change region and language" data-i18n-aria="aria.change_locale">
-                        <span class="locale-flag" id="header-locale-flag"></span>
-                        <div class="locale-button-text">
-                            <span class="language-name" id="header-locale-language"></span>
-                            <span class="country-name" id="header-locale-country"></span>
-                            <span class="currency-info" id="header-locale-info"></span>
-                        </div>
-                    </button>
-                    <button class="header-icon-btn theme-switch" aria-label="Toggle theme" data-i18n-aria="aria.toggle_theme">
-                        <i class="fas fa-moon"></i>
-                        <i class="fas fa-sun"></i>
-                    </button>
-                    <div class="header-dropdown-container hidden" id="my-account-dropdown">
-                        <button class="header-btn" id="my-account-btn">
-                            <div class="user-avatar" id="user-avatar"></div>
-                            <span id="user-name-display"></span>
-                            <i class="fa-solid fa-chevron-down dropdown-chevron"></i>
-                        </button>
-                        <div class="dropdown-menu">
-                            <a href="#" class="dropdown-item static-link" data-page="dashboard"><i class="fa-solid fa-table-columns"></i> <span data-i18n="mobile_menu.dashboard">Dashboard</span></a>
-                            <a href="#" class="dropdown-item static-link" data-page="address-book"><i class="fa-solid fa-address-book"></i> <span data-i18n="mobile_menu.address_book">Address Book</span></a>
-                            <a href="#" class="dropdown-item static-link" data-page="settings"><i class="fa-solid fa-gear"></i> <span data-i18n="mobile_menu.account_settings">Settings</span></a>
-                            <div class="dropdown-divider"></div>
-                            <a href="#" class="dropdown-item" id="logout-btn"><i class="fa-solid fa-arrow-right-from-bracket"></i> <span data-i18n="mobile_menu.logout">Log Out</span></a>
-                        </div>
-                    </div>
-                    <button class="header-btn login" id="login-signup-btn" data-i18n="header.loginSignup">Login / Sign Up</button>
-                </div>
-                 <button class="header-icon-btn" id="mobile-menu-btn" aria-label="Open menu" data-i18n-aria="aria.open_menu">
-                    <i class="fa-solid fa-bars"></i>
+            <button class="header-track-btn" id="track-btn">
+                <i class="fa-solid fa-map-location-dot"></i> <span data-i18n="header.track">Track</span>
+            </button>
+        </header>
+        
+        <!-- FLOATING GLASS BUTTONS (Movable & Beautiful) -->
+        <div class="floating-glass-buttons" id="floating-glass-buttons">
+            <!-- Button 1: AI Chatbot -->
+            <button class="glass-fab glass-fab-chat" id="glass-fab-chat" aria-label="Open AI Assistant" title="AI Assistant">
+                <i class="fa-solid fa-comments"></i>
+                <span class="glass-fab-label" data-i18n="floating.chat">Chat</span>
+            </button>
+            
+            <!-- Button 2: Settings Menu -->
+            <button class="glass-fab glass-fab-settings" id="glass-fab-settings" aria-label="Settings & Menu" title="Settings">
+                <i class="fa-solid fa-gear"></i>
+                <span class="glass-fab-label" data-i18n="floating.menu">Menu</span>
+            </button>
+            
+            <!-- Button 3: Quick Contact -->
+            <button class="glass-fab glass-fab-contact" id="glass-fab-contact" aria-label="Quick Contact" title="Contact Us">
+                <i class="fa-solid fa-headset"></i>
+                <span class="glass-fab-label" data-i18n="floating.help">Help</span>
+            </button>
+        </div>
+        
+        <!-- SETTINGS PANEL (Slide-in from right, contains all header items) -->
+        <div class="glass-settings-panel hidden" id="glass-settings-panel">
+            <div class="glass-panel-header">
+                <h3 data-i18n="settings.title">Settings & Menu</h3>
+                <button class="glass-panel-close" id="close-settings-panel" aria-label="Close">
+                    <i class="fa-solid fa-xmark"></i>
                 </button>
             </div>
+            <div class="glass-panel-content">
+                <!-- Locale Selector -->
+                <div class="glass-panel-section">
+                    <h4><i class="fa-solid fa-globe"></i> <span data-i18n="settings.language_currency">Language & Currency</span></h4>
+                    <button class="glass-panel-item" id="panel-locale-btn">
+                        <span class="locale-flag" id="panel-locale-flag"></span>
+                        <div class="locale-info">
+                            <span class="language-name" id="panel-locale-language"></span>
+                            <span class="country-name" id="panel-locale-country"></span>
+                        </div>
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </button>
+                </div>
+                
+                <!-- Theme Toggle -->
+                <div class="glass-panel-section">
+                    <h4><i class="fa-solid fa-palette"></i> <span data-i18n="settings.appearance">Appearance</span></h4>
+                    <button class="glass-panel-item theme-switch" id="panel-theme-toggle">
+                        <span id="theme-mode-text">Light Mode</span>
+                        <div class="theme-switch-icons">
+                            <i class="fas fa-sun"></i>
+                            <i class="fas fa-moon"></i>
+                        </div>
+                    </button>
+                </div>
+                
+                <!-- Account Actions -->
+                <div class="glass-panel-section" id="panel-user-section">
+                    <h4><i class="fa-solid fa-user"></i> <span data-i18n="settings.account">Account</span></h4>
+                    <div id="panel-user-info" style="display: none;">
+                        <div class="glass-panel-user">
+                            <div class="user-avatar" id="panel-user-avatar"></div>
+                            <span id="panel-user-name"></span>
+                        </div>
+                        <a href="#" class="glass-panel-item static-link" data-page="dashboard">
+                            <i class="fa-solid fa-table-columns"></i>
+                            <span data-i18n="mobile_menu.dashboard">Dashboard</span>
+                        </a>
+                        <a href="#" class="glass-panel-item static-link" data-page="address-book">
+                            <i class="fa-solid fa-address-book"></i>
+                            <span data-i18n="mobile_menu.address_book">Address Book</span>
+                        </a>
+                        <a href="#" class="glass-panel-item static-link" data-page="settings">
+                            <i class="fa-solid fa-gear"></i>
+                            <span data-i18n="mobile_menu.account_settings">Settings</span>
+                        </a>
+                        <button class="glass-panel-item glass-panel-logout" id="panel-logout-btn">
+                            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                            <span data-i18n="mobile_menu.logout">Log Out</span>
+                        </button>
+                    </div>
+                    <button class="glass-panel-item glass-panel-login" id="panel-login-btn" data-i18n="header.loginSignup">
+                        <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                        <span>Login / Sign Up</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- QUICK CONTACT PANEL -->
+        <div class="glass-contact-panel hidden" id="glass-contact-panel">
+            <div class="glass-panel-header">
+                <h3><i class="fa-solid fa-headset"></i> <span data-i18n="contact.title">Get Help Now</span></h3>
+                <button class="glass-panel-close" id="close-contact-panel" aria-label="Close">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+            <div class="glass-panel-content">
+                <p class="glass-panel-subtitle" data-i18n="contact.subtitle">Our team is here to help 24/7</p>
+                
+                <a href="https://wa.me/12513166847" class="glass-contact-btn glass-contact-whatsapp" target="_blank" rel="noopener">
+                    <i class="fa-brands fa-whatsapp"></i>
+                    <div>
+                        <strong>WhatsApp</strong>
+                        <span>+1 (251) 316-6847</span>
+                    </div>
+                </a>
+                
+                <a href="tel:+12513166847" class="glass-contact-btn glass-contact-phone">
+                    <i class="fa-solid fa-phone"></i>
+                    <div>
+                        <strong data-i18n="contact.call">Call Us</strong>
+                        <span>+1 (251) 316-6847</span>
+                    </div>
+                </a>
+                
+                <a href="mailto:vg@vcanresources.com" class="glass-contact-btn glass-contact-email">
+                    <i class="fa-solid fa-envelope"></i>
+                    <div>
+                        <strong data-i18n="contact.email">Email</strong>
+                        <span>vg@vcanresources.com</span>
+                    </div>
+                </a>
+                
+                <div class="glass-panel-divider"></div>
+                
+                <div class="glass-contact-hours">
+                    <i class="fa-solid fa-clock"></i>
+                    <div>
+                        <strong data-i18n="contact.hours">Business Hours</strong>
+                        <span data-i18n="contact.hours_detail">24/7 Support Available</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Backdrop for panels -->
+        <div class="glass-panel-backdrop hidden" id="glass-panel-backdrop"></div>
+        
+        <!-- LEGACY ELEMENTS (Hidden but kept for compatibility) -->
+        <div style="display: none;">
+            <div class="header-user-actions">
+                <button class="header-btn locale-header-btn" id="header-locale-btn">
+                    <span class="locale-flag" id="header-locale-flag"></span>
+                </button>
+                <button class="header-icon-btn theme-switch">
+                    <i class="fas fa-moon"></i>
+                    <i class="fas fa-sun"></i>
+                </button>
+                <div class="header-dropdown-container hidden" id="my-account-dropdown">
+                    <button class="header-btn" id="my-account-btn">
+                        <div class="user-avatar" id="user-avatar"></div>
+                        <span id="user-name-display"></span>
+                    </button>
+                    <div class="dropdown-menu">
+                        <a href="#" class="dropdown-item static-link" data-page="dashboard"><i class="fa-solid fa-table-columns"></i> Dashboard</a>
+                        <a href="#" class="dropdown-item" id="logout-btn"><i class="fa-solid fa-arrow-right-from-bracket"></i> Log Out</a>
+                    </div>
+                </div>
+                <button class="header-btn login" id="login-signup-btn">Login / Sign Up</button>
+            </div>
+        </div>
         </header>
         <div class="main-container">
             <aside class="sidebar" id="app-sidebar">

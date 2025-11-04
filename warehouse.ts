@@ -96,7 +96,7 @@ async function handleWarehouseSearch(e: Event) {
     try {
         if (!State.api) throw new Error("AI API not initialized.");
         const model = State.api.getGenerativeModel({ 
-            model: 'gemini-1.5-flash',
+            model: 'gemini-1.5-flash-8b',
             generationConfig: {
                 responseMimeType: 'application/json'
             }

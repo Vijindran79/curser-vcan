@@ -510,6 +510,7 @@ const RESTRICTED_KEYWORDS: { [key: string]: string[] } = {
 /**
  * Comprehensive compliance check for international shipping
  * Optimized for speed - runs synchronously without external API calls
+ * SMART: Automatically detects local vs international and skips unnecessary checks
  */
 export function checkCompliance(params: {
     originAddress: string;
@@ -523,6 +524,58 @@ export function checkCompliance(params: {
     const originCountry = detectCountry(params.originAddress);
     const destCountry = detectCountry(params.destinationAddress);
     
+    // SMART DETECTION: Check if this is a local delivery (same country)
+    const isLocalDelivery = originCountry === destCountry;
+    
+    console.log(`[COMPLIANCE] ${isLocalDelivery ? 'LOCAL' : 'INTERNATIONAL'} delivery detected: ${originCountry} → ${destCountry}`);
+    
+    // For local deliveries, perform minimal compliance checks
+    if (isLocalDelivery) {
+        const description = params.itemDescription.toLowerCase();
+        const prohibitedItems: string[] = [];
+        const warnings: string[] = [];
+        const errors: string[] = [];
+        
+        // Only check for universally prohibited items (drugs, weapons, explosives)
+        const criticalProhibited = ['drugs', 'weapons', 'explosives'];
+        for (const category of criticalProhibited) {
+            if (PROHIBITED_KEYWORDS[category]) {
+                for (const keyword of PROHIBITED_KEYWORDS[category]) {
+                    if (description.includes(keyword)) {
+                        prohibitedItems.push(category);
+                        errors.push(`${category} cannot be shipped domestically`);
+                        break;
+                    }
+                }
+            }
+        }
+        
+        return {
+            originCountry: originCountry || 'Unknown',
+            destinationCountry: destCountry || 'Unknown',
+            itemDescription: params.itemDescription,
+            hsCode: params.hsCode,
+            weight: params.weight,
+            value: params.value,
+            requiresPreInspection: false,
+            requiresCertificate: false,
+            prohibitedItems,
+            restrictedItems: [],
+            exportRestrictions: [],
+            importRestrictions: [],
+            exportTaxRate: 0,
+            importTaxRate: 0,
+            importDutyRate: 0,
+            cfrCost: 0,
+            xWorkCost: 0,
+            totalAdditionalCosts: 0,
+            requiredDocuments: [],
+            warnings,
+            errors
+        };
+    }
+    
+    // For INTERNATIONAL deliveries, perform full compliance check
     const originRegs = originCountry ? COUNTRY_REGULATIONS[originCountry] : null;
     const destRegs = destCountry ? COUNTRY_REGULATIONS[destCountry] : null;
     

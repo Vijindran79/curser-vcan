@@ -2,6 +2,7 @@
   "loading": {"authenticating": "Kimlik doğrulanıyor...", "loading": "Yükleniyor..."},
   "toast": {"pro_coming_soon": "Pro abonelik yakında geliyor! Sınırsız takip ve öncelikli destek için takipte kalın."},
   "header": {"track": "Takip et", "services": "Hizmetler", "help": "Yardım", "login": "Giriş / Kayıt"},
+  "floating": {"chat": "Sohbet", "menu": "Menü", "help": "Yardım"},
   "aria": {"change_locale": "Bölge ve dili değiştir", "toggle_theme": "Temayı değiştir", "close_auth_modal": "Kapat", "back": "Geri", "show_password": "Şifreyi göster", "hide_password": "Şifreyi gizle"},
   "sidebar": {"services": "Tüm hizmetler", "parcel": "Koli", "baggage": "Bagaj", "fcl": "Tam konteyner", "lcl": "Parsiyel yük", "airfreight": "Hava kargo", "vehicle": "Araç nakliyesi", "railway": "Demiryolu taşımacılığı", "inland": "İç nakliye", "bulk": "Dökme yük", "rivertug": "Nehir hizmetleri", "warehouse": "Depolama", "schedules": "Programlar", "ecommerce": "E-ticaret merkezi", "tradeFinance": "Ticaret finansmanı", "partner": "Ortak ol", "apiHub": "API Merkezi", "helpCenter": "Yardım merkezi"},
   "mobile_menu": {"menu": "Menü", "home": "Ana sayfa", "dashboard": "Panel", "address_book": "Adres defteri", "account_settings": "Ayarlar", "api_hub": "API Merkezi", "help": "Yardım", "region_language": "Bölge ve dil", "theme": "Tema", "logout": "Çıkış", "login": "Giriş"},

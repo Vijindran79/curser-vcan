@@ -2,6 +2,7 @@
   "loading": {"authenticating": "認証中...", "loading": "読み込み中..."},
   "toast": {"pro_coming_soon": "Pro 購読が間もなく開始されます！無制限の追跡と優先サポートをお楽しみに。"},
   "header": {"track": "追跡", "services": "サービス", "help": "ヘルプ", "login": "ログイン / 登録"},
+  "floating": {"chat": "チャット", "menu": "メニュー", "help": "ヘルプ"},
   "aria": {"change_locale": "地域と言語を変更", "toggle_theme": "テーマを切り替え", "close_auth_modal": "閉じる", "back": "戻る", "show_password": "パスワードを表示", "hide_password": "パスワードを隠す"},
   "sidebar": {"services": "全サービス", "parcel": "小包", "baggage": "手荷物", "fcl": "フルコンテナ", "lcl": "混載貨物", "airfreight": "航空貨物", "vehicle": "車両輸送", "railway": "鉄道輸送", "inland": "内陸輸送", "bulk": "バルク貨物", "rivertug": "河川サービス", "warehouse": "倉庫", "schedules": "スケジュール", "ecommerce": "Eコマースハブ", "tradeFinance": "貿易金融", "partner": "パートナーになる", "apiHub": "APIハブ", "helpCenter": "ヘルプセンター"},
   "mobile_menu": {"menu": "メニュー", "home": "ホーム", "dashboard": "ダッシュボード", "address_book": "アドレス帳", "account_settings": "設定", "api_hub": "APIハブ", "help": "ヘルプ", "region_language": "地域と言語", "theme": "テーマ", "logout": "ログアウト", "login": "ログイン"},

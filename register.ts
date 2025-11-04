@@ -209,7 +209,7 @@ async function handleAdvisorQuery(e: Event) {
     chatHistory.scrollTop = chatHistory.scrollHeight;
 
     if (conversationTurns >= MAX_CONVERSATION_TURNS) {
-        const supportMessage = `It seems your query is quite specific. For the best assistance, please start a general application and our experts will guide you, or contact them directly at <a href="mailto:support@vcanresources.com">support@vcanresources.com</a>.`;
+        const supportMessage = `It seems your query is quite specific. For the best assistance, please start a general application and our experts will guide you, or contact them directly at <a href="mailto:vg@vcanresources.com">vg@vcanresources.com</a>.`;
         thinkingIndicator.remove();
         const botMsg = document.createElement('div');
         botMsg.className = 'chat-message-tf advisor-msg';
@@ -231,7 +231,7 @@ async function handleAdvisorQuery(e: Event) {
 
     try {
         const model = State.api.getGenerativeModel({
-            model: 'gemini-1.5-flash',
+            model: 'gemini-1.5-flash-8b',
             generationConfig: {
                 responseMimeType: 'application/json',
                 responseSchema: aiResponseSchema
