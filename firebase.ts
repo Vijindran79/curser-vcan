@@ -33,6 +33,8 @@ export const firebaseConfig = {
   appId: "1:685756131515:web:55eb447560c628f12da19e"
 };
 
+console.log('[FIREBASE DEBUG] Firebase config:', firebaseConfig);
+
 // Geoapify API key for geolocation and map services
 export const GEOAPIFY_API_KEY = "b0b098c3980140a9a8f6895c34f1bb29";
 export const NVIDIA_API_KEY = "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";
@@ -48,29 +50,38 @@ function getFirebase(): any {
 
 // Initialize Firebase when available
 function initializeFirebaseIfReady(): any {
+    console.log('[FIREBASE DEBUG] Attempting to initialize Firebase');
     const firebase = getFirebase();
+    console.log('[FIREBASE DEBUG] Firebase from getFirebase():', firebase ? 'Available' : 'Null');
+    
     if (firebase) {
         try {
             // Check if already initialized
+            console.log('[FIREBASE DEBUG] Firebase apps array:', firebase.apps);
             if (!firebase.apps || firebase.apps.length === 0) {
+                console.log('[FIREBASE DEBUG] Initializing new Firebase app');
                 const app = firebase.initializeApp(firebaseConfig);
-                console.log('Firebase initialized successfully with project:', firebaseConfig.projectId);
+                console.log('[FIREBASE DEBUG] Firebase initialized successfully with project:', firebaseConfig.projectId);
                 return firebase;
             } else {
                 // Return existing app
                 const existingApp = firebase.apps[0];
-                console.log('Firebase already initialized with project:', existingApp.options?.projectId || firebaseConfig.projectId);
+                console.log('[FIREBASE DEBUG] Firebase already initialized with project:', existingApp.options?.projectId || firebaseConfig.projectId);
                 return firebase;
             }
         } catch (error: any) {
             // If already initialized, that's fine
             if (error.code === 'app/duplicate-app') {
-                console.log('Firebase already initialized');
+                console.log('[FIREBASE DEBUG] Firebase already initialized (duplicate app error)');
                 return firebase;
             }
-            console.error('Firebase initialization error:', error);
-            console.error('Firebase config used:', { projectId: firebaseConfig.projectId, authDomain: firebaseConfig.authDomain });
+            console.error('[FIREBASE DEBUG] Firebase initialization error:', error);
+            console.error('[FIREBASE DEBUG] Firebase config used:', { projectId: firebaseConfig.projectId, authDomain: firebaseConfig.authDomain });
+            console.error('[FIREBASE DEBUG] Error code:', error.code);
+            console.error('[FIREBASE DEBUG] Error message:', error.message);
         }
+    } else {
+        console.warn('[FIREBASE DEBUG] Firebase not available for initialization');
     }
     return firebase;
 }
@@ -119,38 +130,64 @@ if (typeof window !== 'undefined') {
 // Helper function to get auth instance (may retry if not ready)
 // This is useful when Firebase loads after module import
 export function getAuth() {
+    console.log('[FIREBASE DEBUG] getAuth() called');
+    
     // Check window.firebase directly in case it loaded after module initialization
     let fb = firebase;
+    console.log('[FIREBASE DEBUG] Current firebase variable:', fb ? 'Set' : 'Null');
+    
     if (!fb && typeof window !== 'undefined' && window.firebase) {
+        console.log('[FIREBASE DEBUG] Found window.firebase, using it');
         fb = window.firebase;
         firebase = fb;
         initializeFirebaseIfReady();
     }
+    
     if (!fb) {
+        console.log('[FIREBASE DEBUG] No firebase found, trying to initialize');
         fb = initializeFirebaseIfReady();
         if (fb) {
+            console.log('[FIREBASE DEBUG] Firebase initialized successfully');
             firebase = fb;
+        } else {
+            console.warn('[FIREBASE DEBUG] Failed to initialize Firebase');
         }
     }
-    return fb?.auth?.() || null;
+    
+    const authInstance = fb?.auth?.();
+    console.log('[FIREBASE DEBUG] Auth instance:', authInstance ? 'Created' : 'Null');
+    return authInstance;
 }
 
 // Helper function to get functions instance (may retry if not ready)
 export function getFunctions() {
+    console.log('[FIREBASE DEBUG] getFunctions() called');
+    
     // Check window.firebase directly in case it loaded after module initialization
     let fb = firebase;
+    console.log('[FIREBASE DEBUG] Current firebase variable:', fb ? 'Set' : 'Null');
+    
     if (!fb && typeof window !== 'undefined' && window.firebase) {
+        console.log('[FIREBASE DEBUG] Found window.firebase, using it');
         fb = window.firebase;
         firebase = fb;
         initializeFirebaseIfReady();
     }
+    
     if (!fb) {
+        console.log('[FIREBASE DEBUG] No firebase found, trying to initialize');
         fb = initializeFirebaseIfReady();
         if (fb) {
+            console.log('[FIREBASE DEBUG] Firebase initialized successfully');
             firebase = fb;
+        } else {
+            console.warn('[FIREBASE DEBUG] Failed to initialize Firebase');
         }
     }
-    return fb?.functions?.() || null;
+    
+    const functionsInstance = fb?.functions?.();
+    console.log('[FIREBASE DEBUG] Functions instance:', functionsInstance ? 'Created' : 'Null');
+    return functionsInstance;
 }
 
 // Export Firebase services with safety checks

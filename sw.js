@@ -1,9 +1,9 @@
 // Vcanship Service Worker - SEO & Performance Optimization
-// Version: 3.3.0 - Force cache invalidation for HS code auto-fill
+// Version: 3.4.0 - Improved i18n JSON file handling with better caching and error recovery
 
-const CACHE_NAME = 'vcanship-v3.3-seo';
-const STATIC_CACHE_NAME = 'vcanship-static-v3.3';
-const DYNAMIC_CACHE_NAME = 'vcanship-dynamic-v3.3';
+const CACHE_NAME = 'vcanship-v3.4-seo';
+const STATIC_CACHE_NAME = 'vcanship-static-v3.4';
+const DYNAMIC_CACHE_NAME = 'vcanship-dynamic-v3.4';
 
 // Critical files for SEO and performance
 const STATIC_FILES = [
@@ -19,7 +19,7 @@ const STATIC_FILES = [
   
   // Service landing pages for SEO
   '/parcel-delivery',
-  '/fcl-shipping', 
+  '/fcl-shipping',
   '/lcl-shipping',
   '/air-freight',
   '/vehicle-shipping',
@@ -35,7 +35,26 @@ const STATIC_FILES = [
   '/state.ts',
   '/api.ts',
   '/router.ts',
-  '/i18n.ts'
+  '/i18n.ts',
+  
+  // Locale files
+  '/locales/en.json',
+  '/locales/es.json',
+  '/locales/fr.json',
+  '/locales/de.json',
+  '/locales/it.json',
+  '/locales/pt.json',
+  '/locales/ru.json',
+  '/locales/ja.json',
+  '/locales/ko.json',
+  '/locales/zh.json',
+  '/locales/ar.json',
+  '/locales/hi.json',
+  '/locales/tr.json',
+  
+  // Critical i18n config files
+  '/locales.json',
+  '/languages.json'
 ];
 
 // URLs that should always be fetched fresh for SEO
@@ -49,20 +68,30 @@ const DYNAMIC_URLS = [
 
 // Install event - cache critical resources
 self.addEventListener('install', (event) => {
-  console.log('[SW] Installing Vcanship Service Worker v3.2.0');
+  console.log('[SW] Installing Vcanship Service Worker v3.4.0');
   
   event.waitUntil(
     caches.open(STATIC_CACHE_NAME)
       .then((cache) => {
-        console.log('[SW] Caching static files for SEO optimization');
-        return cache.addAll(STATIC_FILES);
+        console.log('[SW] Caching static files including i18n resources');
+        // Cache files one by one to handle failures gracefully
+        return Promise.allSettled(
+          STATIC_FILES.map(file => 
+            cache.add(file).catch(err => {
+              console.warn(`[SW] Failed to cache ${file}:`, err.message);
+              return null;
+            })
+          )
+        );
       })
       .then(() => {
-        console.log('[SW] Installation complete - SEO assets cached');
+        console.log('[SW] Installation complete - assets cached');
         return self.skipWaiting();
       })
       .catch((error) => {
         console.error('[SW] Installation failed:', error);
+        // Still skip waiting to activate new SW even if some files failed
+        return self.skipWaiting();
       })
   );
 });
@@ -105,6 +134,11 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
+  // Skip POST requests - they cannot be cached
+  if (request.method === 'POST') {
+    return;
+  }
+  
   // Handle different types of requests for optimal SEO
   if (url.pathname.endsWith('.html') || url.pathname === '/' || url.pathname.includes('/service/')) {
     // HTML pages - stale-while-revalidate for SEO freshness
@@ -112,6 +146,9 @@ self.addEventListener('fetch', (event) => {
   } else if (url.pathname.includes('/api/')) {
     // API requests - network first with offline fallback
     event.respondWith(handleAPIRequest(request));
+  } else if (url.pathname.endsWith('.json')) {
+    // JSON files - network first to ensure fresh data
+    event.respondWith(handleJSONRequest(request));
   } else if (url.pathname.match(/\.(css|js|tsx|ts)$/)) {
     // Static assets - cache first
     event.respondWith(handleStaticRequest(request));
@@ -256,6 +293,101 @@ async function handleImageRequest(request) {
       { headers: { 'Content-Type': 'image/svg+xml' } }
     );
   }
+}
+
+// JSON requests - network first with improved i18n locale file handling
+async function handleJSONRequest(request) {
+  const url = new URL(request.url);
+  const isLocaleFile = url.pathname.includes('/locales/') && url.pathname.endsWith('.json');
+  const isI18nConfigFile = url.pathname.endsWith('locales.json') || url.pathname.endsWith('languages.json');
+  
+  try {
+    // For critical i18n files, try network first but with timeout
+    if (isLocaleFile || isI18nConfigFile) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3s timeout
+      
+      try {
+        const response = await fetch(request, { signal: controller.signal });
+        clearTimeout(timeoutId);
+        
+        if (response && response.status === 200) {
+          const cache = await caches.open(STATIC_CACHE_NAME); // Use static cache for locale files
+          cache.put(request, response.clone());
+          console.log('[SW] Cached i18n file:', url.pathname);
+          return response;
+        }
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        console.log('[SW] i18n file fetch failed/timeout, checking cache:', url.pathname);
+        // Continue to cache check below
+      }
+    } else {
+      // Non-i18n JSON files - standard network first
+      const response = await fetch(request);
+      
+      if (response && response.status === 200) {
+        const contentType = response.headers.get('content-type');
+        if (contentType && contentType.includes('application/json')) {
+          const cache = await caches.open(DYNAMIC_CACHE_NAME);
+          cache.put(request, response.clone());
+          return response;
+        } else {
+          console.warn('[SW] JSON file served with wrong content-type:', contentType);
+          return response;
+        }
+      }
+      
+      return response;
+    }
+  } catch (error) {
+    console.log('[SW] JSON request error:', error.message, url.pathname);
+  }
+  
+  // Fallback to cache for all JSON requests
+  try {
+    const staticCache = await caches.open(STATIC_CACHE_NAME);
+    let cachedResponse = await staticCache.match(request);
+    
+    if (!cachedResponse) {
+      const dynamicCache = await caches.open(DYNAMIC_CACHE_NAME);
+      cachedResponse = await dynamicCache.match(request);
+    }
+    
+    if (cachedResponse) {
+      console.log('[SW] Serving cached JSON:', url.pathname);
+      return cachedResponse;
+    }
+  } catch (cacheError) {
+    console.error('[SW] Cache access error:', cacheError);
+  }
+  
+  // Final fallback: return empty JSON for locale files, error for others
+  if (isLocaleFile) {
+    console.warn('[SW] Returning empty translation object for:', url.pathname);
+    return new Response('{}', {
+      status: 200,
+      headers: { 
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store' // Don't cache empty responses
+      }
+    });
+  } else if (isI18nConfigFile) {
+    console.warn('[SW] Returning empty array for:', url.pathname);
+    return new Response('[]', {
+      status: 200,
+      headers: { 
+        'Content-Type': 'application/json',
+        'Cache-Control': 'no-store'
+      }
+    });
+  }
+  
+  // For other JSON files, return error
+  return new Response(JSON.stringify({ error: 'JSON file not available' }), {
+    status: 404,
+    headers: { 'Content-Type': 'application/json' }
+  });
 }
 
 // Generic requests - network first

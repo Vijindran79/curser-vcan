@@ -136,7 +136,9 @@ function populateMobileMenu() {
 
     contentContainer.innerHTML = `
         <div class="mobile-menu-header">
-            <a href="#" class="logo static-link" data-page="landing"><strong>Vcan</strong><span>Ship</span></a>
+            <a href="#" class="logo static-link" data-page="landing" aria-label="VCanship Home">
+                <img src="./logo.svg" alt="VCanship Logo" class="logo-img">
+            </a>
             <button class="header-icon-btn" id="close-mobile-menu-btn" aria-label="Close menu" data-i18n-aria="aria.close_menu">
                 <i class="fa-solid fa-times"></i>
             </button>
@@ -169,13 +171,25 @@ function populateMobileMenu() {
 }
 
 function initializeSimpleChatFab() {
+    console.log('[FAB DEBUG] Starting simple chat FAB initialization');
+    
     // Simple Chat FAB - just opens chat
     const chatBtn = document.getElementById('fab-chat-btn') as HTMLButtonElement;
-    if (!chatBtn) return;
+    console.log('[FAB DEBUG] Chat FAB button element:', chatBtn ? 'Found' : 'Not found');
+    
+    if (!chatBtn) {
+        console.error('[FAB DEBUG] Chat FAB button not found, checking if container exists');
+        const container = document.getElementById('simple-chat-fab');
+        console.log('[FAB DEBUG] Simple chat FAB container:', container ? 'Found' : 'Not found');
+        return;
+    }
     
     chatBtn.addEventListener('click', () => {
+        console.log('[FAB DEBUG] Chat FAB clicked, opening chat window');
         openChatWindow();
     });
+    
+    console.log('[FAB DEBUG] Simple chat FAB initialization complete');
 }
 
 
@@ -388,6 +402,7 @@ async function initializeCoreApp() {
         // Now that translations are ready, initialize the rest of the app.
         initializeStaticPages();
         initializeSidebar();
+        console.log('[APP DEBUG] Initializing simple chat FAB');
         initializeSimpleChatFab(); // Simple chat FAB
         initializeSettings(); // Keep for potential non-mobile settings functionality
         initializeDashboard();
@@ -510,13 +525,25 @@ function initializeHeaderAutoHide() {
 }
 
 function initializeFloatingFabEnhancements() {
+  console.log('[FAB DEBUG] Starting floating FAB initialization');
+  
   const fab = document.getElementById('main-fab-toggle') as HTMLButtonElement | null;
-  if (!fab) return;
+  console.log('[FAB DEBUG] Main FAB element:', fab ? 'Found' : 'Not found');
+  
+  if (!fab) {
+    console.error('[FAB DEBUG] Main FAB element not found, aborting initialization');
+    return;
+  }
+  
   fab.classList.add('fab-glass', 'fab-draggable');
+  console.log('[FAB DEBUG] Added CSS classes to FAB');
 
   // Create quick menu once
   let menu = document.getElementById('fab-quick-menu') as HTMLElement | null;
+  console.log('[FAB DEBUG] Quick menu element:', menu ? 'Found' : 'Not found');
+  
   if (!menu) {
+    console.log('[FAB DEBUG] Creating new quick menu element');
     menu = document.createElement('div');
     menu.id = 'fab-quick-menu';
     menu.className = 'fab-quick-menu';
@@ -536,6 +563,7 @@ function initializeFloatingFabEnhancements() {
       </div>
     `;
     document.body.appendChild(menu);
+    console.log('[FAB DEBUG] Quick menu created and appended to body');
   }
 
   const toggleMenu = () => {
@@ -615,12 +643,17 @@ function initializeFloatingFabEnhancements() {
 
 // Hook into app init
 (function attachHeaderFabEnhancements(){
+  console.log('[FAB DEBUG] Attaching header FAB enhancements');
+  
   if (document.readyState === 'loading') {
+    console.log('[FAB DEBUG] Document still loading, waiting for DOMContentLoaded');
     document.addEventListener('DOMContentLoaded', () => {
+      console.log('[FAB DEBUG] DOM loaded, initializing FAB enhancements');
       initializeHeaderAutoHide();
       initializeFloatingFabEnhancements();
     });
   } else {
+    console.log('[FAB DEBUG] Document already loaded, initializing FAB enhancements immediately');
     initializeHeaderAutoHide();
     initializeFloatingFabEnhancements();
   }
