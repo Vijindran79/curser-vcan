@@ -1,0 +1,1876 @@
+// VCANSHIP PARCEL DELIVERY - ENHANCED VERSION WITH ALL FEATURES
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { State, setState, type Quote, type Address, resetParcelState, type Service } from './state';
+import { getHsCodeSuggestions, checkAndDecrementLookup } from './api';
+import { showToast, switchPage, toggleLoading } from './ui';
+import { t } from './i18n';
+import { MARKUP_CONFIG } from './pricing';
+import { SchemaType } from '@google/generative-ai';
+import { checkCompliance, type ComplianceCheck } from './compliance';
+import { getLogisticsProviderLogo } from './utils';
+
+// TYPES
+interface ParcelFormData {
+    serviceType: 'pickup' | 'dropoff';
+    originAddress: string;
+    destinationAddress: string;
+    parcelType: string;
+    weight: number;
+    length?: number;
+    width?: number;
+    height?: number;
+    sendDay: 'weekday' | 'saturday' | 'sunday';
+    itemDescription: string;
+    hsCode?: string;
+    documents: File[];
+    savedAddressId?: string;
+}
+
+let currentStep = 1;
+const TOTAL_STEPS = 6;
+let formData: Partial<ParcelFormData> = {};
+let allQuotes: Quote[] = [];
+let dropoffLocations: any[] = [];
+let usedApiQuotes = false; // Track if we successfully got quotes from API
+let originAutocomplete: any = null;
+let destAutocomplete: any = null;
+
+// Google Maps Types (inline declarations)
+declare global {
+    interface Window {
+        googleMapsLoaded?: boolean;
+        google?: any;
+        initGoogleMaps?: () => void;
+    }
+    const google: any;
+}
+
+// STEP 1: Service Type Selection
+function renderStep1(): string {
+    return `
+        <div class="step-content">
+            <h3>How would you like to send your parcel?</h3>
+            <p class="subtitle">Choose the most convenient option for you</p>
+            
+            <div class="service-type-selector" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 2rem;">
+                <button type="button" 
+                    class="service-type-card${formData.serviceType === 'pickup' ? ' selected' : ''}" 
+                    data-type="pickup"
+                    ${formData.serviceType === 'pickup' ? 'style="border-color: #f97316 !important; box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.3) !important; background-color: #FFF7ED !important;"' : ''}>
+                    <div class="service-icon">
+                        <i class="fa-solid fa-house"></i>
+                    </div>
+                    <h4>Home Pickup</h4>
+                    <p>We collect from your door</p>
+                    <span class="badge">Free pickup</span>
+                </button>
+                
+                <button type="button" 
+                    class="service-type-card${formData.serviceType === 'dropoff' ? ' selected' : ''}" 
+                    data-type="dropoff"
+                    ${formData.serviceType === 'dropoff' ? 'style="border-color: #f97316 !important; box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.3) !important; background-color: #FFF7ED !important;"' : ''}>
+                    <div class="service-icon">
+                        <i class="fa-solid fa-location-dot"></i>
+                    </div>
+                    <h4>Drop-off Point</h4>
+                    <p>Take to nearest location</p>
+                    <span class="badge">Save up to 20%</span>
+                </button>
+            </div>
+        </div>
+    `;
+}
+
+// STEP 2: Address Entry with Google Places Autocomplete
+function renderStep2(): string {
+    return `
+        <div class="step-content">
+            <h3>Where is your parcel going?</h3>
+            <p class="subtitle">Enter addresses or postcodes</p>
+            
+            <div class="form-section">
+                <div class="input-wrapper">
+                    <label for="origin-address">
+                        <i class="fa-solid fa-location-dot"></i> 
+                        ${formData.serviceType === 'pickup' ? 'Pickup Address' : 'Your Address'}
+                    </label>
+                    <input 
+                        type="text" 
+                        id="origin-address" 
+                        placeholder="Enter address or postcode..." 
+                        value="${formData.originAddress || ''}"
+                        autocomplete="off"
+                        required
+                    />
+                    <small class="helper-text">Start typing for suggestions</small>
+                </div>
+                
+                    <div class="input-wrapper">
+                    <label for="destination-address">
+                        <i class="fa-solid fa-location-crosshairs"></i> 
+                        Destination Address
+                    </label>
+                    <input 
+                        type="text" 
+                        id="destination-address" 
+                        placeholder="Enter address or postcode..." 
+                        value="${formData.destinationAddress || ''}"
+                        autocomplete="off"
+                        required
+                    />
+                    <small class="helper-text">Start typing for suggestions</small>
+                </div>
+                
+                <div id="address-map-preview" class="map-preview hidden">
+                    <p class="helper-text">📍 Address validated</p>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// STEP 3: Parcel Details with Type Selection
+function renderStep3(): string {
+    const parcelTypes = [
+        { value: 'document', label: 'Document', icon: 'fa-file', desc: 'Letters, papers' },
+        { value: 'small-parcel', label: 'Small Parcel', icon: 'fa-box', desc: 'Up to 2kg' },
+        { value: 'medium-parcel', label: 'Medium Parcel', icon: 'fa-boxes-stacked', desc: '2-10kg' },
+        { value: 'large-parcel', label: 'Large Parcel', icon: 'fa-box-open', desc: '10-30kg' },
+        { value: 'bulky', label: 'Bulky Item', icon: 'fa-couch', desc: 'Furniture, large items' },
+        { value: 'pallet', label: 'Pallet', icon: 'fa-pallet', desc: 'Multiple boxes' },
+        { value: 'breakbulk', label: 'Break Bulk', icon: 'fa-truck-loading', desc: 'Oversized cargo' }
+    ];
+    
+    return `
+        <div class="step-content">
+            <h3>What are you sending?</h3>
+            <p class="subtitle">Tell us about your parcel</p>
+            
+            <div class="parcel-type-grid">
+                ${parcelTypes.map(type => `
+                    <button type="button" class="parcel-type-card ${formData.parcelType === type.value ? 'selected' : ''}" data-value="${type.value}">
+                        <i class="fa-solid ${type.icon}"></i>
+                        <strong>${type.label}</strong>
+                        <small>${type.desc}</small>
+                    </button>
+                `).join('')}
+            </div>
+            
+            <div class="form-section two-column" style="margin-top: 2rem;">
+                <div class="input-wrapper">
+                    <label for="parcel-weight">
+                        Weight (kg) <span class="required">*</span>
+                    </label>
+                    <input 
+                        type="number" 
+                        id="parcel-weight" 
+                        placeholder="e.g., 2.5" 
+                        value="${formData.weight || ''}"
+                        min="0.1"
+                        step="0.1"
+                        inputmode="decimal"
+                        required
+                    />
+                    <small class="helper-text tip">💡 Accurate weight helps us find the best rates</small>
+                </div>
+                
+                <div class="input-wrapper">
+                    <label for="item-description">
+                        What's inside? <span class="required">*</span>
+                    </label>
+                    <input 
+                        type="text" 
+                        id="item-description" 
+                        placeholder="e.g., Books, Clothes, Electronics" 
+                        value="${formData.itemDescription || ''}"
+                        required
+                    />
+                    <small class="helper-text">This helps with customs and compliance</small>
+                </div>
+            </div>
+            
+            <div class="expandable-section">
+                <button type="button" class="expand-toggle" id="dimensions-toggle">
+                    <i class="fa-solid fa-chevron-right"></i>
+                    Add Dimensions (optional but recommended)
+                </button>
+                <div class="expandable-content hidden" id="dimensions-content">
+                    <div class="form-section three-column">
+                        <div class="input-wrapper">
+                            <label for="parcel-length">Length (cm)</label>
+                            <input type="number" id="parcel-length" placeholder="30" value="${formData.length || ''}" min="1" step="1" inputmode="numeric">
+                        </div>
+                        <div class="input-wrapper">
+                            <label for="parcel-width">Width (cm)</label>
+                            <input type="number" id="parcel-width" placeholder="20" value="${formData.width || ''}" min="1" step="1" inputmode="numeric">
+                        </div>
+                        <div class="input-wrapper">
+                            <label for="parcel-height">Height (cm)</label>
+                            <input type="number" id="parcel-height" placeholder="15" value="${formData.height || ''}" min="1" step="1" inputmode="numeric">
+                        </div>
+                    </div>
+                    <div class="info-box">
+                        <i class="fa-solid fa-lightbulb"></i>
+                        <p><strong>Why dimensions matter:</strong> Large but light items may cost more due to volumetric weight.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+
+// STEP 4: Send Day & Compliance
+function renderStep4(): string {
+    return `
+        <div class="step-content">
+            <h3>When would you like to send?</h3>
+            
+            <div class="send-day-selector">
+                <button type="button" class="send-day-card ${formData.sendDay === 'weekday' ? 'selected' : ''}" data-day="weekday">
+                    <i class="fa-solid fa-calendar-days"></i>
+                    <strong>Weekday</strong>
+                    <small>Mon-Fri</small>
+                    <span class="price-badge">Standard rate</span>
+                </button>
+                <button type="button" class="send-day-card ${formData.sendDay === 'saturday' ? 'selected' : ''}" data-day="saturday">
+                    <i class="fa-solid fa-calendar-week"></i>
+                    <strong>Saturday</strong>
+                    <small>Weekend service</small>
+                    <span class="price-badge">+${State.currentCurrency.symbol}5.00</span>
+                </button>
+                <button type="button" class="send-day-card ${formData.sendDay === 'sunday' ? 'selected' : ''}" data-day="sunday">
+                    <i class="fa-solid fa-calendar-day"></i>
+                    <strong>Sunday</strong>
+                    <small>Premium service</small>
+                    <span class="price-badge">+${State.currentCurrency.symbol}8.00</span>
+                </button>
+            </div>
+            
+            <div class="compliance-section">
+                <h4><i class="fa-solid fa-shield-halved"></i> Compliance & HS Code</h4>
+                <div class="hs-code-generator">
+                    <div class="input-wrapper">
+                        <label for="hs-code-display">HS Code (Harmonized System)</label>
+                        <input 
+                            type="text" 
+                            id="hs-code-display" 
+                            value="${formData.hsCode || 'Click to generate'}"
+                            readonly
+                        />
+                        <button type="button" id="generate-hs-code-btn" class="secondary-btn" style="margin-top: 0.5rem;">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i> 
+                            Auto-Generate HS Code
+                        </button>
+                        <small class="helper-text" id="hs-code-helper">
+                            <span id="hs-code-local-text">Optional: Recommended for accurate customs classification</span>
+                            <span id="hs-code-international-text" style="display: none; color: var(--primary-orange); font-weight: 600;">Required for international shipments & customs clearance</span>
+                        </small>
+                    </div>
+                </div>
+                
+                <div class="compliance-tips-card">
+                    <h5><i class="fa-solid fa-info-circle"></i> Packing Guidelines</h5>
+                    <ul>
+                        <li>✓ Use sturdy packaging with adequate padding</li>
+                        <li>✓ Seal all edges with strong tape</li>
+                        <li>✓ Label fragile items clearly</li>
+                        <li>⚠️ Check prohibited items list</li>
+                    </ul>
+                    <button type="button" class="link-btn" id="view-prohibited-items-btn">View Prohibited Items</button>
+                </div>
+                
+                <div id="compliance-alerts"></div>
+            </div>
+            
+            <div class="document-upload-section">
+                <h4><i class="fa-solid fa-file-arrow-up"></i> Supporting Documents (Optional)</h4>
+                <p class="helper-text">Upload invoices, customs forms, insurance documents, etc.</p>
+                <div class="file-upload-area" id="document-upload-area">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <p>Drag & drop files or click to upload</p>
+                    <small>PDF, JPG, PNG - Max 5MB each</small>
+                    <input type="file" id="document-upload-input" multiple accept=".pdf,.jpg,.jpeg,.png" hidden>
+                </div>
+                <div id="uploaded-files-list"></div>
+            </div>
+        </div>
+    `;
+}
+
+// STEP 5: Review & Get Quotes
+function renderStep5(): string {
+    return `
+        <div class="step-content">
+            <h3>Review Your Details</h3>
+            <p class="subtitle">Make sure everything is correct before getting quotes</p>
+            
+            <div class="review-summary-card">
+                <div class="review-section">
+                    <h4><i class="fa-solid fa-route"></i> Route</h4>
+                    <div class="review-item">
+                        <span>From:</span>
+                        <strong>${formData.originAddress || 'Not set'}</strong>
+                        <button type="button" class="edit-btn" data-step="2"><i class="fa-solid fa-edit"></i></button>
+                    </div>
+                    <div class="review-item">
+                        <span>To:</span>
+                        <strong>${formData.destinationAddress || 'Not set'}</strong>
+                        <button type="button" class="edit-btn" data-step="2"><i class="fa-solid fa-edit"></i></button>
+                    </div>
+                    <div class="review-item">
+                        <span>Service:</span>
+                        <strong>${formData.serviceType === 'pickup' ? 'Home Pickup' : 'Drop-off'}</strong>
+                        <button type="button" class="edit-btn" data-step="1"><i class="fa-solid fa-edit"></i></button>
+                    </div>
+                </div>
+                
+                <div class="review-section">
+                    <h4><i class="fa-solid fa-box"></i> Parcel Details</h4>
+                    <div class="review-item">
+                        <span>Type:</span>
+                        <strong>${formData.parcelType || 'Not set'}</strong>
+                        <button type="button" class="edit-btn" data-step="3"><i class="fa-solid fa-edit"></i></button>
+                    </div>
+                    <div class="review-item">
+                        <span>Weight:</span>
+                        <strong>${formData.weight || '0'} kg</strong>
+                        <button type="button" class="edit-btn" data-step="3"><i class="fa-solid fa-edit"></i></button>
+                    </div>
+                    ${formData.length ? `
+                        <div class="review-item">
+                            <span>Dimensions:</span>
+                            <strong>${formData.length} × ${formData.width} × ${formData.height} cm</strong>
+                            <button type="button" class="edit-btn" data-step="3"><i class="fa-solid fa-edit"></i></button>
+                        </div>
+                    ` : ''}
+                    <div class="review-item">
+                        <span>Contents:</span>
+                        <strong>${formData.itemDescription || 'Not specified'}</strong>
+                        <button type="button" class="edit-btn" data-step="3"><i class="fa-solid fa-edit"></i></button>
+                    </div>
+                </div>
+                
+                <div class="review-section">
+                    <h4><i class="fa-solid fa-calendar"></i> Shipping Details</h4>
+                    <div class="review-item">
+                        <span>Send Day:</span>
+                        <strong>${formData.sendDay === 'weekday' ? 'Weekday' : formData.sendDay === 'saturday' ? 'Saturday (+£5)' : 'Sunday (+£8)'}</strong>
+                        <button type="button" class="edit-btn" data-step="4"><i class="fa-solid fa-edit"></i></button>
+                    </div>
+                    ${formData.hsCode ? `
+                        <div class="review-item">
+                            <span>HS Code:</span>
+                            <strong>${formData.hsCode}</strong>
+                            <button type="button" class="edit-btn" data-step="4"><i class="fa-solid fa-edit"></i></button>
+                        </div>
+                    ` : ''}
+                    ${formData.documents && formData.documents.length > 0 ? `
+                        <div class="review-item">
+                            <span>Documents:</span>
+                            <strong>${formData.documents.length} file(s) attached</strong>
+                            <button type="button" class="edit-btn" data-step="4"><i class="fa-solid fa-edit"></i></button>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+            
+            <div class="compliance-check-status">
+                <div class="status-item success">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <span>All details validated</span>
+                </div>
+                <div class="status-item success">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <span>Ready for quotes</span>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// STEP 6: Quotes & Selection
+function renderStep6(): string {
+    if (allQuotes.length === 0) {
+        return `
+            <div class="step-content">
+                <div class="loading-state">
+                    <div class="spinner"></div>
+                    <h3>Finding the best rates for you...</h3>
+                    <p>Comparing prices from multiple carriers</p>
+                </div>
+            </div>
+        `;
+    }
+    
+    return `
+        <div class="step-content">
+            <h3>Choose Your Shipping Option</h3>
+            <p class="subtitle">Sorted by best value</p>
+            
+            <div class="quotes-grid">
+                ${allQuotes.map((quote, idx) => `
+                    <div class="quote-card ${idx === 0 ? 'recommended' : ''}" data-quote-id="${idx}">
+                        ${idx === 0 ? '<span class="recommended-badge">⭐ Best Value</span>' : ''}
+                        <div class="quote-header">
+                            <div class="carrier-logo-fallback">${getCarrierIconHtml(quote.carrierName)}</div>
+                            <div>
+                                <h4>${quote.carrierName}</h4>
+                                <p>${quote.carrierType}</p>
+                            </div>
+                        </div>
+                        <div class="quote-price">
+                            <span class="currency">${State.currentCurrency.symbol}</span>
+                            <span class="amount">${quote.totalCost.toFixed(2)}</span>
+                        </div>
+                        <div class="quote-features">
+                            <div><i class="fa-solid fa-clock"></i> ${quote.estimatedTransitTime}</div>
+                            <div><i class="fa-solid fa-shield"></i> Tracked delivery</div>
+                            <div><i class="fa-solid fa-box"></i> Up to 30kg</div>
+                        </div>
+                        <button type="button" class="select-quote-btn main-submit-btn" data-quote-id="${idx}">
+                            Select & Continue
+                        </button>
+                    </div>
+                `).join('')}
+            </div>
+            
+            <div id="email-inquiry-form-container"></div>
+        </div>
+    `;
+}
+
+// Add function to render email form in step 6
+async function renderEmailFormInStep6() {
+    try {
+        const container = document.getElementById('email-inquiry-form-container');
+        if (container && allQuotes.length > 0) {
+            const { renderEmailInquiryForm, attachEmailInquiryListeners } = await import('./email-inquiry-form');
+            container.innerHTML = renderEmailInquiryForm('parcel', allQuotes, {
+                origin: formData.originAddress,
+                destination: formData.destinationAddress,
+                weight: formData.weight,
+                parcelType: formData.parcelType,
+                serviceType: formData.serviceType
+            });
+            attachEmailInquiryListeners('parcel', allQuotes, {
+                origin: formData.originAddress,
+                destination: formData.destinationAddress,
+                weight: formData.weight,
+                parcelType: formData.parcelType,
+                serviceType: formData.serviceType
+            });
+        }
+    } catch (error) {
+        // Email form is optional - fail silently
+    }
+}
+
+// MAIN WIZARD RENDERER
+function renderWizard(): string {
+    const progress = (currentStep / TOTAL_STEPS) * 100;
+    
+    return `
+        <div class="parcel-wizard-container">
+            <button class="back-btn static-link" data-page="landing">
+                <i class="fa-solid fa-arrow-left"></i> Back to Services
+            </button>
+            
+            <div class="wizard-header">
+                <h2>Send a Parcel</h2>
+                <div class="step-indicator">
+                    ${Array.from({ length: TOTAL_STEPS }, (_, i) => {
+                        const stepNum = i + 1;
+                        const isCompleted = currentStep > stepNum;
+                        const isActive = currentStep === stepNum;
+                        const isPending = currentStep < stepNum;
+                        
+                        return `
+                            <div class="step-dot-wrapper">
+                                <div class="step-dot ${isCompleted ? 'completed' : isActive ? 'active' : 'pending'}" data-step="${stepNum}">
+                                    ${isCompleted ? '<i class="fa-solid fa-check"></i>' : stepNum}
+                                </div>
+                                ${i < TOTAL_STEPS - 1 ? '<div class="step-connector"></div>' : ''}
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: ${progress}%"></div>
+                </div>
+                <p class="step-label">Step ${currentStep} of ${TOTAL_STEPS}</p>
+            </div>
+            
+            <form id="parcel-wizard-form" novalidate>
+                ${currentStep === 1 ? renderStep1() : ''}
+                ${currentStep === 2 ? renderStep2() : ''}
+                ${currentStep === 3 ? renderStep3() : ''}
+                ${currentStep === 4 ? renderStep4() : ''}
+                ${currentStep === 5 ? renderStep5() : ''}
+                ${currentStep === 6 ? renderStep6() : ''}
+                
+                <div class="wizard-actions">
+                    ${currentStep > 1 ? '<button type="button" id="prev-step-btn" class="secondary-btn"><i class="fa-solid fa-arrow-left"></i> Back</button>' : ''}
+                    ${currentStep < 6 ? '<button type="button" id="next-step-btn" class="main-submit-btn">Next <i class="fa-solid fa-arrow-right"></i></button>' : ''}
+                </div>
+            </form>
+        </div>
+    `;
+}
+
+// NAVIGATION & VALIDATION
+function validateCurrentStep(): boolean {
+    switch (currentStep) {
+        case 1:
+            if (!formData.serviceType) {
+                showToast('Please select a service type', 'warning');
+                return false;
+            }
+            return true;
+        case 2:
+            // Read current values from DOM to catch unsaved changes
+            const page2 = document.getElementById('page-parcel');
+            if (!page2) {
+                return false;
+            }
+            
+            const originInput = page2.querySelector('#origin-address') as HTMLInputElement;
+            const destInput = page2.querySelector('#destination-address') as HTMLInputElement;
+            
+            if (!originInput || !destInput) {
+                showToast('Address fields not found. Please refresh the page.', 'error');
+                return false;
+            }
+            
+            const originAddress = originInput.value?.trim() || formData.originAddress?.trim() || '';
+            const destinationAddress = destInput.value?.trim() || formData.destinationAddress?.trim() || '';
+            
+            // Update formData
+            if (originAddress) formData.originAddress = originAddress;
+            if (destinationAddress) formData.destinationAddress = destinationAddress;
+            
+            // Basic length validation
+            if (!originAddress || originAddress.length < 10) {
+                showToast('Please enter a complete pickup address (street address with city/state required)', 'error');
+                originInput.focus();
+                originInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return false;
+            }
+            if (!destinationAddress || destinationAddress.length < 10) {
+                showToast('Please enter a complete destination address (street address with city/state required)', 'error');
+                destInput.focus();
+                destInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return false;
+            }
+            
+            // Validate address format - must contain street address and city/state/country
+            // Check for common address components (numbers for street, city names, state/country codes)
+            const addressPattern = /.*\d+.*/; // Must contain at least one number (street number)
+            const cityPattern = /.*[A-Za-z]{3,}.*/; // Must contain at least one word with 3+ letters (city name)
+            
+            if (!addressPattern.test(originAddress)) {
+                showToast('Invalid pickup address format. Please include street number and address.', 'error');
+                originInput.focus();
+                originInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return false;
+            }
+            if (!cityPattern.test(originAddress)) {
+                showToast('Invalid pickup address format. Please include city name.', 'error');
+                originInput.focus();
+                originInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return false;
+            }
+            
+            if (!addressPattern.test(destinationAddress)) {
+                showToast('Invalid destination address format. Please include street number and address.', 'error');
+                destInput.focus();
+                destInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return false;
+            }
+            if (!cityPattern.test(destinationAddress)) {
+                showToast('Invalid destination address format. Please include city name.', 'error');
+                destInput.focus();
+                destInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return false;
+            }
+            
+            // Check if addresses are too similar (likely wrong)
+            if (originAddress.toLowerCase() === destinationAddress.toLowerCase()) {
+                showToast('Pickup and destination addresses cannot be the same', 'error');
+                originInput.focus();
+                originInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return false;
+            }
+            
+            return true;
+        case 3:
+            // Read current values from DOM to catch unsaved changes
+            const page = document.getElementById('page-parcel');
+            if (!page) return false;
+            
+            // Get parcel type from selected card or formData
+            const selectedCard = page.querySelector('.parcel-type-card.selected') as HTMLElement;
+            const parcelType = selectedCard?.dataset.value || formData.parcelType || '';
+            
+            const weightInput = page.querySelector('#parcel-weight') as HTMLInputElement;
+            const descInput = page.querySelector('#item-description') as HTMLInputElement;
+            
+            const weightStr = weightInput?.value?.trim() || '';
+            const weight = weightStr ? parseFloat(weightStr) : formData.weight || 0;
+            const itemDescription = descInput?.value?.trim() || formData.itemDescription?.trim() || '';
+            
+            // Update formData with current values BEFORE validation
+            if (parcelType) formData.parcelType = parcelType;
+            if (weight && weight > 0) formData.weight = weight;
+            if (itemDescription) formData.itemDescription = itemDescription;
+            
+            // Validation with clear error messages
+            if (!parcelType) {
+                showToast('Please select a parcel type', 'warning');
+                // Scroll to parcel type cards
+                const parcelTypeSection = page.querySelector('.parcel-type-selector');
+                if (parcelTypeSection) {
+                    parcelTypeSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                return false;
+            }
+            if (!weightStr || !weight || weight <= 0 || isNaN(weight)) {
+                showToast('Please enter a valid weight (must be greater than 0)', 'warning');
+                weightInput?.focus();
+                weightInput?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return false;
+            }
+            if (!itemDescription) {
+                showToast('Please enter item description', 'warning');
+                descInput?.focus();
+                descInput?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return false;
+            }
+            
+            // Check for prohibited items BEFORE allowing progression
+            const description = itemDescription.toLowerCase();
+            const prohibitedKeywords: { [key: string]: { severity: 'error' | 'warning', message: string } } = {
+                'perfume': { severity: 'error', message: 'Perfume contains flammable substances and alcohol. Cannot be shipped via standard parcel service. Please contact support for special handling.' },
+                'cologne': { severity: 'error', message: 'Cologne contains flammable substances and alcohol. Cannot be shipped via standard parcel service. Please contact support for special handling.' },
+                'fragrance': { severity: 'error', message: 'Fragrances contain flammable substances. Cannot be shipped via standard parcel service. Please contact support for special handling.' },
+                'battery': { severity: 'error', message: 'Batteries are dangerous goods and require special handling, documentation, and carrier approval. Cannot proceed without proper documentation.' },
+                'batteries': { severity: 'error', message: 'Batteries are dangerous goods and require special handling, documentation, and carrier approval. Cannot proceed without proper documentation.' },
+                'lithium': { severity: 'error', message: 'Lithium batteries are dangerous goods and require special handling, documentation, and carrier approval. Cannot proceed without proper documentation.' },
+                'li-ion': { severity: 'error', message: 'Lithium-ion batteries are dangerous goods and require special handling, documentation, and carrier approval. Cannot proceed without proper documentation.' },
+                'li-poly': { severity: 'error', message: 'Lithium-polymer batteries are dangerous goods and require special handling, documentation, and carrier approval. Cannot proceed without proper documentation.' }
+            };
+            
+            for (const [keyword, info] of Object.entries(prohibitedKeywords)) {
+                if (description.includes(keyword)) {
+                    showToast(info.message, 'error');
+                    descInput?.focus();
+                    descInput?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    return false; // Block progression
+                }
+            }
+            
+            // All validations passed
+            return true;
+        case 4:
+            const page4 = document.getElementById('page-parcel');
+            if (!page4) return false;
+            
+            // Check send day selection from DOM if not in formData
+            const sendDayCards = page4.querySelectorAll('.send-day-card');
+            let selectedDay = formData.sendDay;
+            sendDayCards.forEach(card => {
+                if (card.classList.contains('selected')) {
+                    selectedDay = (card as HTMLElement).dataset.day as any;
+                }
+            });
+            
+            if (!selectedDay) {
+                showToast('Please select a send day', 'warning');
+                return false;
+            }
+            
+            // Update formData
+            formData.sendDay = selectedDay;
+            
+            // Check if international shipment - HS code required only for international
+            const isInternational = isInternationalShipment();
+            if (isInternational && !formData.hsCode) {
+                // Warning but don't block - just notify
+                const hsCodeDisplay = page4.querySelector('#hs-code-display') as HTMLInputElement;
+                if (!hsCodeDisplay || !hsCodeDisplay.value || hsCodeDisplay.value === 'Click to generate') {
+                    showToast('HS code recommended for international shipments. You can proceed without it.', 'warning');
+                }
+            }
+            
+            return true;
+        case 5:
+            return true;
+        default:
+            return true;
+    }
+}
+
+
+async function goToNextStep() {
+    // Validate before proceeding
+    const isValid = validateCurrentStep();
+    
+    if (!isValid) {
+        return;
+    }
+    
+    const nextBtn = document.getElementById('next-step-btn') as HTMLButtonElement;
+    let originalText = '';
+    if (nextBtn) {
+        nextBtn.disabled = true;
+        originalText = nextBtn.innerHTML;
+        nextBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processing...';
+        nextBtn.style.opacity = '0.7';
+    }
+    
+    // Show loading overlay with appropriate message
+    const loadingMessages: { [key: number]: string } = {
+        1: 'Preparing address entry...',
+        2: 'Preparing parcel details...',
+        3: 'Checking compliance requirements...',
+        4: 'Preparing review...',
+        5: 'Fetching real-time quotes from carriers... This may take 10-15 seconds'
+    };
+    
+    const loadingMessage = loadingMessages[currentStep] || 'Preparing next step...';
+    toggleLoading(true, loadingMessage);
+    
+    try {
+        // Navigate IMMEDIATELY - don't wait for anything except step 5 (quote fetching)
+        if (currentStep === 5) {
+            // Step 5: Need to fetch quotes - show fetching message
+            toggleLoading(true, 'Fetching real-time quotes from carriers... This may take 10-15 seconds');
+            
+            // Fetch quotes in background
+            await fetchQuotes();
+            
+            // After fetching quotes, move to step 6 to display them
+            if (allQuotes.length > 0) {
+                currentStep++;
+                renderPage();
+            } else {
+                showToast('Failed to get quotes. Please try again.', 'error');
+            }
+            toggleLoading(false);
+            
+            // Restore button
+            if (nextBtn) {
+                nextBtn.disabled = false;
+                nextBtn.innerHTML = originalText;
+                nextBtn.style.opacity = '1';
+            }
+            return;
+        }
+        
+        // For all other steps - navigate INSTANTLY (don't wait for compliance checks)
+        if (currentStep < TOTAL_STEPS) {
+            currentStep++;
+            
+            // Render immediately - this should be instant
+            renderPage();
+            
+            // Hide loading immediately after render (navigation is instant)
+            toggleLoading(false);
+            
+            // Run compliance checks AFTER navigation (non-blocking)
+            // Only for step 4 - run immediately but don't block navigation
+            if (currentStep === 4) {
+                // Run compliance check immediately (it's synchronous now - instant)
+                setTimeout(() => {
+                    checkProhibitedItems();
+                }, 100);
+            }
+        }
+        
+        // Restore button state immediately
+        if (nextBtn) {
+            nextBtn.disabled = false;
+            nextBtn.innerHTML = originalText;
+            nextBtn.style.opacity = '1';
+        }
+    } catch (error) {
+        toggleLoading(false);
+        showToast('An error occurred during navigation. Please try again.', 'error');
+        
+        // Restore button on error
+        if (nextBtn) {
+            nextBtn.disabled = false;
+            nextBtn.innerHTML = originalText;
+            nextBtn.style.opacity = '1';
+        }
+    }
+}
+
+function goToPreviousStep() {
+    if (currentStep > 1) {
+        currentStep--;
+        renderPage();
+    }
+}
+
+function goToStep(step: number) {
+    if (step >= 1 && step <= TOTAL_STEPS) {
+        currentStep = step;
+        renderPage();
+    }
+}
+
+// FETCH QUOTES
+async function fetchQuotes() {
+    if (!checkAndDecrementLookup()) return;
+    
+    toggleLoading(true, 'Finding best rates...');
+    
+    try {
+        // Try to fetch from Shippo API first (real quotes) - with fast timeout
+        try {
+            const { fetchShippoQuotes } = await import('./backend-api');
+            
+            // Set timeout to fail fast if backend not deployed (5 seconds)
+            const apiTimeout = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('API timeout - backend not deployed')), 5000);
+            });
+            
+            const realQuotes = await Promise.race([
+                fetchShippoQuotes({
+                    originAddress: formData.originAddress || '',
+                    destinationAddress: formData.destinationAddress || '',
+                    weight: formData.weight || 0,
+                    length: formData.length,
+                    width: formData.width,
+                    height: formData.height,
+                    parcelType: formData.parcelType || '',
+                    currency: State.currentCurrency.code
+                }),
+                apiTimeout
+            ]) as Quote[];
+            
+            const extraCost = formData.sendDay === 'saturday' ? 5 : formData.sendDay === 'sunday' ? 8 : 0;
+            allQuotes = realQuotes.map(q => ({
+                ...q,
+                totalCost: q.totalCost + extraCost
+            })).sort((a: Quote, b: Quote) => a.totalCost - b.totalCost);
+            
+            // Mark that we successfully used API quotes
+            usedApiQuotes = true;
+            return;
+        } catch (apiError: any) {
+            // Shippo API failed - show error and stop
+            console.error('[Parcel] Shippo API error:', apiError);
+            toggleLoading(false);
+            
+            const errorMessage = apiError.message || 'Unable to fetch real-time quotes from Shippo API';
+            showToast(`Error: ${errorMessage}. Please check your Shippo API configuration or try again later.`, 'error');
+            
+            // Mark that we're NOT using API quotes
+            usedApiQuotes = false;
+            
+            // Don't proceed with AI fallback - require real quotes
+            throw new Error('Shippo API unavailable. Cannot proceed without real quotes.');
+        }
+    } catch (error: any) {
+        // Outer catch - handle any errors from the entire fetch process
+        console.error('[Parcel] Failed to fetch quotes:', error);
+        toggleLoading(false);
+        showToast(`Failed to fetch quotes: ${error.message || 'Unknown error'}`, 'error');
+        throw error; // Re-throw to prevent progression
+    }
+        
+        const extraCost = formData.sendDay === 'saturday' ? 5 : formData.sendDay === 'sunday' ? 8 : 0;
+        
+        // Enhanced prompt for more accurate quote generation
+        const parcelWeight = formData.weight || 1;
+        const dimensions = formData.length && formData.width && formData.height 
+            ? `Dimensions: ${formData.length}×${formData.width}×${formData.height} cm.` 
+            : '';
+        
+        const prompt = `You are a logistics pricing expert. Generate 5 realistic parcel delivery quotes for international shipping.
+
+Shipment Details:
+- Origin: ${formData.originAddress || 'Unknown'}
+- Destination: ${formData.destinationAddress || 'Unknown'}
+- Weight: ${parcelWeight} kg
+${dimensions}
+- Parcel Type: ${formData.parcelType || 'Standard'}
+- Contents: ${formData.itemDescription || 'General goods'}
+- Currency: ${State.currentCurrency.code} (${State.currentCurrency.symbol})
+- Service Day: ${formData.sendDay === 'saturday' ? 'Saturday (+premium)' : formData.sendDay === 'sunday' ? 'Sunday (+premium)' : 'Weekday'}
+
+Requirements:
+1. Generate quotes from 5 different major international carriers (e.g., DHL, UPS, FedEx, DPD, Evri, TNT, Aramex)
+2. Prices should be realistic based on weight, distance, and parcel type
+3. Transit times should vary: 2-5 days for express, 5-10 days for standard, 10-15 days for economy
+4. Each quote must include base shipping cost (add ${extraCost} ${State.currentCurrency.symbol} for weekend delivery if applicable)
+5. Make quotes competitive but realistic
+6. Return JSON with "quotes" array containing all required fields
+
+Important: These are ESTIMATES for customer reference. Actual rates may vary based on final measurements and carrier availability.`;
+
+        const responseSchema = {
+            type: SchemaType.OBJECT,
+            properties: {
+                quotes: {
+                    type: SchemaType.ARRAY,
+                    items: {
+                        type: SchemaType.OBJECT,
+                        properties: {
+                            carrierName: { type: SchemaType.STRING, description: 'Name of the shipping carrier' },
+                            carrierType: { type: SchemaType.STRING, description: 'Service type (e.g., Express, Standard, Economy)' },
+                            totalCost: { type: SchemaType.NUMBER, description: 'Total cost in the specified currency' },
+                            estimatedTransitTime: { type: SchemaType.STRING, description: 'Estimated delivery time (e.g., 3-5 days)' },
+                            serviceProvider: { type: SchemaType.STRING, description: 'Service provider name' },
+                            isSpecialOffer: { type: SchemaType.BOOLEAN, description: 'Whether this is a special offer' }
+                        },
+                        required: ['carrierName', 'carrierType', 'totalCost', 'estimatedTransitTime']
+                    }
+                }
+            },
+            required: ['quotes']
+        };
+        
+        // Try gemini-2.0-flash-exp first, fallback to gemini-1.5-flash if needed
+        let model;
+        try {
+            model = State.api.getGenerativeModel({ 
+                model: 'gemini-2.0-flash-exp',
+                generationConfig: {
+                    responseMimeType: 'application/json',
+                    responseSchema: responseSchema,
+                    temperature: 0.7,
+                    maxOutputTokens: 2048
+                }
+            });
+        } catch (modelError: any) {
+            try {
+                model = State.api.getGenerativeModel({ 
+                    model: 'gemini-1.5-flash',
+                    generationConfig: {
+                        responseMimeType: 'application/json',
+                        responseSchema: responseSchema,
+                        temperature: 0.7,
+                        maxOutputTokens: 2048
+                    }
+                });
+            } catch (fallbackError: any) {
+                model = State.api.getGenerativeModel({ 
+                    model: 'gemini-pro',
+                    generationConfig: {
+                        responseMimeType: 'application/json',
+                        responseSchema: responseSchema,
+                        temperature: 0.7
+                    }
+                });
+            }
+        }
+        
+        const result = await model.generateContent(prompt);
+        const responseText = result.response.text();
+        
+        if (!responseText) {
+            throw new Error('Empty response from Gemini API');
+        }
+        
+        const response = JSON.parse(responseText);
+        
+        if (!response.quotes || !Array.isArray(response.quotes) || response.quotes.length === 0) {
+            throw new Error('Invalid response format from Gemini API');
+        }
+        
+        // Process and validate quotes
+        allQuotes = response.quotes
+            .filter((q: any) => q.carrierName && q.totalCost && q.estimatedTransitTime)
+            .map((q: any): Quote => ({
+                carrierName: q.carrierName || 'Unknown Carrier',
+                carrierType: q.carrierType || 'Standard Service',
+                totalCost: parseFloat(q.totalCost) || 0,
+                estimatedTransitTime: q.estimatedTransitTime || '5-7 days',
+                serviceProvider: q.serviceProvider || 'Vcanship AI',
+                isSpecialOffer: q.isSpecialOffer || false,
+                // Required Quote interface properties
+                chargeableWeight: parcelWeight,
+                chargeableWeightUnit: 'kg',
+                weightBasis: 'Weight',
+                costBreakdown: {
+                    baseShippingCost: parseFloat(q.totalCost) || 0,
+                    fuelSurcharge: 0,
+                    estimatedCustomsAndTaxes: 0,
+                    optionalInsuranceCost: 0,
+                    ourServiceFee: 0
+                }
+            }))
+            .sort((a: Quote, b: Quote) => a.totalCost - b.totalCost);
+        
+        // Ensure we have at least 3 quotes
+        if (allQuotes.length < 3) {
+            // Generate fallback quotes if needed
+            const basePrice = (parcelWeight * 2.5) + extraCost;
+            const fallbackCarriers = [
+                { name: 'DHL Express', type: 'Express', multiplier: 1.2 },
+                { name: 'UPS Standard', type: 'Standard', multiplier: 1.0 },
+                { name: 'FedEx Economy', type: 'Economy', multiplier: 0.8 }
+            ];
+            
+            const fallbackQuotes: Quote[] = fallbackCarriers.map((carrier, idx) => ({
+                carrierName: carrier.name,
+                carrierType: carrier.type,
+                totalCost: (basePrice * carrier.multiplier) + extraCost,
+                estimatedTransitTime: carrier.type === 'Express' ? '2-3 days' : carrier.type === 'Standard' ? '5-7 days' : '10-12 days',
+                serviceProvider: 'Vcanship AI',
+                isSpecialOffer: idx === 2,
+                // Required Quote interface properties
+                chargeableWeight: parcelWeight,
+                chargeableWeightUnit: 'kg',
+                weightBasis: 'Weight',
+                costBreakdown: {
+                    baseShippingCost: (basePrice * carrier.multiplier) + extraCost,
+                    fuelSurcharge: 0,
+                    estimatedCustomsAndTaxes: 0,
+                    optionalInsuranceCost: 0,
+                    ourServiceFee: 0
+                }
+            }));
+            
+            allQuotes = [...allQuotes, ...fallbackQuotes]
+                .slice(0, 5)
+                .sort((a: Quote, b: Quote) => a.totalCost - b.totalCost);
+        }
+        
+    } catch (error) {
+        showToast('Failed to get quotes. Please try again.', 'error');
+        currentStep = 5;
+        renderPage();
+    } finally {
+        toggleLoading(false);
+    }
+}
+
+// Show email inquiry form after quotes are displayed
+async function showEmailInquiryForm() {
+    // Render the email form in step 6
+    await renderEmailFormInStep6();
+}
+
+// GENERATE LABEL PDF
+function generateShippingLabel(trackingId: string, selectedQuote: Quote) {
+    const doc = new jsPDF();
+    
+    // Add logo
+    doc.setFontSize(20);
+    doc.setTextColor(249, 115, 22); // Orange
+    doc.text('VCANSHIP', 10, 15);
+    
+    // Barcode representation
+    doc.setFontSize(10);
+    doc.text(trackingId, 10, 30);
+    doc.rect(10, 35, 80, 15);
+    doc.setFontSize(8);
+    doc.text('||||| |||| |||| ||||| |||| |||', 12, 45);
+    
+    // Shipping details
+    doc.setFontSize(12);
+    doc.text('FROM:', 10, 60);
+    doc.setFontSize(10);
+    doc.text(formData.originAddress || '', 10, 67);
+    
+    doc.setFontSize(12);
+    doc.text('TO:', 10, 85);
+    doc.setFontSize(10);
+    doc.text(formData.destinationAddress || '', 10, 92);
+    
+    // Parcel details
+    doc.setFontSize(12);
+    doc.text('DETAILS:', 10, 110);
+    doc.setFontSize(10);
+    doc.text(`Weight: ${formData.weight}kg`, 10, 117);
+    doc.text(`Type: ${formData.parcelType}`, 10, 124);
+    doc.text(`Carrier: ${selectedQuote.carrierName}`, 10, 131);
+    
+    // Instructions
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.text('Attach this label securely to your parcel', 10, 150);
+    doc.text('Keep tracking number for reference', 10, 155);
+    
+    return doc;
+}
+
+// GENERATE RECEIPT PDF
+function generateReceipt(trackingId: string, selectedQuote: Quote) {
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(20);
+    doc.setTextColor(249, 115, 22);
+    doc.text('VCANSHIP', 10, 15);
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.text('Shipping Receipt', 10, 22);
+    doc.text(`Date: ${new Date().toLocaleDateString()}`, 10, 28);
+    doc.text(`Tracking: ${trackingId}`, 10, 34);
+    
+    // Table
+    autoTable(doc, {
+        startY: 45,
+        head: [['Item', 'Details']],
+        body: [
+            ['From', formData.originAddress || ''],
+            ['To', formData.destinationAddress || ''],
+            ['Weight', `${formData.weight} kg`],
+            ['Type', formData.parcelType || ''],
+            ['Carrier', selectedQuote.carrierName],
+            ['Service', selectedQuote.carrierType],
+            ['Transit Time', selectedQuote.estimatedTransitTime],
+            ['Total Cost', `${State.currentCurrency.symbol}${selectedQuote.totalCost.toFixed(2)}`]
+        ]
+    });
+    
+    return doc;
+}
+
+// EVENT LISTENERS
+function attachWizardListeners() {
+    const page = document.getElementById('page-parcel');
+    if (!page) return;
+    
+    // Next/Previous buttons
+    page.querySelector('#next-step-btn')?.addEventListener('click', async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        await goToNextStep();
+    });
+    page.querySelector('#prev-step-btn')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        goToPreviousStep();
+    });
+    
+    // Step 1: Service type selection
+    page.querySelectorAll('.service-type-card').forEach(card => {
+        card.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const serviceType = (card as HTMLElement).dataset.type as 'pickup' | 'dropoff';
+            if (serviceType) {
+                // Update form data
+                formData.serviceType = serviceType;
+                // Immediately update visual state BEFORE re-rendering
+                page.querySelectorAll('.service-type-card').forEach(c => {
+                    c.classList.remove('selected');
+                });
+                card.classList.add('selected');
+                // Re-render immediately to ensure state is consistent
+                requestAnimationFrame(() => {
+                    renderPage();
+                });
+            }
+        });
+    });
+    
+    // Step 2: Address inputs with Google Places Autocomplete
+    const originInput = page.querySelector('#origin-address') as HTMLInputElement;
+    const destInput = page.querySelector('#destination-address') as HTMLInputElement;
+    
+    // Initialize Google Places Autocomplete for both inputs
+    if (originInput && destInput) {
+        initializeAddressAutocomplete(originInput, destInput);
+    }
+    
+    // Save data when user types or changes input
+    originInput?.addEventListener('input', () => {
+        formData.originAddress = originInput.value.trim();
+    });
+    originInput?.addEventListener('change', () => {
+        formData.originAddress = originInput.value.trim();
+    });
+    
+    destInput?.addEventListener('input', () => {
+        formData.destinationAddress = destInput.value.trim();
+    });
+    destInput?.addEventListener('change', () => {
+        formData.destinationAddress = destInput.value.trim();
+    });
+    
+    // Step 3: Parcel type selection
+    page.querySelectorAll('.parcel-type-card').forEach(card => {
+        card.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const parcelType = (card as HTMLElement).dataset.value || '';
+            if (parcelType) {
+                formData.parcelType = parcelType;
+                // Update visual state immediately without full re-render
+                page.querySelectorAll('.parcel-type-card').forEach(c => {
+                    c.classList.remove('selected');
+                });
+                card.classList.add('selected');
+                // Optionally re-render for consistency, but use requestAnimationFrame for smooth transition
+                requestAnimationFrame(() => {
+                    renderPage();
+                });
+            }
+        });
+    });
+    
+    // Step 3: Dimensions toggle
+    page.querySelector('#dimensions-toggle')?.addEventListener('click', (e) => {
+        const content = page.querySelector('#dimensions-content');
+        const icon = (e.currentTarget as HTMLElement).querySelector('i');
+        content?.classList.toggle('hidden');
+        icon?.classList.toggle('fa-chevron-right');
+        icon?.classList.toggle('fa-chevron-down');
+    });
+    
+    // Step 3: Weight, dimensions, and description
+    const weightInput = page.querySelector('#parcel-weight') as HTMLInputElement;
+    const descInput = page.querySelector('#item-description') as HTMLInputElement;
+    const lengthInput = page.querySelector('#parcel-length') as HTMLInputElement;
+    const widthInput = page.querySelector('#parcel-width') as HTMLInputElement;
+    const heightInput = page.querySelector('#parcel-height') as HTMLInputElement;
+    
+    // Real-time prohibited items check on description input
+    descInput?.addEventListener('input', () => {
+        formData.itemDescription = descInput.value.trim();
+        // Check for prohibited items in real-time
+        if (descInput.value.trim().length > 3) {
+            checkProhibitedItems();
+        }
+    });
+    
+    // Save data on input change for immediate availability (not just on blur)
+    weightInput?.addEventListener('input', () => { 
+        const val = parseFloat(weightInput.value);
+        if (!isNaN(val) && val > 0) {
+            formData.weight = val;
+        }
+    });
+    weightInput?.addEventListener('blur', () => { 
+        const val = parseFloat(weightInput.value);
+        if (!isNaN(val) && val > 0) {
+            formData.weight = val;
+        }
+    });
+    
+    descInput?.addEventListener('input', () => { 
+        formData.itemDescription = descInput.value.trim(); 
+    });
+    descInput?.addEventListener('blur', () => { 
+        formData.itemDescription = descInput.value.trim(); 
+    });
+    
+    lengthInput?.addEventListener('input', () => { 
+        const val = parseFloat(lengthInput.value);
+        if (!isNaN(val) && val > 0) {
+            formData.length = val;
+        }
+    });
+    lengthInput?.addEventListener('blur', () => { 
+        const val = parseFloat(lengthInput.value);
+        if (!isNaN(val) && val > 0) {
+            formData.length = val;
+        }
+    });
+    
+    widthInput?.addEventListener('input', () => { 
+        const val = parseFloat(widthInput.value);
+        if (!isNaN(val) && val > 0) {
+            formData.width = val;
+        }
+    });
+    widthInput?.addEventListener('blur', () => { 
+        const val = parseFloat(widthInput.value);
+        if (!isNaN(val) && val > 0) {
+            formData.width = val;
+        }
+    });
+    
+    heightInput?.addEventListener('input', () => { 
+        const val = parseFloat(heightInput.value);
+        if (!isNaN(val) && val > 0) {
+            formData.height = val;
+        }
+    });
+    heightInput?.addEventListener('blur', () => { 
+        const val = parseFloat(heightInput.value);
+        if (!isNaN(val) && val > 0) {
+            formData.height = val;
+        }
+    });
+    
+    // Step 4: Send day selection
+    page.querySelectorAll('.send-day-card').forEach(card => {
+        card.addEventListener('click', () => {
+            formData.sendDay = (card as HTMLElement).dataset.day as any;
+            renderPage();
+        });
+    });
+    
+    // Step 4: Generate HS Code
+    page.querySelector('#generate-hs-code-btn')?.addEventListener('click', async () => {
+        if (!formData.itemDescription) {
+            showToast('Please enter item description first', 'warning');
+            return;
+        }
+        toggleLoading(true, 'Generating HS code...');
+        try {
+            const suggestions = await getHsCodeSuggestions(formData.itemDescription);
+            if (suggestions.length > 0) {
+                formData.hsCode = suggestions[0].code;
+                (page.querySelector('#hs-code-display') as HTMLInputElement).value = formData.hsCode;
+                showToast('HS code generated successfully', 'success');
+            }
+        } catch (error) {
+            showToast('Failed to generate HS code', 'error');
+        } finally {
+            toggleLoading(false);
+        }
+    });
+    
+    // Step 4: Document upload
+    const uploadArea = page.querySelector('#document-upload-area');
+    const uploadInput = page.querySelector('#document-upload-input') as HTMLInputElement;
+    
+    uploadArea?.addEventListener('click', () => uploadInput?.click());
+    uploadInput?.addEventListener('change', (e) => {
+        const files = Array.from((e.target as HTMLInputElement).files || []);
+        formData.documents = files;
+        const list = page.querySelector('#uploaded-files-list');
+        if (list) {
+            list.innerHTML = files.map(f => `<div class="file-item"><i class="fa-solid fa-file"></i> ${f.name}</div>`).join('');
+        }
+    });
+    
+    // Step 5: Edit buttons
+    page.querySelectorAll('.edit-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const step = parseInt((btn as HTMLElement).dataset.step || '1');
+            goToStep(step);
+        });
+    });
+    
+    // Step 6: Quote selection
+    page.querySelectorAll('.select-quote-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            
+            const quoteId = parseInt((btn as HTMLElement).dataset.quoteId || '0');
+            const selectedQuote = allQuotes[quoteId];
+            setState({ parcelSelectedQuote: selectedQuote });
+            
+            // Set up payment context for payment page
+            const shipmentId = 'VC-' + Date.now().toString(36).toUpperCase();
+            setState({
+                paymentContext: {
+                    service: 'parcel' as Service,
+                    quote: selectedQuote,
+                    shipmentId: shipmentId,
+                    origin: formData.originAddress || '',
+                    destination: formData.destinationAddress || '',
+                    addons: []
+                }
+            });
+            
+            // Also set parcelSelectedQuote for backward compatibility
+            setState({ parcelSelectedQuote: selectedQuote });
+            
+            // Show loading - proceeding to payment
+            toggleLoading(true, 'Proceeding to payment...');
+            
+            // Wait a moment for user feedback
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // Navigate to payment page
+            toggleLoading(false);
+            switchPage('payment');
+        });
+    });
+}
+
+// MAIN RENDER
+function renderPage() {
+    const page = document.getElementById('page-parcel');
+    if (!page) return;
+    
+    page.innerHTML = renderWizard();
+    attachWizardListeners();
+    updateStepConnectors();
+    
+    // Update HS code requirements based on shipment type (after DOM is rendered)
+    if (currentStep === 4) {
+        const isInternational = isInternationalShipment();
+        const hsCodeLocalText = document.getElementById('hs-code-local-text');
+        const hsCodeInternationalText = document.getElementById('hs-code-international-text');
+        
+        if (hsCodeLocalText && hsCodeInternationalText) {
+            if (isInternational) {
+                hsCodeLocalText.style.display = 'none';
+                hsCodeInternationalText.style.display = 'inline';
+            } else {
+                hsCodeLocalText.style.display = 'inline';
+                hsCodeInternationalText.style.display = 'none';
+            }
+        }
+        
+        // Run compliance check immediately (synchronous - instant)
+        setTimeout(() => {
+            checkProhibitedItems();
+        }, 100);
+
+        // Auto-assign HS Code for international shipments when description is present
+        (async () => {
+            try {
+                const hsDisplay = document.getElementById('hs-code-display') as HTMLInputElement | null;
+                const description = (formData.itemDescription || '').trim();
+                if (isInternational && hsDisplay && (!formData.hsCode || hsDisplay.value === 'Click to generate') && description.length >= 3) {
+                    const suggestions = await getHsCodeSuggestions(description);
+                    if (suggestions && suggestions.length > 0 && suggestions[0].code) {
+                        formData.hsCode = suggestions[0].code;
+                        hsDisplay.value = suggestions[0].code;
+                    }
+                }
+            } catch {}
+        })();
+    }
+    
+    // Only show email form if we're on step 6 AND using AI quotes (not API quotes)
+    // Email form is only for services without API keys or when API fails
+    if (currentStep === 6 && allQuotes.length > 0 && !usedApiQuotes) {
+        showEmailInquiryForm().catch(() => {
+            // Email form is optional - fail silently
+        });
+    }
+    
+    // Auto-focus first input
+    const firstInput = page.querySelector('input:not([type="hidden"])') as HTMLElement;
+    firstInput?.focus();
+}
+
+// Initialize Google Places Autocomplete for address inputs
+function initializeAddressAutocomplete(originInput: HTMLInputElement, destInput: HTMLInputElement) {
+    // Check if Google Maps API is loaded
+    if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
+        // Try loading it if not available
+        if (!(window as any).googleMapsLoaded) {
+            setTimeout(() => {
+                if (typeof google !== 'undefined' && google.maps && google.maps.places) {
+                    initializeAddressAutocomplete(originInput, destInput);
+                }
+            }, 1000);
+        }
+        return;
+    }
+
+    try {
+        // Configure autocomplete options
+        const autocompleteOptions = {
+            componentRestrictions: { country: [] } as any, // No country restriction - allow worldwide
+            fields: ['formatted_address', 'address_components', 'geometry', 'place_id'],
+            types: ['address'] // Focus on full addresses
+        };
+
+        // Initialize autocomplete for origin address
+        originAutocomplete = new (window.google as any).maps.places.Autocomplete(originInput, autocompleteOptions);
+        originAutocomplete.addListener('place_changed', () => {
+            const place = originAutocomplete?.getPlace();
+            if (place && place.formatted_address) {
+                originInput.value = place.formatted_address;
+                formData.originAddress = place.formatted_address;
+                
+                // Show validation success
+                showAddressValidationFeedback(originInput, true);
+            }
+        });
+
+        // Initialize autocomplete for destination address
+        destAutocomplete = new (window.google as any).maps.places.Autocomplete(destInput, autocompleteOptions);
+        destAutocomplete.addListener('place_changed', () => {
+            const place = destAutocomplete?.getPlace();
+            if (place && place.formatted_address) {
+                destInput.value = place.formatted_address;
+                formData.destinationAddress = place.formatted_address;
+                
+                // Show validation success
+                showAddressValidationFeedback(destInput, true);
+            }
+        });
+    } catch (error) {
+        showToast('Address autocomplete not available. Please enter addresses manually.', 'warning');
+    }
+}
+
+// Show visual feedback for address validation
+function showAddressValidationFeedback(input: HTMLInputElement, isValid: boolean) {
+    const wrapper = input.closest('.input-wrapper');
+    if (!wrapper) return;
+
+    if (isValid) {
+        wrapper.classList.add('address-validated');
+        wrapper.classList.remove('address-error');
+        
+        // Add checkmark icon
+        let checkmark = wrapper.querySelector('.address-checkmark');
+        if (!checkmark) {
+            checkmark = document.createElement('i');
+            checkmark.className = 'fa-solid fa-check-circle address-checkmark';
+            wrapper.appendChild(checkmark);
+        }
+    } else {
+        wrapper.classList.remove('address-validated');
+        wrapper.classList.add('address-error');
+    }
+}
+
+// Check if shipment is international (different countries)
+function isInternationalShipment(): boolean {
+    const origin = formData.originAddress?.toLowerCase() || '';
+    const destination = formData.destinationAddress?.toLowerCase() || '';
+    
+    // Extract country names/codes from addresses
+    const countries = [
+        'united states', 'usa', 'us', 'uk', 'united kingdom', 'gb', 'britain',
+        'canada', 'ca', 'australia', 'au', 'germany', 'de', 'france', 'fr',
+        'china', 'cn', 'japan', 'jp', 'korea', 'kr', 'india', 'in',
+        'spain', 'es', 'italy', 'it', 'netherlands', 'nl', 'belgium', 'be',
+        'switzerland', 'ch', 'sweden', 'se', 'norway', 'no', 'denmark', 'dk',
+        'singapore', 'sg', 'malaysia', 'my', 'thailand', 'th', 'indonesia', 'id',
+        'philippines', 'ph', 'vietnam', 'vn', 'brazil', 'br', 'mexico', 'mx',
+        'argentina', 'ar', 'chile', 'cl', 'south africa', 'za', 'uae', 'united arab emirates'
+    ];
+    
+    let originCountry = '';
+    let destCountry = '';
+    
+    for (const country of countries) {
+        if (origin.includes(country)) {
+            originCountry = country.split(' ')[0]; // Get first word
+            break;
+        }
+    }
+    
+    for (const country of countries) {
+        if (destination.includes(country)) {
+            destCountry = country.split(' ')[0]; // Get first word
+            break;
+        }
+    }
+    
+    // If both countries found and different, it's international
+    if (originCountry && destCountry && originCountry !== destCountry) {
+        return true;
+    }
+    
+    // If one address has country and other doesn't, assume international for safety
+    if (originCountry || destCountry) {
+        // Check if addresses are obviously in same country by checking postal codes, states, etc.
+        // For now, if we can't determine, default to international if countries differ
+        return originCountry !== destCountry;
+    }
+    
+    // Default: assume international if we can't determine (safer assumption)
+    return true;
+}
+
+// Check for prohibited items and show intelligent warnings
+// Enhanced compliance checking using comprehensive compliance system
+let complianceData: ComplianceCheck | null = null;
+
+function checkProhibitedItems() {
+    const description = (formData.itemDescription || '').toLowerCase();
+    if (!description || !formData.originAddress || !formData.destinationAddress) return;
+    
+    // Use comprehensive compliance check (synchronous - instant)
+    try {
+        complianceData = checkCompliance({
+            originAddress: formData.originAddress,
+            destinationAddress: formData.destinationAddress,
+            itemDescription: formData.itemDescription || '',
+            hsCode: formData.hsCode,
+            weight: formData.weight || 0,
+            value: (formData.weight || 0) * 50, // Estimate value based on weight
+            serviceType: formData.serviceType
+        });
+        
+        displayComplianceResults(complianceData);
+    } catch (error) {
+        // Fallback to basic check if comprehensive system fails
+        const basicProhibitedItems: { [key: string]: { type: string, reason: string, severity: 'warning' | 'error' } } = {
+            'perfume': { type: 'Liquids/Flammable', reason: 'Contains alcohol and flammable substances. May be restricted or require special packaging.', severity: 'warning' },
+            'battery': { type: 'Lithium Batteries', reason: 'Lithium batteries are dangerous goods. May require special handling, documentation, and carrier approval.', severity: 'error' },
+            'batteries': { type: 'Lithium Batteries', reason: 'Lithium batteries are dangerous goods. May require special handling, documentation, and carrier approval.', severity: 'error' },
+            'cigarette': { type: 'Tobacco Products', reason: 'E-cigarettes and tobacco products are restricted or prohibited in many countries. Requires age verification and special documentation.', severity: 'warning' },
+            'e-cigarette': { type: 'Tobacco Products', reason: 'E-cigarettes and vaping devices contain lithium batteries and nicotine. Highly restricted in many countries.', severity: 'error' },
+            'vape': { type: 'Tobacco Products', reason: 'Vaping devices contain lithium batteries and nicotine. Highly restricted in many countries.', severity: 'error' },
+            'vaping': { type: 'Tobacco Products', reason: 'Vaping devices contain lithium batteries and nicotine. Highly restricted in many countries.', severity: 'error' },
+            'alcohol': { type: 'Liquids/Alcohol', reason: 'Alcohol shipments are heavily regulated. Requires special permits and documentation.', severity: 'warning' },
+            'weapon': { type: 'Prohibited', reason: 'Weapons are strictly prohibited. Cannot be shipped.', severity: 'error' },
+            'explosive': { type: 'Dangerous Goods', reason: 'Explosive materials are strictly prohibited.', severity: 'error' },
+            'flammable': { type: 'Dangerous Goods', reason: 'Flammable materials require special handling and documentation.', severity: 'warning' }
+        };
+        
+        const foundItems: string[] = [];
+        const alerts = [];
+        
+        for (const [keyword, info] of Object.entries(basicProhibitedItems)) {
+            if (description.includes(keyword)) {
+                foundItems.push(keyword);
+                alerts.push({
+                    keyword,
+                    type: info.type,
+                    reason: info.reason,
+                    severity: info.severity
+                });
+            }
+        }
+        
+        if (alerts.length > 0) {
+            displayBasicComplianceAlerts(alerts);
+        }
+    }
+}
+
+// Display comprehensive compliance results
+function displayComplianceResults(compliance: ComplianceCheck) {
+    const alertsContainer = document.getElementById('compliance-alerts');
+    if (!alertsContainer) return;
+    
+    let html = '';
+    
+    // Display errors first
+    if (compliance.errors.length > 0) {
+        html += compliance.errors.map(error => `
+            <div class="compliance-alert alert-error" style="
+                padding: 1rem;
+                margin-top: 1rem;
+                border-radius: 8px;
+                border-left: 4px solid var(--error-color);
+                background-color: rgba(239, 68, 68, 0.1);
+            ">
+                <div style="display: flex; align-items: start; gap: 0.75rem;">
+                    <i class="fa-solid fa-triangle-exclamation" 
+                       style="color: var(--error-color); font-size: 1.2rem; margin-top: 0.2rem;"></i>
+                    <div>
+                        <strong style="color: var(--error-color);">❌ Compliance Error</strong>
+                        <p style="margin: 0.5rem 0 0; color: var(--text-color); font-size: 0.9rem;">${error}</p>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    // Display warnings
+    if (compliance.warnings.length > 0) {
+        html += compliance.warnings.map(warning => `
+            <div class="compliance-alert alert-warning" style="
+                padding: 1rem;
+                margin-top: 1rem;
+                border-radius: 8px;
+                border-left: 4px solid #F59E0B;
+                background-color: rgba(245, 158, 11, 0.1);
+            ">
+                <div style="display: flex; align-items: start; gap: 0.75rem;">
+                    <i class="fa-solid fa-exclamation-triangle" 
+                       style="color: #F59E0B; font-size: 1.2rem; margin-top: 0.2rem;"></i>
+                    <div>
+                        <strong style="color: #F59E0B;">⚠️ Compliance Warning</strong>
+                        <p style="margin: 0.5rem 0 0; color: var(--text-color); font-size: 0.9rem;">${warning}</p>
+                    </div>
+                </div>
+            </div>
+        `).join('');
+    }
+    
+    // Display required documents
+    if (compliance.requiredDocuments.length > 0) {
+        html += `
+            <div class="compliance-alert alert-warning" style="
+                padding: 1rem;
+                margin-top: 1rem;
+                border-radius: 8px;
+                border-left: 4px solid var(--primary-orange);
+                background-color: rgba(249, 115, 22, 0.1);
+            ">
+                <div style="display: flex; align-items: start; gap: 0.75rem;">
+                    <i class="fa-solid fa-file-circle-check" 
+                       style="color: var(--primary-orange); font-size: 1.2rem; margin-top: 0.2rem;"></i>
+                    <div>
+                        <strong style="color: var(--primary-orange);">📋 Required Documents</strong>
+                        <ul style="margin: 0.5rem 0 0; padding-left: 1.5rem; color: var(--text-color); font-size: 0.9rem;">
+                            ${compliance.requiredDocuments.map(doc => `<li>${doc}</li>`).join('')}
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Display pre-inspection requirement
+    if (compliance.requiresPreInspection) {
+        html += `
+            <div class="compliance-alert alert-warning" style="
+                padding: 1rem;
+                margin-top: 1rem;
+                border-radius: 8px;
+                border-left: 4px solid var(--primary-orange);
+                background-color: rgba(249, 115, 22, 0.1);
+            ">
+                <div style="display: flex; align-items: start; gap: 0.75rem;">
+                    <i class="fa-solid fa-clipboard-check" 
+                       style="color: var(--primary-orange); font-size: 1.2rem; margin-top: 0.2rem;"></i>
+                    <div>
+                        <strong style="color: var(--primary-orange);">🔍 Pre-Inspection Required</strong>
+                        <p style="margin: 0.5rem 0 0; color: var(--text-color); font-size: 0.9rem;">
+                            ${compliance.destinationCountry} requires pre-inspection certificate before shipment. 
+                            ${compliance.certificateType ? `Certificate type: ${compliance.certificateType}` : 'Please contact us for certificate requirements.'}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    
+    alertsContainer.innerHTML = html;
+    
+    if (html) {
+        alertsContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        
+        // Show toast if there are errors
+        if (compliance.errors.length > 0) {
+            showToast(`❌ Compliance errors detected. Please review restrictions.`, 'error');
+        } else if (compliance.warnings.length > 0) {
+            showToast(`⚠️ Compliance warnings: ${compliance.warnings.join(', ')}`, 'warning');
+        }
+    }
+}
+
+// Display basic compliance alerts (fallback)
+function displayBasicComplianceAlerts(alerts: any[]) {
+    if (alerts.length > 0) {
+        const alertsContainer = document.getElementById('compliance-alerts');
+        if (alertsContainer) {
+            alertsContainer.innerHTML = alerts.map(alert => `
+                <div class="compliance-alert ${alert.severity === 'error' ? 'alert-error' : 'alert-warning'}" style="
+                    padding: 1rem;
+                    margin-top: 1rem;
+                    border-radius: 8px;
+                    border-left: 4px solid ${alert.severity === 'error' ? 'var(--error-color)' : '#F59E0B'};
+                    background-color: ${alert.severity === 'error' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)'};
+                ">
+                    <div style="display: flex; align-items: start; gap: 0.75rem;">
+                        <i class="fa-solid ${alert.severity === 'error' ? 'fa-triangle-exclamation' : 'fa-exclamation-triangle'}" 
+                           style="color: ${alert.severity === 'error' ? 'var(--error-color)' : '#F59E0B'}; 
+                                  font-size: 1.2rem; margin-top: 0.2rem;"></i>
+                        <div>
+                            <strong style="color: ${alert.severity === 'error' ? 'var(--error-color)' : '#F59E0B'};">
+                                ⚠️ ${alert.type} Detected
+                            </strong>
+                            <p style="margin: 0.5rem 0 0; color: var(--text-color); font-size: 0.9rem;">
+                                ${alert.reason}
+                            </p>
+                            ${alert.severity === 'error' ? 
+                                '<p style="margin: 0.5rem 0 0; font-weight: 600; color: var(--error-color);">⚠️ Some carriers may refuse this shipment. Please contact support for assistance.</p>' : 
+                                '<p style="margin: 0.5rem 0 0; color: var(--medium-gray); font-size: 0.85rem;">Please check carrier-specific restrictions and requirements.</p>'
+                            }
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Scroll to alert
+            alertsContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        
+        // Show toast notification
+        const alertTypes = alerts.map((a: any) => a.type).join(', ');
+        const hasError = alerts.some((a: any) => a.severity === 'error');
+        showToast(`⚠️ Prohibited items detected: ${alertTypes}. Please review restrictions.`, hasError ? 'error' : 'warning');
+    }
+}
+
+// Get carrier logo or fallback icon
+function getCarrierIconHtml(carrierName: string): string {
+    const logoUrl = getLogisticsProviderLogo(carrierName);
+    
+    if (logoUrl) {
+        return `<img src="${logoUrl}" alt="${carrierName}" class="carrier-logo" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\'fa-solid fa-box-open\\'></i>';">`;
+    }
+    
+    // Fallback to Font Awesome icon if logo not found
+    const carrierLower = carrierName.toLowerCase();
+    const iconMap: { [key: string]: string } = {
+        'dhl': '<i class="fa-solid fa-box"></i>',
+        'fedex': '<i class="fa-solid fa-truck-fast"></i>',
+        'ups': '<i class="fa-solid fa-truck"></i>',
+        'dpd': '<i class="fa-solid fa-truck-ramp-box"></i>',
+        'usps': '<i class="fa-solid fa-envelope"></i>',
+        'evri': '<i class="fa-solid fa-parcel"></i>',
+        'maersk': '<i class="fa-solid fa-ship"></i>',
+        'cma cgm': '<i class="fa-solid fa-ship"></i>',
+        'hapag': '<i class="fa-solid fa-ship"></i>',
+        'emirates': '<i class="fa-solid fa-plane"></i>',
+        'lufthansa': '<i class="fa-solid fa-plane"></i>',
+        'cathay': '<i class="fa-solid fa-plane"></i>',
+        'atlas': '<i class="fa-solid fa-plane"></i>'
+    };
+    
+    for (const [key, icon] of Object.entries(iconMap)) {
+        if (carrierLower.includes(key)) {
+            return icon;
+        }
+    }
+    
+    return '<i class="fa-solid fa-box-open"></i>';
+}
+
+// Update step connector lines based on step states
+function updateStepConnectors() {
+    const page = document.getElementById('page-parcel');
+    if (!page) return;
+    
+    const connectors = page.querySelectorAll('.step-connector');
+    const dots = page.querySelectorAll('.step-dot');
+    
+    connectors.forEach((connector, index) => {
+        const prevDot = dots[index] as HTMLElement;
+        const nextDot = dots[index + 1] as HTMLElement;
+        
+        if (prevDot && nextDot) {
+            const prevCompleted = prevDot.classList.contains('completed');
+            const prevActive = prevDot.classList.contains('active');
+            const nextCompleted = nextDot.classList.contains('completed');
+            
+            if (prevCompleted && nextCompleted) {
+                // Both completed - full green
+                (connector as HTMLElement).style.backgroundColor = '#22c55e';
+            } else if (prevCompleted && prevActive) {
+                // Previous completed, next is active - gradient
+                (connector as HTMLElement).style.background = 'linear-gradient(90deg, #22c55e 0%, var(--border-color) 100%)';
+            } else if (prevCompleted) {
+                // Previous completed - full green
+                (connector as HTMLElement).style.backgroundColor = '#22c55e';
+            } else {
+                // Reset to default
+                (connector as HTMLElement).style.backgroundColor = '';
+                (connector as HTMLElement).style.background = '';
+            }
+        }
+    });
+}
+
+// EXPORT
+export function startParcel() {
+    setState({ currentService: 'parcel' });
+    resetParcelState();
+    switchPage('parcel');
+    currentStep = 1;
+    formData = {};
+    allQuotes = [];
+    usedApiQuotes = false; // Reset API quote flag
+    renderPage();
+}
