@@ -17,29 +17,29 @@ export function renderDashboard() {
     // --- Render E-commerce Hub UI from Screenshot ---
     page.innerHTML = `
         <div class="dashboard-ecom-hub">
-            <h2 class="ecom-hub-title">${t('dashboard.title')}</h2>
+            <h2 class="ecom-hub-title">Dashboard</h2>
             <div class="ecom-hub-actions">
                 <button class="ecom-action-card" id="ecom-hub-dashboard-card">
                     <div class="ecom-action-card-icon">
                         <i class="fa-solid fa-table-columns"></i>
                     </div>
-                    <span>${t('dashboard.card_dashboard')}</span>
+                    <span>Dashboard</span>
                 </button>
                 <button class="ecom-action-card" id="ecom-hub-myproducts-card">
                     <div class="ecom-action-card-icon">
                        <i class="fa-solid fa-boxes-stacked"></i>
                     </div>
-                    <span>${t('dashboard.card_my_products')}</span>
+                    <span>My Products</span>
                 </button>
                 <button class="ecom-action-card" id="ecom-hub-addproduct-card">
                     <div class="ecom-action-card-icon">
                         <i class="fa-solid fa-circle-plus"></i>
                     </div>
-                    <span>${t('dashboard.card_add_product')}</span>
+                    <span>Add Product</span>
                 </button>
             </div>
             <div id="ecom-hub-content-view">
-                <p>${t('dashboard.stats_placeholder')}</p>
+                <p>Your dashboard stats will appear here</p>
             </div>
         </div>
     `;

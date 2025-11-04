@@ -672,27 +672,37 @@ export function initializeAuth() {
     const loadingMsg = t('loading.authenticating') || 'Authenticating...';
     toggleLoading(true, loadingMsg);
     
+    console.log('[AUTH DEBUG] Starting authentication initialization');
+    
     // Function to try initializing auth
     const tryInitialize = () => {
         // Get fresh auth instance in case Firebase loaded after module import
         let currentAuth = getAuth ? getAuth() : auth;
         
+        console.log('[AUTH DEBUG] Initial auth instance:', currentAuth ? 'Found' : 'Not found');
+        
         // Check window.firebase directly
         if (!currentAuth && typeof window !== 'undefined' && (window as any).firebase) {
+            console.log('[AUTH DEBUG] Found window.firebase, attempting initialization');
             try {
                 const fb = (window as any).firebase;
                 if (fb.apps && fb.apps.length === 0) {
+                    console.log('[AUTH DEBUG] Initializing Firebase app');
                     fb.initializeApp(firebaseConfig);
                 }
                 currentAuth = fb.auth();
+                console.log('[AUTH DEBUG] Auth from window.firebase:', currentAuth ? 'Success' : 'Failed');
     } catch (error) {
-        // Silently handle Firebase initialization errors
+        console.error('[AUTH DEBUG] Firebase initialization error:', error);
     }
         }
         
         if (currentAuth && typeof currentAuth.onAuthStateChanged === 'function') {
+            console.log('[AUTH DEBUG] Auth instance is valid, continuing initialization');
             continueAuthInitialization(currentAuth);
             return true;
+        } else {
+            console.log('[AUTH DEBUG] Auth instance invalid:', currentAuth ? 'onAuthStateChanged missing' : 'No auth instance');
         }
         return false;
     };
@@ -720,7 +730,10 @@ export function initializeAuth() {
 }
 
 async function continueAuthInitialization(authInstance: any) {
+    console.log('[AUTH DEBUG] Continuing auth initialization with:', authInstance ? 'Valid instance' : 'Null instance');
+    
     if (!authInstance || typeof authInstance.onAuthStateChanged !== 'function') {
+        console.error('[AUTH DEBUG] Invalid auth instance or missing onAuthStateChanged');
         toggleLoading(false);
         return;
     }
@@ -728,18 +741,24 @@ async function continueAuthInitialization(authInstance: any) {
     try {
         // Check for redirect result first (for redirect-based auth)
         try {
+            console.log('[AUTH DEBUG] Checking for redirect result');
             const redirectResult = await authInstance.getRedirectResult();
             if (redirectResult?.user) {
+                console.log('[AUTH DEBUG] Found redirect result user:', redirectResult.user.email);
                 completeLogin(redirectResult.user);
                 toggleLoading(false);
                 return;
             }
+            console.log('[AUTH DEBUG] No redirect result found');
         } catch (redirectError: any) {
+            console.log('[AUTH DEBUG] Redirect result error (expected if not from redirect):', redirectError.code || redirectError.message);
             // Ignore redirect errors - might not be from redirect
         }
         
         // Set up auth state listener
+        console.log('[AUTH DEBUG] Setting up auth state listener');
         authInstance.onAuthStateChanged((user: any) => {
+            console.log('[AUTH DEBUG] Auth state changed. User:', user ? user.email : 'No user');
             if (user) {
                 const userProfile = { name: user.displayName || user.email!.split('@')[0], email: user.email! };
                 const savedLookups = localStorage.getItem('vcanship_free_lookups');
@@ -761,6 +780,7 @@ async function continueAuthInitialization(authInstance: any) {
             toggleLoading(false);
         });
     } catch (error) {
+        console.error('[AUTH DEBUG] Error in auth initialization:', error);
         toggleLoading(false);
         return;
     }

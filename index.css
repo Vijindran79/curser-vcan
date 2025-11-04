@@ -204,9 +204,16 @@ html[data-theme="dark"] header {
   font-size: 1.8rem;
   color: var(--dark-gray);
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 2px;
   text-decoration: none;
+}
+
+.logo-img {
+  height: 40px;
+  width: auto;
+  max-width: 200px;
+  object-fit: contain;
 }
 
 .logo strong {

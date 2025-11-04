@@ -87,29 +87,63 @@ async function loadTranslations(lang: string): Promise<void> {
         langFile = 'en';
     }
 
-    const response = await fetch(`./locales/${langFile}.json`);
-    if (!response.ok) {
-      throw new Error(`Could not load translation file for ${lang}`);
-    }
-    translations = await response.json();
-    currentLanguage = lang;
-    document.documentElement.lang = lang;
-    
-    // Set text direction
-    if (rtlLanguages.includes(lang)) {
-        document.documentElement.dir = 'rtl';
-    } else {
-        document.documentElement.dir = 'ltr';
+    // Add timeout to prevent hanging on slow networks
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
+
+    try {
+      const response = await fetch(`./locales/${langFile}.json`, { 
+        signal: controller.signal,
+        cache: 'no-cache' // Ensure fresh translations
+      });
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: Could not load translation file for ${lang}`);
+      }
+      
+      const data = await response.json();
+      
+      // Validate that we got actual translation data
+      if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
+        throw new Error(`Invalid or empty translation data for ${lang}`);
+      }
+      
+      translations = data;
+      currentLanguage = lang;
+      document.documentElement.lang = lang;
+      
+      // Set text direction
+      if (rtlLanguages.includes(lang)) {
+          document.documentElement.dir = 'rtl';
+      } else {
+          document.documentElement.dir = 'ltr';
+      }
+      
+      console.log(`[i18n] Successfully loaded translations for ${lang} (${Object.keys(data).length} keys)`);
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      throw fetchError;
     }
 
-  } catch (error) {
-    console.error(error);
+  } catch (error: any) {
+    console.error(`[i18n] Failed to load ${lang}:`, error.message);
+    
     // Fallback to English if the selected language fails to load
     if (lang !== 'en') {
+        console.log('[i18n] Falling back to English translations');
         await loadTranslations('en');
     } else {
-        // If even English fails, we must throw to be caught by the initializer.
-        throw error;
+        // If even English fails, use minimal fallback
+        console.error('[i18n] CRITICAL: Could not load English translations. Using minimal fallback.');
+        translations = {
+          app: { name: 'VCanship' },
+          header: { track: 'Track' },
+          error: { generic: 'An error occurred' }
+        };
+        currentLanguage = 'en';
+        document.documentElement.lang = 'en';
+        document.documentElement.dir = 'ltr';
     }
   }
 }
@@ -128,10 +162,25 @@ export function updateStaticUIText() {
 export async function initializeI18n() {
   try {
       const savedLanguage = localStorage.getItem('vcanship_language') || 'en';
+      console.log(`[i18n] Initializing with language: ${savedLanguage}`);
+      
       await loadTranslations(savedLanguage);
-  } catch (error) {
-      console.error("Fatal: Could not load critical translation files. UI text may not appear correctly.", error);
-      // The app will continue, but with untranslated keys.
+      console.log('[i18n] Initialization successful');
+      
+  } catch (error: any) {
+      console.error("[i18n] FATAL: Could not initialize i18n system:", error.message);
+      console.error("[i18n] The app will continue with minimal translations.");
+      
+      // Ensure we have at least minimal translations loaded
+      if (Object.keys(translations).length === 0) {
+        translations = {
+          app: { name: 'VCanship' },
+          header: { track: 'Track', login: 'Login' },
+          error: { generic: 'An error occurred' },
+          common: { loading: 'Loading...', retry: 'Retry' }
+        };
+        currentLanguage = 'en';
+      }
   }
 
   updateStaticUIText();

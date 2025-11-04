@@ -43,7 +43,6 @@ declare global {
         google?: any;
         initGoogleMaps?: () => void;
     }
-    const google: any;
 }
 
 // STEP 1: Service Type Selection
@@ -861,33 +860,22 @@ async function fetchQuotes() {
             usedApiQuotes = true;
             return;
         } catch (apiError: any) {
-            // Shippo API failed - show error and stop
+            // Shippo API failed - try AI fallback
             console.error('[Parcel] Shippo API error:', apiError);
-            toggleLoading(false);
-            
-            const errorMessage = apiError.message || 'Unable to fetch real-time quotes from Shippo API';
-            showToast(`Error: ${errorMessage}. Please check your Shippo API configuration or try again later.`, 'error');
             
             // Mark that we're NOT using API quotes
             usedApiQuotes = false;
             
-            // Don't proceed with AI fallback - require real quotes
-            throw new Error('Shippo API unavailable. Cannot proceed without real quotes.');
+            // Continue with AI fallback instead of throwing error
         }
-    } catch (error: any) {
-        // Outer catch - handle any errors from the entire fetch process
-        console.error('[Parcel] Failed to fetch quotes:', error);
-        toggleLoading(false);
-        showToast(`Failed to fetch quotes: ${error.message || 'Unknown error'}`, 'error');
-        throw error; // Re-throw to prevent progression
-    }
         
+        // AI Fallback for quotes
         const extraCost = formData.sendDay === 'saturday' ? 5 : formData.sendDay === 'sunday' ? 8 : 0;
         
         // Enhanced prompt for more accurate quote generation
         const parcelWeight = formData.weight || 1;
-        const dimensions = formData.length && formData.width && formData.height 
-            ? `Dimensions: ${formData.length}×${formData.width}×${formData.height} cm.` 
+        const dimensions = formData.length && formData.width && formData.height
+            ? `Dimensions: ${formData.length}×${formData.width}×${formData.height} cm.`
             : '';
         
         const prompt = `You are a logistics pricing expert. Generate 5 realistic parcel delivery quotes for international shipping.
@@ -937,7 +925,7 @@ Important: These are ESTIMATES for customer reference. Actual rates may vary bas
         // Try gemini-2.0-flash-exp first, fallback to gemini-1.5-flash if needed
         let model;
         try {
-            model = State.api.getGenerativeModel({ 
+            model = State.api.getGenerativeModel({
                 model: 'gemini-2.0-flash-exp',
                 generationConfig: {
                     responseMimeType: 'application/json',
@@ -948,7 +936,7 @@ Important: These are ESTIMATES for customer reference. Actual rates may vary bas
             });
         } catch (modelError: any) {
             try {
-                model = State.api.getGenerativeModel({ 
+                model = State.api.getGenerativeModel({
                     model: 'gemini-1.5-flash',
                     generationConfig: {
                         responseMimeType: 'application/json',
@@ -958,7 +946,7 @@ Important: These are ESTIMATES for customer reference. Actual rates may vary bas
                     }
                 });
             } catch (fallbackError: any) {
-                model = State.api.getGenerativeModel({ 
+                model = State.api.getGenerativeModel({
                     model: 'gemini-pro',
                     generationConfig: {
                         responseMimeType: 'application/json',
@@ -1041,7 +1029,9 @@ Important: These are ESTIMATES for customer reference. Actual rates may vary bas
                 .sort((a: Quote, b: Quote) => a.totalCost - b.totalCost);
         }
         
-    } catch (error) {
+    } catch (error: any) {
+        // Handle any errors from the entire fetch process
+        console.error('[Parcel] Failed to fetch quotes:', error);
         showToast('Failed to get quotes. Please try again.', 'error');
         currentStep = 5;
         renderPage();
@@ -1454,11 +1444,13 @@ function renderPage() {
 // Initialize Google Places Autocomplete for address inputs
 function initializeAddressAutocomplete(originInput: HTMLInputElement, destInput: HTMLInputElement) {
     // Check if Google Maps API is loaded
-    if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
+    const googleMaps = (window as any).google;
+    if (typeof googleMaps === 'undefined' || !googleMaps.maps || !googleMaps.maps.places) {
         // Try loading it if not available
         if (!(window as any).googleMapsLoaded) {
             setTimeout(() => {
-                if (typeof google !== 'undefined' && google.maps && google.maps.places) {
+                const retryGoogleMaps = (window as any).google;
+                if (typeof retryGoogleMaps !== 'undefined' && retryGoogleMaps.maps && retryGoogleMaps.maps.places) {
                     initializeAddressAutocomplete(originInput, destInput);
                 }
             }, 1000);
@@ -1475,7 +1467,8 @@ function initializeAddressAutocomplete(originInput: HTMLInputElement, destInput:
         };
 
         // Initialize autocomplete for origin address
-        originAutocomplete = new (window.google as any).maps.places.Autocomplete(originInput, autocompleteOptions);
+        const googleMaps = (window as any).google;
+        originAutocomplete = new googleMaps.maps.places.Autocomplete(originInput, autocompleteOptions);
         originAutocomplete.addListener('place_changed', () => {
             const place = originAutocomplete?.getPlace();
             if (place && place.formatted_address) {
@@ -1488,7 +1481,7 @@ function initializeAddressAutocomplete(originInput: HTMLInputElement, destInput:
         });
 
         // Initialize autocomplete for destination address
-        destAutocomplete = new (window.google as any).maps.places.Autocomplete(destInput, autocompleteOptions);
+        destAutocomplete = new googleMaps.maps.places.Autocomplete(destInput, autocompleteOptions);
         destAutocomplete.addListener('place_changed', () => {
             const place = destAutocomplete?.getPlace();
             if (place && place.formatted_address) {

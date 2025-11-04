@@ -58,9 +58,17 @@ function cleanupApiHubEditors() {
 
 
 export function renderLandingPage() {
+    console.log('[LANDING DEBUG] Starting landing page render');
+    
     const page = DOMElements.pageLanding;
-    if (!page) return;
+    console.log('[LANDING DEBUG] Landing page element:', page ? 'Found' : 'Not found');
+    
+    if (!page) {
+        console.error('[LANDING DEBUG] Landing page element not found, aborting render');
+        return;
+    }
 
+    console.log('[LANDING DEBUG] Setting landing page innerHTML');
     page.innerHTML = `
       <section class="landing-hero-v2">
         <h1 class="hero-title-v2" data-i18n="landing.hero_title">Global Shipping, Intelligently Simplified</h1>
@@ -645,5 +653,24 @@ export function initializeStaticPages() {
         tickerBanner.innerHTML = `<div class="ticker-content"><div class="ticker-track">${tickerHtml}</div></div>`;
     }
 
-    renderLandingPage();
+    console.log('[LANDING DEBUG] Landing page render complete');
+    
+    // Check if secure trade section exists after rendering
+    setTimeout(() => {
+        const secureTradeSection = document.querySelector('.secure-trade-promo');
+        console.log('[LANDING DEBUG] Secure trade section:', secureTradeSection ? 'Found' : 'Not found');
+        
+        if (secureTradeSection) {
+            const secureTradeButton = secureTradeSection.querySelector('button[data-service="secure-trade"]');
+            console.log('[LANDING DEBUG] Secure trade button:', secureTradeButton ? 'Found' : 'Not found');
+            
+            if (secureTradeButton) {
+                console.log('[LANDING DEBUG] Adding click listener to secure trade button');
+                secureTradeButton.addEventListener('click', () => {
+                    console.log('[LANDING DEBUG] Secure trade button clicked');
+                    mountService('secure-trade');
+                });
+            }
+        }
+    }, 100);
 }

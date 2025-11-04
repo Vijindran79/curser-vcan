@@ -107,6 +107,9 @@ export async function validateAddress(address: string): Promise<any | null> {
  * @returns The data from the function or throws an error.
  */
 async function invokeAiFunction(functionName: string, payload: object): Promise<any> {
+    console.log('[API DEBUG] Invoking AI function:', functionName);
+    console.log('[API DEBUG] Payload:', payload);
+    
     if (!checkAndDecrementLookup()) {
         throw new Error("Usage limit reached.");
     }
@@ -114,29 +117,39 @@ async function invokeAiFunction(functionName: string, payload: object): Promise<
     try {
         // FIX: Switched to v8 namespaced syntax for calling a Firebase Function.
         const currentFunctions = functions || getFunctions();
+        console.log('[API DEBUG] Functions instance:', currentFunctions ? 'Available' : 'Not available');
+        
         if (!currentFunctions) {
             throw new Error('Firebase Functions not available');
         }
         
         const aiFunction = currentFunctions.httpsCallable(functionName);
+        console.log('[API DEBUG] Created callable function:', aiFunction ? 'Success' : 'Failed');
         
         // Set timeout to fail fast if function isn't deployed
         const timeoutPromise = new Promise((_, reject) => {
             setTimeout(() => reject(new Error('Function timeout')), 5000);
         });
         
+        console.log('[API DEBUG] Calling function with timeout (5s)');
         const result = await Promise.race([
             aiFunction(payload),
             timeoutPromise
         ]) as any;
         
+        console.log('[API DEBUG] Function call result:', result);
+        
         const data: any = result.data;
+        console.log('[API DEBUG] Response data type:', typeof data, 'value:', data);
         
         // The backend function might return a JSON string, which we parse here.
         if (typeof data === 'string') {
              try {
-                return JSON.parse(data);
+                const parsed = JSON.parse(data);
+                console.log('[API DEBUG] Parsed JSON response:', parsed);
+                return parsed;
              } catch (e) {
+                console.log('[API DEBUG] Not JSON, returning raw string');
                 // If it's not JSON, return the raw string.
                 return data;
              }
@@ -144,8 +157,9 @@ async function invokeAiFunction(functionName: string, payload: object): Promise<
         return data;
 
     } catch (error: any) {
+        console.log('[API DEBUG] Function call error:', error.code, error.message);
         // Silently handle CORS/unavailable errors - fall back gracefully
-        const isCorsError = error.code === 'functions/unavailable' || 
+        const isCorsError = error.code === 'functions/unavailable' ||
                            error.code === 'functions/not-found' ||
                            error.code === 'internal' ||
                            error.message?.includes('CORS') ||
@@ -153,6 +167,7 @@ async function invokeAiFunction(functionName: string, payload: object): Promise<
                            error.message?.includes('timeout');
         
         if (isCorsError) {
+            console.log('[API DEBUG] CORS/Network error - will use fallback');
             // Silent fallback - don't throw, just return empty/fallback
             throw new Error('Function not available - will use AI fallback');
         }
@@ -169,26 +184,34 @@ async function invokeAiFunction(functionName: string, payload: object): Promise<
  * @returns The chatbot's response text.
  */
 export async function getChatbotResponse(message: string, history: { role: 'user' | 'model', text: string }[]): Promise<string> {
+    console.log('[CHAT DEBUG] Starting chatbot request with message:', message);
+    console.log('[CHAT DEBUG] Conversation history length:', history.length);
+    
     try {
         // The backend function will likely expect the message and history for context.
+        console.log('[CHAT DEBUG] Calling invokeAiFunction for get-chatbot-response');
         const response = await invokeAiFunction('get-chatbot-response', { message, history });
+        console.log('[CHAT DEBUG] Received response:', typeof response, response);
         
-        // The backend should return a string directly. 
+        // The backend should return a string directly.
         // If it returns an object like { text: "..." }, this handles it.
         if (typeof response === 'string') {
+            console.log('[CHAT DEBUG] Returning string response');
             return response;
         }
         if (response && typeof response.text === 'string') {
+            console.log('[CHAT DEBUG] Returning response.text');
             return response.text;
         }
         
         // Fallback if the response format is unexpected
+        console.error('[CHAT DEBUG] Invalid response format from chatbot API:', response);
         throw new Error("Invalid response format from chatbot API.");
 
     } catch (error) {
         // Errors are already handled by invokeAiFunction (which calls handleFirebaseError)
         // but we'll re-throw a user-friendly message for the UI to catch.
-        console.error("getChatbotResponse failed:", error);
+        console.error("[CHAT DEBUG] getChatbotResponse failed:", error);
         throw new Error("Sorry, I'm having trouble connecting. Please try again later.");
     }
 }
