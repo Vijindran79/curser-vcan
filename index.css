@@ -4550,3 +4550,98 @@ html[data-theme="dark"] .fab-quick-menu .menu-sep { background: rgba(255,255,255
 
 /* Ensure track button visible when compact */
 #track-btn { display: inline-flex; }
+
+/* --- DASHBOARD ICON STYLES --- */
+.dashboard-ecom-hub {
+    padding: 2rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.ecom-hub-title {
+    font-size: 2rem;
+    margin-bottom: 2rem;
+    color: var(--dark-gray);
+    text-align: center;
+}
+
+.ecom-hub-actions {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.ecom-action-card {
+    background-color: var(--background-color);
+    border: 2px solid var(--border-color);
+    border-radius: var(--card-border-radius);
+    padding: 2.5rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.3s ease-in-out;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    min-height: 200px;
+}
+
+.ecom-action-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
+    border-color: var(--primary-orange);
+    background-color: var(--light-gray);
+}
+
+.ecom-action-card-icon {
+    width: 90px;
+    height: 90px;
+    background: linear-gradient(135deg, var(--primary-orange), #FF8C42);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 0.5rem;
+    box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+}
+
+.ecom-action-card-icon i {
+    font-size: 2.5rem;
+    color: white;
+}
+
+.ecom-action-card span {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--dark-gray);
+    letter-spacing: 0.02em;
+}
+
+#ecom-hub-content-view {
+    background-color: var(--background-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--card-border-radius);
+    padding: 2rem;
+    text-align: center;
+}
+
+html[data-theme="dark"] .ecom-action-card-icon {
+    background-color: var(--border-color);
+}
+
+@media (max-width: 768px) {
+    .ecom-hub-actions {
+        grid-template-columns: 1fr;
+    }
+    
+    .ecom-action-card {
+        flex-direction: row;
+        text-align: left;
+    }
+    
+    .ecom-action-card-icon {
+        margin-bottom: 0;
+        margin-right: 1rem;
+    }
+}
