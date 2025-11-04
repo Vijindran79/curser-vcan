@@ -612,9 +612,25 @@ export function initializeStaticPages() {
             'DHL', 'FedEx', 'UPS', 'DPD' // Parcel
         ];
 
-        const getTickerCarrierName = (carrierName: string) => {
-            // Return carrier name as text instead of blocked logos
-            return carrierName;
+        const getTickerCarrierLogo = (carrierName: string) => {
+            // Carrier logo map with high-quality logos
+            const logoMap: { [key: string]: string } = {
+                'Maersk': 'https://logos-world.net/wp-content/uploads/2020/08/Maersk-Logo.png',
+                'CMA CGM': 'https://logos-world.net/wp-content/uploads/2021/08/CMA-CGM-Logo.png',
+                'Hapag-Lloyd': 'https://logos-world.net/wp-content/uploads/2021/09/Hapag-Lloyd-Logo.png',
+                'ONE': 'https://logos-world.net/wp-content/uploads/2021/09/ONE-Logo.png',
+                'Evergreen': 'https://logos-world.net/wp-content/uploads/2021/09/Evergreen-Line-Logo.png',
+                'Lufthansa Cargo': 'https://logos-world.net/wp-content/uploads/2020/05/Lufthansa-Logo.png',
+                'Emirates SkyCargo': 'https://logos-world.net/wp-content/uploads/2020/08/Emirates-Logo.png',
+                'Cathay Cargo': 'https://logos-world.net/wp-content/uploads/2021/03/Cathay-Pacific-Logo.png',
+                'Atlas Air': 'https://logos-world.net/wp-content/uploads/2021/08/Atlas-Air-Logo.png',
+                'DHL': 'https://logos-world.net/wp-content/uploads/2020/04/DHL-Logo.png',
+                'FedEx': 'https://logos-world.net/wp-content/uploads/2020/05/FedEx-Logo.png',
+                'UPS': 'https://logos-world.net/wp-content/uploads/2021/03/UPS-Logo.png',
+                'DPD': 'https://logos-world.net/wp-content/uploads/2021/02/DPD-Logo.png'
+            };
+            
+            return logoMap[carrierName] || '';
         };
         
         const tickerItems = [
@@ -636,12 +652,17 @@ export function initializeStaticPages() {
             }
         });
         
-        // Add separator before carrier names
+        // Add separator before carrier logos
         tickerHtml += '<span class="ticker-separator">•</span>';
         
-        // Add carrier names as text instead of blocked logos
+        // Add carrier logos with fallback to text
         tickerCarriers.forEach((carrier, index) => {
-            tickerHtml += `<span class="ticker-text">${getTickerCarrierName(carrier)}</span>`;
+            const logoUrl = getTickerCarrierLogo(carrier);
+            if (logoUrl) {
+                tickerHtml += `<img src="${logoUrl}" alt="${carrier}" class="carrier-logo-ticker" onerror="this.outerHTML='<span class=\\'ticker-text\\'>${carrier}</span>';">`;
+            } else {
+                tickerHtml += `<span class="ticker-text">${carrier}</span>`;
+            }
             if (index < tickerCarriers.length - 1) {
                 tickerHtml += '<span class="ticker-separator">•</span>';
             }
