@@ -1,0 +1,121 @@
+warning: in the working copy of 'index.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'payment.ts', LF will be replaced by CRLF the next time Git touches it
+[1mdiff --git a/index.html b/index.html[m
+[1mindex c7a1a0f..6550662 100644[m
+[1m--- a/index.html[m
+[1m+++ b/index.html[m
+[36m@@ -143,7 +143,40 @@[m
+                 <div id="page-help" class="page"></div>[m
+                 <div id="page-privacy" class="page"></div>[m
+                 <div id="page-terms" class="page"></div>[m
+[31m-                <div id="page-payment" class="page"></div>[m
+[32m+[m[32m                <div id="page-payment" class="page">[m
+[32m+[m[32m                    <div class="payment-page-container">[m
+[32m+[m[32m                        <button type="button" id="payment-back-btn" class="back-btn" aria-label="Back to previous step">[m
+[32m+[m[32m                            ← Back[m
+[32m+[m[32m                        </button>[m
+[32m+[m[32m                        <div class="payment-layout">[m
+[32m+[m[32m                            <div class="payment-main">[m
+[32m+[m[32m                                <h2>Complete Your Payment</h2>[m
+[32m+[m[32m                                <div id="payment-overview" class="payment-overview card">[m
+[32m+[m[32m                                    <h3>Order Summary</h3>[m
+[32m+[m[32m                                    <div id="payment-summary-items"></div>[m
+[32m+[m[32m                                    <div class="payment-summary-total">[m
+[32m+[m[32m                                        <strong>Total:</strong>[m
+[32m+[m[32m                                        <span id="payment-summary-total">$0.00</span>[m
+[32m+[m[32m                                    </div>[m
+[32m+[m[32m                                </div>[m
+[32m+[m[32m                                <form id="payment-form">[m
+[32m+[m[32m                                    <div class="form-section">[m
+[32m+[m[32m                                        <label for="cardholder-name">Cardholder Name</label>[m
+[32m+[m[32m                                        <input type="text" id="cardholder-name" required placeholder="Full name on card">[m
+[32m+[m[32m                                    </div>[m
+[32m+[m[32m                                    <div class="form-section">[m
+[32m+[m[32m                                        <label for="stripe-card-element">Card Details</label>[m
+[32m+[m[32m                                        <div id="stripe-card-element" class="w-full h-16" style="width: 100%; min-height: 64px; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--background-color);"></div>[m
+[32m+[m[32m                                    </div>[m
+[32m+[m[32m                                    <button type="submit" id="payment-submit-btn" class="main-submit-btn">[m
+[32m+[m[32m                                        <span id="payment-submit-label">Pay $0.00</span>[m
+[32m+[m[32m                                        <span class="loading-spinner-small" style="display: none;"></span>[m
+[32m+[m[32m                                    </button>[m
+[32m+[m[32m                                </form>[m
+[32m+[m[32m                            </div>[m
+[32m+[m[32m                        </div>[m
+[32m+[m[32m                    </div>[m
+[32m+[m[32m                </div>[m
+                 <div id="page-subscription" class="page"></div>[m
+                 <div id="page-confirmation" class="page"></div>[m
+                 <div id="page-results" class="page"></div>[m
+[1mdiff --git a/payment.ts b/payment.ts[m
+[1mindex 18d47b6..3cf1daa 100644[m
+[1m--- a/payment.ts[m
+[1m+++ b/payment.ts[m
+[36m@@ -14,6 +14,7 @@[m [mdeclare global {[m
+ let stripe: any = null;[m
+ let elements: any = null;[m
+ let cardElement: any = null;[m
+[32m+[m[32mconst boundPaymentForms = new WeakSet<HTMLFormElement>();[m
+ [m
+ // This key is publishable and safe to be exposed on the frontend.[m
+ // Using LIVE publishable key[m
+[36m@@ -145,100 +146,34 @@[m [masync function mountPaymentForm() {[m
+     }[m
+ [m
+     try {[m
+[31m-        // FIRST: Ensure the payment page HTML exists with the container element[m
+[31m-        // This should happen BEFORE we fetch the clientSecret so the form is visible[m
+[31m-        console.log('[Payment] Ensuring payment page HTML exists...');[m
+[32m+[m[32m        console.log('[Payment] Preparing payment page DOM...');[m
+         const paymentPage = document.getElementById('page-payment');[m
+         if (!paymentPage) {[m
+             throw new Error('Payment page not found');[m
+         }[m
+ [m
+[31m-        // Check if payment form HTML exists, if not create it[m
+[31m-        let paymentForm = document.getElementById('payment-form');[m
+[32m+[m[32m        const paymentForm = document.getElementById('payment-form') as HTMLFormElement | null;[m
+         if (!paymentForm) {[m
+[31m-            console.log('[Payment] Creating payment page HTML...');[m
+[31m-            // Create the payment page HTML structure[m
+[31m-            paymentPage.innerHTML = `[m
+[31m-                <div class="payment-page-container">[m
+[31m-                    <button class="back-btn" onclick="mountService('landing')">← Back</button>[m
+[31m-                    <div class="payment-layout">[m
+[31m-                        <div class="payment-main">[m
+[31m-                            <h2>Complete Your Payment</h2>[m
+[31m-                            <div id="payment-overview" class="payment-overview card">[m
+[31m-                                <h3>Order Summary</h3>[m
+[31m-                                <div id="payment-summary-items"></div>[m
+[31m-                                <div class="payment-summary-total">[m
+[31m-                                    <strong>Total:</strong>[m
+[31m-                                    <span id="payment-summary-total">${State.currentCurrency.symbol}0.00</span>[m
+[31m-                                </div>[m
+[31m-                            </div>[m
+[31m-                            <form id="payment-form">[m
+[31m-                                <div class="form-section">[m
+[31m-                                    <label for="cardholder-name">Cardholder Name</label>[m
+[31m-                                    <input type="text" id="cardholder-name" required placeholder="Full name on card">[m
+[31m-                                </div>[m
+[31m-                                <div class="form-section">[m
+[31m-                                    <label>Card Details</label>[m
+[31m-                                    <div id="stripe-card-element" class="w-full h-16" style="width: 100%; min-height: 64px; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; background: var(--background-color);"></div>[m
+[31m-                                </div>[m
+[31m-                                <button type="submit" id="payment-submit-btn" class="main-submit-btn">[m
+[31m-                                    Pay ${State.currentCurrency.symbol}${totalAmount.toFixed(2)}[m
+[31m-                                    <span class="loading-spinner-small" style="display: none;"></span>[m
+[31m-                                </button>[m
+[31m-                            </form>[m
+[31m-                        </div>[m
+[31m-                    </div>[m
+[31m-                </div>[m
+[31m-            `;[m
+[31m-            paymentForm = document.getElementById('payment-form');[m
+[31m-            if (paymentForm) {[m
+[31m-                paymentForm.addEventListener('submit', handlePaymentSubmit);[m
+[31m-            }[m
+[31m-            // Re-render the order summary since we just created the HTML[m
+[31m-            renderOrderSummary();[m
+[31m-            [m
+[31m-            // Verify the container element was created successfully[m
+[31m-            const verifyContainer = document.getElementById('stripe-card-element');[m
+[31m-

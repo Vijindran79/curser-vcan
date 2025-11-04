@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "vcanship-onestop-logistics"
+  },
+  "targets": {
+    "vcanship-onestop-logistics": {
+      "hosting": {
+        "vcanresources": [
+          "vcanship-onestop-logistics"
+        ]
+      }
+    }
+  }
+}
+

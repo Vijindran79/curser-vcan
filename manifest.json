@@ -1,0 +1,23 @@
+{
+  "name": "Vcanship",
+  "short_name": "Vcanship",
+  "description": "Vcanship's AI-driven platform relentlessly finds the cheapest global shipping rates for parcels and freight, leveraging exclusive capacity and market intelligence.",
+  "icons": [
+    {
+      "src": "./logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#F0F4F8",
+  "theme_color": "#0D9488"
+}
