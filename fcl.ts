@@ -1282,6 +1282,25 @@ function sortAndRenderFclQuotes(sortBy: 'price' | 'speed') {
     complianceDiv.id = 'fcl-compliance-summary';
     quotesContainer.appendChild(complianceDiv);
     
+    // Add document center button
+    const docButtonDiv = document.createElement('div');
+    docButtonDiv.style.cssText = 'text-align: center; margin-top: 2rem;';
+    docButtonDiv.innerHTML = `
+        <button id="fcl-doc-center-btn" style="padding: 1rem 2rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; font-weight: 600; font-size: 1rem; cursor: pointer; display: inline-flex; align-items: center; gap: 0.75rem; transition: transform 0.2s;">
+            <i class="fa-solid fa-download"></i> Download Shipping Documents
+        </button>
+    `;
+    quotesContainer.appendChild(docButtonDiv);
+    
+    // Add event listener for document center
+    setTimeout(() => {
+        document.getElementById('fcl-doc-center-btn')?.addEventListener('click', () => {
+            import('./document-center').then(({ showDocumentCenter }) => {
+                showDocumentCenter();
+            });
+        });
+    }, 100);
+    
     // Show inline compliance summary
     const originCountry = State.fclDetails?.pickupAddress?.country || State.fclDetails?.pickupPort || 'Unknown';
     const destCountry = State.fclDetails?.deliveryAddress?.country || State.fclDetails?.deliveryPort || 'Unknown';

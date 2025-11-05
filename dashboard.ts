@@ -4,6 +4,7 @@ import { State, setState } from './state';
 import { switchPage, showToast } from './ui';
 import { mountService } from './router';
 import { t } from './i18n';
+import { showDocumentCenter } from './document-center';
 
 export function renderDashboard() {
     const page = DOMElements.pageDashboard;
@@ -37,6 +38,12 @@ export function renderDashboard() {
                     </div>
                     <span>Add Product</span>
                 </button>
+                <button class="ecom-action-card" id="ecom-hub-documents-card">
+                    <div class="ecom-action-card-icon">
+                        <i class="fa-solid fa-folder-open"></i>
+                    </div>
+                    <span>Documents</span>
+                </button>
             </div>
             <div id="ecom-hub-content-view">
                 <p>Your dashboard stats will appear here</p>
@@ -58,6 +65,10 @@ export function renderDashboard() {
     document.getElementById('ecom-hub-addproduct-card')?.addEventListener('click', () => {
         setState({ ecomInitialView: 'add-product' });
         mountService('ecommerce');
+    });
+
+    document.getElementById('ecom-hub-documents-card')?.addEventListener('click', () => {
+        showDocumentCenter();
     });
 }
 

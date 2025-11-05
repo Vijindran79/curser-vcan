@@ -3243,6 +3243,21 @@ function showPaymentConfirmation() {
                     Download Receipt
                 </button>
                 
+                <button id="download-documents-btn" class="secondary-btn" style="
+                    width: 100%;
+                    padding: 0.875rem 1.5rem;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 0.5rem;
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    color: white;
+                    border: none;
+                ">
+                    <i class="fa-solid fa-folder-open"></i>
+                    Download Shipping Documents
+                </button>
+                
                 ${formData.serviceType === 'dropoff' && formData.originAddress ? `
                     <button id="view-dropoff-locations-btn" class="secondary-btn" style="
                         width: 100%;
@@ -3313,6 +3328,13 @@ function showPaymentConfirmation() {
         } catch (error) {
             showToast('Failed to generate receipt', 'error');
         }
+    });
+    
+    // Download documents button
+    modal.querySelector('#download-documents-btn')?.addEventListener('click', async () => {
+        import('./document-center').then(({ showDocumentCenter }) => {
+            showDocumentCenter();
+        });
     });
     
     // View drop-off locations button
