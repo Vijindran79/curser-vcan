@@ -54,8 +54,9 @@ export function initAddressAutocomplete(
 
     // Check if Google Maps API is loaded
     if (typeof google === 'undefined' || !google.maps) {
-        console.error('Google Maps API not loaded');
-        showToast('Address autocomplete is not available. Please check your internet connection.', 'error');
+        console.warn('Google Maps API not loaded - autocomplete unavailable, manual entry available');
+        // Don't show error toast - just allow manual entry
+        input.setAttribute('placeholder', 'Enter address manually');
         return null;
     }
 

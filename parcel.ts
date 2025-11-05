@@ -2052,19 +2052,22 @@ function renderPage() {
 }
 
 // Initialize Google Places Autocomplete for address inputs
+let autocompleteRetryCount = 0;
 function initializeAddressAutocomplete(originInput: HTMLInputElement, destInput: HTMLInputElement) {
     // Check if Google Maps API is loaded
     const googleMaps = (window as any).google;
     if (typeof googleMaps === 'undefined' || !googleMaps.maps || !googleMaps.maps.places) {
-        console.warn('Google Maps API not loaded, retrying...');
-        // Try loading it if not available
-        if (!(window as any).googleMapsLoaded) {
+        // Only log once and retry once
+        if (autocompleteRetryCount === 0) {
+            console.info('📍 Address autocomplete: Manual entry mode (Google Maps API optional)');
+            autocompleteRetryCount++;
+            // Try once more after delay
             setTimeout(() => {
                 const retryGoogleMaps = (window as any).google;
                 if (typeof retryGoogleMaps !== 'undefined' && retryGoogleMaps.maps && retryGoogleMaps.maps.places) {
                     initializeAddressAutocomplete(originInput, destInput);
                 }
-            }, 1000);
+            }, 2000);
         }
         return;
     }

@@ -1202,3 +1202,87 @@ export const sendPasswordResetEmailFunction = functionsV2.onRequest({
     invoker: 'public'
 }, sendPasswordResetEmailApp);
 
+// ==========================================
+// GOOGLE MAPS API PROXY (Secure)
+// ==========================================
+
+const googleMapsProxyApp = express();
+googleMapsProxyApp.use(cors({ origin: true }));
+googleMapsProxyApp.use(express.json());
+
+/**
+ * Proxy Google Maps Places Autocomplete API
+ * Keeps API key secure on server side
+ */
+googleMapsProxyApp.get('/autocomplete', async (req, res) => {
+    try {
+        const { input, types } = req.query;
+        
+        if (!input || typeof input !== 'string') {
+            return res.status(400).json({ error: 'Input parameter required' });
+        }
+
+        const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || functions.config().google?.maps_api_key;
+        
+        if (!GOOGLE_MAPS_API_KEY) {
+            console.error('Google Maps API key not configured');
+            return res.status(503).json({ error: 'Maps service not configured' });
+        }
+
+        const url = new URL('https://maps.googleapis.com/maps/api/place/autocomplete/json');
+        url.searchParams.append('input', input);
+        url.searchParams.append('key', GOOGLE_MAPS_API_KEY);
+        if (types) url.searchParams.append('types', types as string);
+
+        const response = await fetch(url.toString());
+        const data = await response.json();
+
+        return res.status(200).json(data);
+
+    } catch (error: any) {
+        console.error('[googleMapsProxy] Autocomplete error:', error);
+        return res.status(500).json({ error: 'Failed to fetch autocomplete results' });
+    }
+});
+
+/**
+ * Proxy Google Maps Place Details API
+ */
+googleMapsProxyApp.get('/place-details', async (req, res) => {
+    try {
+        const { place_id } = req.query;
+        
+        if (!place_id || typeof place_id !== 'string') {
+            return res.status(400).json({ error: 'place_id parameter required' });
+        }
+
+        const GOOGLE_MAPS_API_KEY = process.env.GOOGLE_MAPS_API_KEY || functions.config().google?.maps_api_key;
+        
+        if (!GOOGLE_MAPS_API_KEY) {
+            console.error('Google Maps API key not configured');
+            return res.status(503).json({ error: 'Maps service not configured' });
+        }
+
+        const url = new URL('https://maps.googleapis.com/maps/api/place/details/json');
+        url.searchParams.append('place_id', place_id);
+        url.searchParams.append('key', GOOGLE_MAPS_API_KEY);
+        url.searchParams.append('fields', 'address_components,formatted_address,geometry');
+
+        const response = await fetch(url.toString());
+        const data = await response.json();
+
+        return res.status(200).json(data);
+
+    } catch (error: any) {
+        console.error('[googleMapsProxy] Place details error:', error);
+        return res.status(500).json({ error: 'Failed to fetch place details' });
+    }
+});
+
+export const googleMapsProxy = functionsV2.onRequest({
+    region: 'us-central1',
+    memory: '256MiB',
+    timeoutSeconds: 30,
+    invoker: 'public'
+}, googleMapsProxyApp);
+
