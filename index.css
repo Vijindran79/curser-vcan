@@ -5798,3 +5798,273 @@ html[data-theme="dark"] #fcl-insurance-premium {
 /* ========================================
    END CARGO INSURANCE STYLES
    ======================================== */
+
+/* ========================================
+   SUBSCRIPTION PAGE STYLES
+   ======================================== */
+
+.subscription-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 40px 20px;
+}
+
+.subscription-header {
+    text-align: center;
+    margin-bottom: 60px;
+}
+
+.subscription-header h1 {
+    font-size: 2.5rem;
+    color: var(--text-color);
+    margin-bottom: 10px;
+}
+
+.subscription-header .subtitle {
+    font-size: 1.2rem;
+    color: var(--medium-gray);
+}
+
+.pricing-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 30px;
+    margin-bottom: 60px;
+}
+
+.pricing-card {
+    background: var(--light-gray);
+    border: 2px solid var(--border-color);
+    border-radius: var(--card-border-radius);
+    padding: 40px 30px;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.pricing-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+.pricing-card.recommended {
+    border-color: var(--primary-orange);
+    background: linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%);
+}
+
+.pricing-card.best-value {
+    border-color: #10B981;
+    background: linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%);
+}
+
+.pricing-badge {
+    position: absolute;
+    top: -15px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--primary-orange);
+    color: white;
+    padding: 8px 20px;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.pricing-badge.savings {
+    background: #10B981;
+}
+
+.pricing-card h3 {
+    font-size: 1.8rem;
+    color: var(--text-color);
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.pricing-card .price {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.pricing-card .currency {
+    font-size: 1.5rem;
+    color: var(--medium-gray);
+    vertical-align: top;
+}
+
+.pricing-card .amount {
+    font-size: 3rem;
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+.pricing-card .period {
+    font-size: 1.2rem;
+    color: var(--medium-gray);
+}
+
+.savings-badge {
+    text-align: center;
+    color: #10B981;
+    font-weight: 600;
+    margin-bottom: 20px;
+}
+
+.pricing-card .features {
+    list-style: none;
+    margin: 30px 0;
+    padding: 0;
+}
+
+.pricing-card .features li {
+    padding: 12px 0;
+    color: var(--text-color);
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.pricing-card .features li i {
+    color: #10B981;
+    font-size: 1.2rem;
+}
+
+.pricing-card .main-submit-btn {
+    width: 100%;
+    padding: 15px;
+    font-size: 1.1rem;
+    margin-top: 20px;
+}
+
+.pricing-card .main-submit-btn.disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.current-plan-notice {
+    background: #ECFDF5;
+    border: 2px solid #10B981;
+    border-radius: var(--card-border-radius);
+    padding: 25px;
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+.current-plan-notice i {
+    color: #10B981;
+    font-size: 2rem;
+    margin-bottom: 10px;
+}
+
+.current-plan-notice p {
+    color: var(--text-color);
+    font-size: 1.1rem;
+}
+
+.free-tier-info {
+    background: var(--light-gray);
+    border: 2px solid var(--border-color);
+    border-radius: var(--card-border-radius);
+    padding: 30px;
+    margin-bottom: 40px;
+}
+
+.free-tier-info h3 {
+    color: var(--text-color);
+    margin-bottom: 20px;
+    font-size: 1.5rem;
+}
+
+.free-tier-info ul {
+    list-style: none;
+    margin-bottom: 20px;
+}
+
+.free-tier-info ul li {
+    padding: 10px 0;
+    color: var(--text-color);
+    font-size: 1rem;
+}
+
+.free-tier-info .upgrade-cta {
+    color: var(--primary-orange);
+    font-weight: 600;
+    font-size: 1.1rem;
+    text-align: center;
+    margin-top: 20px;
+}
+
+.pricing-faq {
+    margin-top: 60px;
+}
+
+.pricing-faq h3 {
+    color: var(--text-color);
+    font-size: 2rem;
+    margin-bottom: 30px;
+    text-align: center;
+}
+
+.faq-item {
+    background: var(--light-gray);
+    border: 1px solid var(--border-color);
+    border-radius: var(--card-border-radius);
+    padding: 25px;
+    margin-bottom: 20px;
+}
+
+.faq-item h4 {
+    color: var(--text-color);
+    font-size: 1.3rem;
+    margin-bottom: 10px;
+}
+
+.faq-item p {
+    color: var(--medium-gray);
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+/* Dark Mode Subscription Styles */
+html[data-theme="dark"] .pricing-card {
+    background: rgba(30, 41, 59, 0.5);
+}
+
+html[data-theme="dark"] .pricing-card.recommended {
+    background: linear-gradient(135deg, rgba(249, 115, 22, 0.1) 0%, rgba(249, 115, 22, 0.05) 100%);
+}
+
+html[data-theme="dark"] .pricing-card.best-value {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.05) 100%);
+}
+
+html[data-theme="dark"] .current-plan-notice {
+    background: rgba(16, 185, 129, 0.1);
+}
+
+html[data-theme="dark"] .free-tier-info {
+    background: rgba(30, 41, 59, 0.5);
+}
+
+html[data-theme="dark"] .faq-item {
+    background: rgba(30, 41, 59, 0.5);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .pricing-cards {
+        grid-template-columns: 1fr;
+    }
+    
+    .subscription-header h1 {
+        font-size: 2rem;
+    }
+    
+    .subscription-header .subtitle {
+        font-size: 1rem;
+    }
+}
+
+/* ========================================
+   END SUBSCRIPTION PAGE STYLES
+   ======================================== */

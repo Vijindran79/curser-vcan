@@ -749,8 +749,7 @@ export const getHsCode = functions.https.onCall(async (data: HSCodeRequest, cont
 // });
 
 // Export subscription functions from subscription.ts
-// COMMENTED OUT: subscription.ts uses v2, causes deployment timeout when mixed with v1
-// export { createSubscriptionCheckout, cancelSubscription, stripeWebhook } from './subscription';
+export { createSubscriptionCheckout, cancelSubscription, stripeWebhook } from './subscription';
 
 // ==========================================
 // PAYMENT INTENT
