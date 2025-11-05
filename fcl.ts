@@ -907,7 +907,11 @@ async function handleFclFormSubmit(e: Event) {
     const hsCode = (document.getElementById('fcl-hs-code') as HTMLInputElement).value;
 
 
+    // Get mainService from state (ocean-only or full-forwarding)
+    const mainService = State.fclDetails?.mainService || 'ocean-only';
+    
     const details: FclDetails = {
+        mainService,
         serviceType: serviceType as FclDetails['serviceType'],
         pickupType: serviceType.startsWith('door-to') ? 'address' : 'location',
         deliveryType: serviceType.endsWith('-to-door') ? 'address' : 'location',
@@ -989,12 +993,25 @@ async function handleFclFormSubmit(e: Event) {
             return;
         }
         const containerSummary = details.containers.map(c => `${c.quantity} x ${c.type}`).join(', ');
+        
+        // Determine service description and pricing adjustment
+        const serviceDescription = mainService === 'full-forwarding' 
+            ? 'Full Forwarding Service (includes customs clearance, documentation handling, compliance management, and door-to-door service)'
+            : 'Ocean Freight Only (port-to-port, customer handles customs)';
+        
+        const pricingNote = mainService === 'full-forwarding'
+            ? 'For Full Forwarding Service: Include an additional 45-50% on top of ocean freight to cover customs clearance ($300-500), documentation handling ($200-300), compliance management ($150-250), and door-to-door transport. This provides complete end-to-end service.'
+            : 'For Ocean Freight Only: Provide base ocean freight rates for port-to-port service. Customer will handle customs clearance and documentation separately.';
+        
         const prompt = `Act as a logistics pricing expert for FCL sea freight. Provide a JSON response containing realistic quotes from 3 different carriers (e.g., Maersk, MSC, CMA CGM) and a compliance checklist.
+        - Service Type: ${serviceDescription}
         - Route: From ${pickupPort || pickupAddress?.country} to ${deliveryPort || deliveryAddress?.country}.
         - Containers: ${containerSummary}.
         - Cargo: ${details.cargoDescription}.
         - HS Code: ${hsCode || 'Not Provided'}.
         - Currency: ${State.currentCurrency.code}.
+        
+        PRICING INSTRUCTIONS: ${pricingNote}
         
         The response should be a JSON object with two keys: "quotes" and "complianceReport".
         The "quotes" key should be an array of objects. For each quote object, provide carrierName, estimatedTransitTime, and totalCost. Apply a ${MARKUP_CONFIG.fcl.standard * 100}% markup to a realistic base cost to calculate the totalCost.
@@ -1809,11 +1826,67 @@ function attachFclEventListeners() {
         // Handle main service card selection (Ocean Only vs Full Forwarding)
         const mainServiceCard = target.closest<HTMLElement>('.main-service-card');
         if (mainServiceCard) {
-            document.querySelectorAll('.main-service-card').forEach(card => 
-                card.classList.remove('active')
-            );
+            // Update all cards - remove active styling and add inactive styling
+            document.querySelectorAll('.main-service-card').forEach(card => {
+                card.classList.remove('active');
+                const htmlCard = card as HTMLElement;
+                htmlCard.style.border = '2px solid #E5E7EB';
+                htmlCard.style.background = 'white';
+                
+                // Update text colors for inactive state
+                const h4 = htmlCard.querySelector('h4') as HTMLElement;
+                const p = htmlCard.querySelector('p') as HTMLElement;
+                const strong = htmlCard.querySelector('strong') as HTMLElement;
+                const span = htmlCard.querySelector('div > span') as HTMLElement;
+                if (h4) h4.style.color = '#1F2937';
+                if (p) p.style.color = '#6B7280';
+                if (strong) strong.style.color = '#1F2937';
+                if (span) span.style.color = '#4B5563';
+                
+                // Update background of best-for box
+                const bestForBox = htmlCard.querySelector('div > div:last-child') as HTMLElement;
+                if (bestForBox) bestForBox.style.background = '#F3F4F6';
+            });
+            
+            // Add active styling to selected card
             mainServiceCard.classList.add('active');
             const service = mainServiceCard.getAttribute('data-service');
+            
+            if (service === 'ocean-only') {
+                mainServiceCard.style.border = '3px solid #F97316';
+                mainServiceCard.style.background = 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%)';
+                
+                const h4 = mainServiceCard.querySelector('h4') as HTMLElement;
+                const p = mainServiceCard.querySelector('p') as HTMLElement;
+                const strong = mainServiceCard.querySelector('strong') as HTMLElement;
+                const span = mainServiceCard.querySelector('div > span') as HTMLElement;
+                if (h4) h4.style.color = '#EA580C';
+                if (p) p.style.color = '#9A3412';
+                if (strong) strong.style.color = '#EA580C';
+                if (span) span.style.color = '#78350F';
+                
+                const bestForBox = mainServiceCard.querySelector('div > div:last-child') as HTMLElement;
+                if (bestForBox) bestForBox.style.background = 'white';
+            } else {
+                mainServiceCard.style.border = '3px solid #3B82F6';
+                mainServiceCard.style.background = 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%)';
+                
+                const h4 = mainServiceCard.querySelector('h4') as HTMLElement;
+                const p = mainServiceCard.querySelector('p') as HTMLElement;
+                const strong = mainServiceCard.querySelector('strong') as HTMLElement;
+                const span = mainServiceCard.querySelector('div > span') as HTMLElement;
+                if (h4) h4.style.color = '#2563EB';
+                if (p) p.style.color = '#1E40AF';
+                if (strong) strong.style.color = '#2563EB';
+                if (span) span.style.color = '#1E3A8A';
+                
+                const bestForBox = mainServiceCard.querySelector('div > div:last-child') as HTMLElement;
+                if (bestForBox) bestForBox.style.background = 'white';
+            }
+            
+            // Also check/uncheck the radio inputs
+            const radio = mainServiceCard.querySelector('input[type="radio"]') as HTMLInputElement;
+            if (radio) radio.checked = true;
             
             // Store selected service in state
             if (State.fclDetails) {
@@ -1824,6 +1897,15 @@ function attachFclEventListeners() {
                     }
                 });
             }
+            
+            // Show toast notification
+            showToast(
+                service === 'ocean-only' 
+                    ? '🚢 Ocean Freight Only selected - you handle customs' 
+                    : '✨ Full Forwarding selected - we handle everything!',
+                'success',
+                2000
+            );
         }
         
         if (target.closest('.fcl-remove-container-btn')) {
