@@ -100,7 +100,7 @@ export interface FclContainer {
     type: string;
     quantity: number;
     weight: number;
-    weightUnit: 'TON' | 'KG';
+    weightUnit: 'TON' | 'KG' | 'LBS';
 }
 export interface FclDetails {
     serviceType: FclServiceType;
