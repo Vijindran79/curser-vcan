@@ -3,6 +3,12 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { State, setState, resetFclState, Quote, FclDetails, ComplianceDoc, FclContainer, FclInsurance, Service } from './state';
 import { switchPage, updateProgressBar, showToast, toggleLoading } from './ui';
+import { 
+    getLocalCharges, 
+    calculateTotalLocalCharges, 
+    formatLocalChargesBreakdown, 
+    detectDestinationCountry 
+} from './local-charges';
 import { getHsCodeSuggestions } from './api';
 import { detectCountry } from './compliance';
 import { MARKUP_CONFIG } from './pricing';
@@ -1086,6 +1092,83 @@ function handleFclDocumentUpload(files: FileList) {
     showToast(`Uploaded ${files.length} document(s)`, 'success');
 }
 
+/**
+ * Render local charges information for destination country
+ */
+function renderLocalChargesInfo(): string {
+    // Get destination from state
+    const destination = State.fclDetails?.deliveryAddress?.country || State.fclDetails?.deliveryPort || '';
+    
+    if (!destination) {
+        return '';
+    }
+    
+    // Detect country code
+    const countryCode = detectDestinationCountry(destination);
+    
+    if (!countryCode) {
+        return '';
+    }
+    
+    // Get local charges
+    const localCharges = getLocalCharges(countryCode);
+    
+    if (!localCharges) {
+        return '';
+    }
+    
+    const total = calculateTotalLocalCharges(localCharges.charges);
+    const breakdown = formatLocalChargesBreakdown(localCharges);
+    
+    return `
+        <div style="margin-top: 1.5rem;">
+            <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 1rem; border-radius: 8px 8px 0 0;">
+                <h4 style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fa-solid fa-money-bill-wave"></i>
+                    Destination Local Charges
+                </h4>
+                <p style="margin: 0.5rem 0 0; font-size: 0.875rem; opacity: 0.95;">
+                    ${localCharges.country} (${localCharges.countryCode})
+                </p>
+            </div>
+            
+            <div style="background: var(--card-bg); padding: 1rem; border: 1px solid var(--border-color); border-top: none; border-radius: 0 0 8px 8px;">
+                <!-- Total -->
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: #f0fdf4; border-radius: 8px; margin-bottom: 1rem;">
+                    <span style="font-weight: 600; color: #166534;">Estimated Total Local Charges:</span>
+                    <span style="font-size: 1.25rem; font-weight: 700; color: #166534;">${localCharges.currency} ${total.toFixed(2)}</span>
+                </div>
+                
+                <!-- Breakdown -->
+                <div style="font-size: 0.875rem; line-height: 1.8; color: var(--text-color);">
+                    ${breakdown.replace(/\n/g, '<br>')}
+                </div>
+                
+                ${localCharges.notes ? `
+                    <div style="margin-top: 1rem; padding: 0.75rem; background: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px;">
+                        <div style="display: flex; align-items: start; gap: 0.5rem;">
+                            <i class="fa-solid fa-info-circle" style="color: #d97706; margin-top: 0.125rem;"></i>
+                            <div style="font-size: 0.8125rem; color: #78350f;">
+                                <strong>Important Notes:</strong><br>
+                                ${localCharges.notes}
+                            </div>
+                        </div>
+                    </div>
+                ` : ''}
+                
+                <!-- Disclaimer -->
+                <div style="margin-top: 1rem; padding: 0.625rem; background: rgba(59, 130, 246, 0.1); border-radius: 6px;">
+                    <p style="font-size: 0.75rem; color: var(--text-secondary); margin: 0; line-height: 1.5;">
+                        <i class="fa-solid fa-triangle-exclamation" style="color: #3b82f6;"></i>
+                        These are estimated local charges at destination. Actual charges may vary based on specific cargo, port, and current tariffs. 
+                        Vcanship will confirm exact charges before booking.
+                    </p>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
 async function renderFclResultsStep(complianceReport: any) {
     const sidebarContainer = document.getElementById('fcl-sidebar-container');
     const controlsContainer = document.getElementById('fcl-results-controls');
@@ -1123,6 +1206,8 @@ async function renderFclResultsStep(complianceReport: any) {
                         </div>
                     </div>
                 ` : ''}
+                
+                ${renderLocalChargesInfo()}
              </div>
              <div class="quote-confirmation-panel">
                 <h4>This is an AI Estimate</h4>
