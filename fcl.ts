@@ -92,7 +92,7 @@ function renderFclPage() {
                 </div>
                 <p style="margin: 0; opacity: 0.95; font-size: 14px;">Upgrade to Pro for unlimited real-time quotes from Maersk, MSC, CMA CGM & more major carriers. Save up to 30% vs. traditional brokers!</p>
             </div>
-            <button onclick="switchPage('subscription')" style="background: white; color: #667eea; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; white-space: nowrap; font-size: 14px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+            <button onclick="mountService('subscription')" style="background: white; color: #667eea; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; white-space: nowrap; font-size: 14px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
                 Upgrade Now →
             </button>
         </div>
