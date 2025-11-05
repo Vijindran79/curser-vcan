@@ -8,10 +8,7 @@ const db = admin.firestore();
 
 // Initialize Stripe
 // IMPORTANT: Use environment variables only - never hardcode API keys
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
-if (!STRIPE_SECRET_KEY) {
-    throw new Error('STRIPE_SECRET_KEY environment variable is required');
-}
+const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder';
 const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' });
 
 /**
@@ -26,6 +23,11 @@ export const createSubscriptionCheckout = onCall<{ priceId: string; plan: string
     async (req: CallableRequest<{ priceId: string; plan: string; userEmail?: string }>) => {
         if (!req.auth) {
             throw new HttpsError('unauthenticated', 'User must be authenticated');
+        }
+        
+        // Runtime check for Stripe key
+        if (!process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY === 'sk_test_placeholder') {
+            throw new HttpsError('failed-precondition', 'Stripe is not configured. Please contact support@vcanship.com');
         }
 
         const { priceId, plan, userEmail } = req.data;
