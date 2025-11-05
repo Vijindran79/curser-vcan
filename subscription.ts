@@ -226,7 +226,7 @@ async function initializeCheckout(plan: 'monthly' | 'yearly') {
     try {
         // Check if functions are available
         if (!functions) {
-            throw new Error('Payment system is currently being set up. Please try again in a few minutes or contact support@vcanship.com');
+            throw new Error('Payment system is currently being set up. Please try again in a few minutes or contact vg@vcanresources.com');
         }
         
         // Load Stripe if not already loaded
@@ -263,7 +263,7 @@ async function initializeCheckout(plan: 'monthly' | 'yearly') {
                 throw new Error(checkoutResult.error.message);
             }
         } else {
-            throw new Error('Payment system error. Please contact support@vcanship.com with error code: NO_SESSION');
+            throw new Error('Payment system error. Please contact vg@vcanresources.com with error code: NO_SESSION');
         }
     } catch (error: any) {
         console.error('Checkout error:', error);
@@ -272,15 +272,15 @@ async function initializeCheckout(plan: 'monthly' | 'yearly') {
         let errorMessage = 'Failed to start checkout. ';
         
         if (error.message?.includes('not found') || error.message?.includes('does not exist')) {
-            errorMessage = '⚠️ Payment system is still being configured. Please try again later or contact support@vcanship.com';
+            errorMessage = '⚠️ Payment system is still being configured. Please try again later or contact vg@vcanresources.com';
         } else if (error.message?.includes('permission') || error.message?.includes('PERMISSION_DENIED')) {
-            errorMessage = '⚠️ Payment setup required. Please contact support@vcanship.com to complete subscription setup.';
+            errorMessage = '⚠️ Payment setup required. Please contact vg@vcanresources.com to complete subscription setup.';
         } else if (error.message?.includes('network') || error.message?.includes('offline')) {
             errorMessage = 'Network error. Please check your connection and try again.';
         } else if (error.message) {
             errorMessage = error.message;
         } else {
-            errorMessage += 'Please contact support@vcanship.com';
+            errorMessage += 'Please contact vg@vcanresources.com';
         }
         
         showToast(errorMessage, 'error', 8000);
