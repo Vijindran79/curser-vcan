@@ -185,6 +185,16 @@ async function handleLclFormSubmit(e: Event) {
         showToast("Please add at least one cargo item.", "error");
         return;
     }
+    
+    // Show skeleton loader immediately
+    const skeletonLoader = await import('./skeleton-loader');
+    skeletonLoader.showSkeletonLoader({
+        service: 'lcl',
+        estimatedTime: 12,
+        showCarrierLogos: true,
+        showProgressBar: true
+    });
+    
     toggleLoading(true, "Calculating LCL estimates...");
 
     const origin = (document.getElementById('lcl-origin') as HTMLInputElement).value;
@@ -218,6 +228,7 @@ async function handleLclFormSubmit(e: Event) {
             serviceProvider: 'Sea Rates API'
         }));
         
+        skeletonLoader.hideSkeletonLoader();
         renderLclResultsStep();
         goToLclStep(2);
         
@@ -282,6 +293,9 @@ async function handleLclFormSubmit(e: Event) {
 
         const parsedResult = JSON.parse(result.response.text());
 
+        const { hideSkeletonLoader } = await import('./skeleton-loader');
+        hideSkeletonLoader();
+        
         currentLclQuotes = parsedResult.quotes.map((q: any) => ({
             ...q,
             carrierType: "LCL Consolidator",
@@ -293,6 +307,7 @@ async function handleLclFormSubmit(e: Event) {
         goToLclStep(2);
     } catch (error) {
         console.error("LCL quote error:", error);
+        skeletonLoader.hideSkeletonLoader();
         showToast("Could not generate an estimate. Please try again.", "error");
     } finally {
         toggleLoading(false);

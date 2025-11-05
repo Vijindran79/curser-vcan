@@ -272,6 +272,15 @@ async function handleGetQuote() {
     };
     setState({ airfreightDetails: details });
     
+    // Show skeleton loader immediately
+    const skeletonLoader = await import('./skeleton-loader');
+    skeletonLoader.showSkeletonLoader({
+        service: 'air',
+        estimatedTime: 10,
+        showCarrierLogos: true,
+        showProgressBar: true
+    });
+    
     toggleLoading(true, "Analyzing your shipment...");
     try {
         // Try Sea Rates API first (real quotes for air freight)
@@ -299,6 +308,7 @@ async function handleGetQuote() {
                 serviceProvider: 'Sea Rates API'
             }));
             
+            skeletonLoader.hideSkeletonLoader();
             setState({ airfreightComplianceDocs: [] });
             renderQuoteAndComplianceStep({ status: 'verified', summary: 'Rates from Sea Rates API', requirements: [] });
             goToAirfreightStep(3);
@@ -384,9 +394,12 @@ async function handleGetQuote() {
         const docs: ComplianceDoc[] = parsedResult.complianceReport.requirements.map((r: any) => ({ ...r, id: `doc-${r.title.replace(/\s/g, '-')}`, status: 'pending', file: null, required: true }));
         setState({ airfreightComplianceDocs: docs });
 
+        skeletonLoader.hideSkeletonLoader();
+        
         renderQuoteAndComplianceStep(parsedResult.complianceReport);
         goToAirfreightStep(3);
     } catch (error) {
+        skeletonLoader.hideSkeletonLoader();
         showToast("Failed to get quote and compliance.", "error");
     } finally {
         toggleLoading(false);

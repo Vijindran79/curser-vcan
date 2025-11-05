@@ -1008,11 +1008,20 @@ async function goToNextStep() {
     try {
         // Navigate IMMEDIATELY - don't wait for anything except step 5 (quote fetching)
         if (currentStep === 5) {
-            // Step 5: Need to fetch quotes - show fetching message
+            // Step 5: Need to fetch quotes - show fetching message and skeleton loader
+            const skeletonLoader = await import('./skeleton-loader');
+            skeletonLoader.showSkeletonLoader({
+                service: 'parcel',
+                estimatedTime: 12,
+                showCarrierLogos: true,
+                showProgressBar: true
+            });
+            
             toggleLoading(true, 'Fetching real-time quotes from carriers... This may take 10-15 seconds');
             
             // Fetch quotes in background
             await fetchQuotes();
+            skeletonLoader.hideSkeletonLoader();
             
             // After fetching quotes, move to step 6 to display them
             if (allQuotes.length > 0) {

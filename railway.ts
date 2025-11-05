@@ -243,6 +243,16 @@ function renderRailwayPage() {
 
 async function handleRailwayFormSubmit(e: Event) {
     e.preventDefault();
+    
+    // Show skeleton loader immediately
+    const skeletonLoader = await import('./skeleton-loader');
+    skeletonLoader.showSkeletonLoader({
+        service: 'rail',
+        estimatedTime: 10,
+        showCarrierLogos: true,
+        showProgressBar: true
+    });
+    
     toggleLoading(true, "Calculating railway estimate...");
 
     const origin = (document.getElementById('railway-origin') as HTMLInputElement).value;
@@ -287,6 +297,7 @@ async function handleRailwayFormSubmit(e: Event) {
                 attachEmailInquiryListeners('railway', realQuotes, { origin, destination: dest, cargoType, weight });
             }, 100);
         }
+        skeletonLoader.hideSkeletonLoader();
         goToRailwayStep(2);
         return;
     } catch (apiError: any) {
@@ -329,9 +340,11 @@ async function handleRailwayFormSubmit(e: Event) {
                 </div>
             `;
         }
+        skeletonLoader.hideSkeletonLoader();
         goToRailwayStep(2);
     } catch (error) {
         console.error("Railway quote error:", error);
+        skeletonLoader.hideSkeletonLoader();
         showToast("Could not generate an estimate. Please try again.", "error");
     } finally {
         toggleLoading(false);
