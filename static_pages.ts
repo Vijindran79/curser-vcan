@@ -617,21 +617,21 @@ export function initializeStaticPages() {
         ];
 
         const getTickerCarrierLogo = (carrierName: string) => {
-            // Carrier logo map with working CDN sources (logos-world.net is down)
+            // Carrier logo map with Clearbit Logo API (reliable, fast, free)
             const logoMap: { [key: string]: string } = {
-                'Maersk': 'https://cdn.brandfetch.io/id1LQGJ5c6/w/400/h/400/theme/dark/logo.png?t=1729589866449',
-                'CMA CGM': 'https://cdn.brandfetch.io/idXvzB9Gl4/w/400/h/400/theme/dark/logo.png?t=1729589541074',
-                'Hapag-Lloyd': 'https://cdn.brandfetch.io/idCHd2SqLE/w/400/h/400/theme/dark/logo.png?t=1729589704917',
+                'Maersk': 'https://logo.clearbit.com/maersk.com',
+                'CMA CGM': 'https://logo.clearbit.com/cma-cgm.com',
+                'Hapag-Lloyd': 'https://logo.clearbit.com/hapag-lloyd.com',
                 'ONE': 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Ocean_Network_Express_logo.svg/320px-Ocean_Network_Express_logo.svg.png',
                 'Evergreen': 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/Evergreen_Marine_logo.svg/320px-Evergreen_Marine_logo.svg.png',
-                'Lufthansa Cargo': 'https://cdn.brandfetch.io/idhVOwbILQ/w/400/h/400/theme/dark/logo.png?t=1729589843473',
-                'Emirates SkyCargo': 'https://cdn.brandfetch.io/idY-nIS0xH/w/400/h/400/theme/dark/logo.png?t=1729590437011',
-                'Cathay Cargo': 'https://cdn.brandfetch.io/idEUfXJlq4/w/400/h/400/theme/dark/logo.png?t=1729589504091',
+                'Lufthansa Cargo': 'https://logo.clearbit.com/lufthansa.com',
+                'Emirates SkyCargo': 'https://logo.clearbit.com/emirates.com',
+                'Cathay Cargo': 'https://logo.clearbit.com/cathaypacific.com',
                 'Atlas Air': 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/Atlas_Air_Logo.svg/320px-Atlas_Air_Logo.svg.png',
-                'DHL': 'https://cdn.brandfetch.io/idXHzdEwBt/w/400/h/400/theme/dark/logo.png?t=1729590579258',
-                'FedEx': 'https://cdn.brandfetch.io/idjYkIwM7Z/w/400/h/400/theme/dark/logo.png?t=1729590467758',
-                'UPS': 'https://cdn.brandfetch.io/idCd1mUn0_/w/400/h/400/theme/dark/logo.png?t=1729590685863',
-                'DPD': 'https://cdn.brandfetch.io/idTdiFzVnI/w/400/h/400/theme/dark/logo.png?t=1729590384929'
+                'DHL': 'https://logo.clearbit.com/dhl.com',
+                'FedEx': 'https://logo.clearbit.com/fedex.com',
+                'UPS': 'https://logo.clearbit.com/ups.com',
+                'DPD': 'https://logo.clearbit.com/dpd.com'
             };
             
             return logoMap[carrierName] || '';

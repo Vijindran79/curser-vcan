@@ -151,26 +151,26 @@ export function makeDraggable(element: HTMLElement, storageKey: string) {
 export function getLogisticsProviderLogo(providerName: string): string | null {
     const providerLower = providerName.toLowerCase().trim();
     
-    // Using reliable CDN sources for company logos (logos-world.net is down)
+    // Using reliable CDN sources - logo.clearbit.com and Wikipedia
     const logoMap: { [key: string]: string } = {
-        'dhl': 'https://cdn.brandfetch.io/idXHzdEwBt/w/400/h/400/theme/dark/logo.png?t=1729590579258',
-        'fedex': 'https://cdn.brandfetch.io/idjYkIwM7Z/w/400/h/400/theme/dark/logo.png?t=1729590467758',
-        'ups': 'https://cdn.brandfetch.io/idCd1mUn0_/w/400/h/400/theme/dark/logo.png?t=1729590685863',
-        'tnt': 'https://cdn.brandfetch.io/idSUrLOWxR/w/400/h/400/theme/dark/logo.png?t=1729590643583',
-        'aramex': 'https://cdn.brandfetch.io/idaiGam3xZ/w/400/h/400/theme/dark/logo.png?t=1729590097558',
-        'maersk': 'https://cdn.brandfetch.io/id1LQGJ5c6/w/400/h/400/theme/dark/logo.png?t=1729589866449',
-        'dpd': 'https://cdn.brandfetch.io/idTdiFzVnI/w/400/h/400/theme/dark/logo.png?t=1729590384929',
-        'usps': 'https://cdn.brandfetch.io/idkFLkc-Gx/w/400/h/400/theme/dark/logo.png?t=1729590694669',
+        'dhl': 'https://logo.clearbit.com/dhl.com',
+        'fedex': 'https://logo.clearbit.com/fedex.com',
+        'ups': 'https://logo.clearbit.com/ups.com',
+        'tnt': 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ee/TNT_Express_Logo.svg/320px-TNT_Express_Logo.svg.png',
+        'aramex': 'https://logo.clearbit.com/aramex.com',
+        'maersk': 'https://logo.clearbit.com/maersk.com',
+        'dpd': 'https://logo.clearbit.com/dpd.com',
+        'usps': 'https://logo.clearbit.com/usps.com',
         'evri': 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Evri_logo.svg/320px-Evri_logo.svg.png',
-        'cma cgm': 'https://cdn.brandfetch.io/idXvzB9Gl4/w/400/h/400/theme/dark/logo.png?t=1729589541074',
-        'hapag': 'https://cdn.brandfetch.io/idCHd2SqLE/w/400/h/400/theme/dark/logo.png?t=1729589704917',
-        'hapag-lloyd': 'https://cdn.brandfetch.io/idCHd2SqLE/w/400/h/400/theme/dark/logo.png?t=1729589704917',
-        'emirates': 'https://cdn.brandfetch.io/idY-nIS0xH/w/400/h/400/theme/dark/logo.png?t=1729590437011',
-        'lufthansa': 'https://cdn.brandfetch.io/idhVOwbILQ/w/400/h/400/theme/dark/logo.png?t=1729589843473',
-        'cathay': 'https://cdn.brandfetch.io/idEUfXJlq4/w/400/h/400/theme/dark/logo.png?t=1729589504091',
-        'cathay pacific': 'https://cdn.brandfetch.io/idEUfXJlq4/w/400/h/400/theme/dark/logo.png?t=1729589504091',
+        'cma cgm': 'https://logo.clearbit.com/cma-cgm.com',
+        'hapag': 'https://logo.clearbit.com/hapag-lloyd.com',
+        'hapag-lloyd': 'https://logo.clearbit.com/hapag-lloyd.com',
+        'emirates': 'https://logo.clearbit.com/emirates.com',
+        'lufthansa': 'https://logo.clearbit.com/lufthansa.com',
+        'cathay': 'https://logo.clearbit.com/cathaypacific.com',
+        'cathay pacific': 'https://logo.clearbit.com/cathaypacific.com',
         'atlas': 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/Atlas_Air_Logo.svg/320px-Atlas_Air_Logo.svg.png',
-        'msc': 'https://cdn.brandfetch.io/idkwrAP9_G/w/400/h/400/theme/dark/logo.png?t=1729589898226',
+        'msc': 'https://logo.clearbit.com/msc.com',
         'evergreen': 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/Evergreen_Marine_logo.svg/320px-Evergreen_Marine_logo.svg.png',
         'one': 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Ocean_Network_Express_logo.svg/320px-Ocean_Network_Express_logo.svg.png'
     };
@@ -194,19 +194,19 @@ export function getEcommercePlatformLogo(platformName: string): string | null {
     const platformLower = platformName.toLowerCase().trim();
     
     const logoMap: { [key: string]: string } = {
-        'amazon': 'https://cdn.brandfetch.io/idSUrLOWxR/w/400/h/400/theme/dark/logo.png?t=1729590099273',
-        'ebay': 'https://cdn.brandfetch.io/idI4pLjGQl/w/400/h/400/theme/dark/logo.png?t=1729590403859',
-        'shopify': 'https://cdn.brandfetch.io/idAnDTFapY/w/400/h/400/theme/dark/logo.png?t=1729590604935',
-        'walmart': 'https://cdn.brandfetch.io/idc91SAlpX/w/400/h/400/theme/dark/logo.png?t=1729590718892',
-        'etsy': 'https://cdn.brandfetch.io/idE9H6TQER/w/400/h/400/theme/dark/logo.png?t=1729590447677',
-        'instagram': 'https://cdn.brandfetch.io/idxW4r6KEd/w/400/h/400/theme/dark/logo.png?t=1729589755916',
-        'facebook marketplace': 'https://cdn.brandfetch.io/ido9pDgh7X/w/400/h/400/theme/dark/logo.png?t=1729589461090',
-        'facebook': 'https://cdn.brandfetch.io/ido9pDgh7X/w/400/h/400/theme/dark/logo.png?t=1729589461090',
-        'google shopping': 'https://cdn.brandfetch.io/idIq_kF0rb/w/400/h/400/theme/dark/logo.png?t=1729589679830',
-        'google': 'https://cdn.brandfetch.io/idIq_kF0rb/w/400/h/400/theme/dark/logo.png?t=1729589679830',
-        'tiktok shop': 'https://cdn.brandfetch.io/idt7nXGpJY/w/400/h/400/theme/dark/logo.png?t=1729590645754',
-        'tiktok': 'https://cdn.brandfetch.io/idt7nXGpJY/w/400/h/400/theme/dark/logo.png?t=1729590645754',
-        'alibaba': 'https://cdn.brandfetch.io/idctOXLKWs/w/400/h/400/theme/dark/logo.png?t=1729590060843'
+        'amazon': 'https://logo.clearbit.com/amazon.com',
+        'ebay': 'https://logo.clearbit.com/ebay.com',
+        'shopify': 'https://logo.clearbit.com/shopify.com',
+        'walmart': 'https://logo.clearbit.com/walmart.com',
+        'etsy': 'https://logo.clearbit.com/etsy.com',
+        'instagram': 'https://logo.clearbit.com/instagram.com',
+        'facebook marketplace': 'https://logo.clearbit.com/facebook.com',
+        'facebook': 'https://logo.clearbit.com/facebook.com',
+        'google shopping': 'https://logo.clearbit.com/google.com',
+        'google': 'https://logo.clearbit.com/google.com',
+        'tiktok shop': 'https://logo.clearbit.com/tiktok.com',
+        'tiktok': 'https://logo.clearbit.com/tiktok.com',
+        'alibaba': 'https://logo.clearbit.com/alibaba.com'
     };
     
     // Try exact match first
