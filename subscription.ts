@@ -6,8 +6,8 @@ import { showToast, toggleLoading } from './ui';
 import { functions, db } from './firebase';
 import { mountService } from './router';
 
-// Stripe publishable key
-const STRIPE_PUBLISHABLE_KEY = process.env.STRIPE_PUBLISHABLE_KEY || 'pk_test_51RnhihPyJngwy6BVymsoYDsBfigGqBOYaHHnPyviDja1dmlD8YgxNQDdupAsCBzkH2ztCAU0IKyNVJRUa1MJ02tv00VJO88S52';
+// Stripe publishable key (LIVE - secure for frontend use)
+const STRIPE_PUBLISHABLE_KEY = 'pk_live_51RnhihPyJngwy6BVAi9YTgB5kc1NMsOvqyqoJdnRFVrKAH0XvDxNWg5nBb27uObdag5nBHgAHGPEaqSa17YoYhQB006lp59yKe';
 
 let stripe: any = null;
 

@@ -1,14 +1,14 @@
 // Firebase Functions for Stripe Subscription Management
 
 import { onCall, CallableRequest, HttpsError, onRequest, Request } from 'firebase-functions/v2/https';
+import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import Stripe from 'stripe';
 
 const db = admin.firestore();
 
-// Initialize Stripe
-// IMPORTANT: Use environment variables only - never hardcode API keys
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder';
+// Initialize Stripe from Firebase config (secure backend storage)
+const STRIPE_SECRET_KEY = functions.config().stripe?.secret_key || process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder';
 const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' });
 
 /**
@@ -26,8 +26,9 @@ export const createSubscriptionCheckout = onCall<{ priceId: string; plan: string
         }
         
         // Runtime check for Stripe key
-        if (!process.env.STRIPE_SECRET_KEY || process.env.STRIPE_SECRET_KEY === 'sk_test_placeholder') {
-            throw new HttpsError('failed-precondition', 'Stripe is not configured. Please contact support@vcanship.com');
+        const stripeKey = functions.config().stripe?.secret_key || process.env.STRIPE_SECRET_KEY;
+        if (!stripeKey || stripeKey === 'sk_test_placeholder') {
+            throw new HttpsError('failed-precondition', 'Stripe is not configured. Please contact vg@vcanresources.com');
         }
 
         const { priceId, plan, userEmail } = req.data;
