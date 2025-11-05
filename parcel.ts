@@ -9,6 +9,7 @@ import { MARKUP_CONFIG } from './pricing';
 import { SchemaType } from '@google/generative-ai';
 import { checkCompliance, type ComplianceCheck, COUNTRY_PICKUP_RULES, detectCountry } from './compliance';
 import { getLogisticsProviderLogo } from './utils';
+import { loadSavedAddresses, saveAddress, type SavedAddress } from './account';
 
 // TYPES
 interface ParcelFormData {
@@ -154,10 +155,21 @@ function renderStep1(): string {
 
 // STEP 2: Address Entry with Google Places Autocomplete
 function renderStep2(): string {
+    const isLoggedIn = State.isLoggedIn;
+    
     return `
         <div class="step-content">
             <h3>Where is your parcel going?</h3>
             <p class="subtitle">Enter addresses or postcodes</p>
+            
+            ${isLoggedIn ? `
+                <div style="margin-bottom: 1.5rem;">
+                    <button type="button" id="select-from-address-book-btn" class="secondary-btn" style="width: 100%; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                        <i class="fa-solid fa-address-book"></i>
+                        Select from Address Book
+                    </button>
+                </div>
+            ` : ''}
             
             <div class="form-section">
                 <div class="input-wrapper">
@@ -174,9 +186,15 @@ function renderStep2(): string {
                         required
                     />
                     <small class="helper-text">Start typing for suggestions</small>
+                    ${isLoggedIn ? `
+                        <label style="margin-top: 0.5rem; display: flex; align-items: center; gap: 0.5rem; font-weight: normal; font-size: 0.9em;">
+                            <input type="checkbox" id="save-origin-address" style="width: auto;">
+                            Save this address for future bookings
+                        </label>
+                    ` : ''}
                 </div>
                 
-                    <div class="input-wrapper">
+                <div class="input-wrapper">
                     <label for="destination-address">
                         <i class="fa-solid fa-location-crosshairs"></i> 
                         Destination Address
@@ -190,6 +208,12 @@ function renderStep2(): string {
                         required
                     />
                     <small class="helper-text">Start typing for suggestions</small>
+                    ${isLoggedIn ? `
+                        <label style="margin-top: 0.5rem; display: flex; align-items: center; gap: 0.5rem; font-weight: normal; font-size: 0.9em;">
+                            <input type="checkbox" id="save-destination-address" style="width: auto;">
+                            Save this address for future bookings
+                        </label>
+                    ` : ''}
                 </div>
                 
                 <div id="address-map-preview" class="map-preview hidden">
@@ -937,6 +961,22 @@ async function goToNextStep() {
         
         // For all other steps - navigate INSTANTLY (don't wait for compliance checks)
         if (currentStep < TOTAL_STEPS) {
+            // Before leaving Step 2, check if user wants to save addresses
+            if (currentStep === 2 && State.isLoggedIn) {
+                const saveOriginCheckbox = document.getElementById('save-origin-address') as HTMLInputElement;
+                const saveDestCheckbox = document.getElementById('save-destination-address') as HTMLInputElement;
+                
+                if (saveOriginCheckbox?.checked && formData.originAddress) {
+                    // Save origin address in background
+                    saveAddressFromString(formData.originAddress, 'Origin').catch(console.error);
+                }
+                
+                if (saveDestCheckbox?.checked && formData.destinationAddress) {
+                    // Save destination address in background
+                    saveAddressFromString(formData.destinationAddress, 'Destination').catch(console.error);
+                }
+            }
+            
             currentStep++;
             
             // Render immediately - this should be instant
@@ -1595,6 +1635,11 @@ function attachWizardListeners() {
             showToast('Failed to find drop-off locations', 'error');
             console.error('Drop-off location error:', error);
         }
+    });
+    
+    // Step 2: Address Book button
+    page.querySelector('#select-from-address-book-btn')?.addEventListener('click', async () => {
+        await showAddressBookModal();
     });
     
     // Step 2: Address inputs with Google Places Autocomplete
@@ -3232,6 +3277,223 @@ function showPaymentConfirmation() {
             downloadBtn.style.transform = 'scale(1)';
             downloadBtn.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
         });
+    }
+}
+
+// SAVE ADDRESS FROM STRING
+async function saveAddressFromString(addressString: string, label: string) {
+    if (!State.currentUser) return;
+    
+    try {
+        // Parse address string (simple approach - can be enhanced)
+        const parts = addressString.split(',').map(p => p.trim());
+        
+        if (parts.length < 3) {
+            console.warn('Address too short to parse:', addressString);
+            return;
+        }
+        
+        const street = parts[0] || '';
+        const city = parts[parts.length - 3] || parts[1] || '';
+        const postcode = parts[parts.length - 2] || '';
+        const country = parts[parts.length - 1] || '';
+        
+        const addressData: Partial<SavedAddress> = {
+            label: label,
+            name: State.currentUser.name,
+            street: street,
+            city: city,
+            postcode: postcode,
+            country: country,
+            isDefault: false,
+            userId: State.currentUser.uid || State.currentUser.email,
+            createdAt: new Date().toISOString(),
+        };
+        
+        const success = await saveAddress(addressData);
+        if (success) {
+            showToast(`✓ ${label} address saved to address book`, 'success');
+        }
+    } catch (error) {
+        console.error('Error saving address:', error);
+    }
+}
+
+// ADDRESS BOOK MODAL
+async function showAddressBookModal() {
+    toggleLoading(true, 'Loading saved addresses...');
+    
+    try {
+        const addresses = await loadSavedAddresses();
+        toggleLoading(false);
+        
+        if (addresses.length === 0) {
+            showToast('No saved addresses found. Complete this booking and check "Save address" to add addresses.', 'info');
+            return;
+        }
+        
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.id = 'address-book-modal';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 700px; max-height: 80vh; overflow-y: auto;">
+                <div class="modal-header" style="background: linear-gradient(135deg, #F97316 0%, #EA580C 100%); color: white; padding: 1.5rem; margin: -1.5rem -1.5rem 1.5rem -1.5rem; border-radius: 12px 12px 0 0;">
+                    <h2 style="margin: 0; display: flex; align-items: center; gap: 0.75rem;">
+                        <i class="fa-solid fa-address-book"></i>
+                        Select Saved Address
+                    </h2>
+                    <p style="margin: 0.5rem 0 0 0; opacity: 0.9; font-size: 0.9em;">Choose an address to autofill</p>
+                </div>
+                
+                <div style="display: grid; gap: 1rem;">
+                    ${addresses.map(addr => `
+                        <div class="address-select-card" data-id="${addr.id}" style="
+                            border: 2px solid #E5E7EB;
+                            border-radius: 12px;
+                            padding: 1.25rem;
+                            cursor: pointer;
+                            transition: all 0.2s ease;
+                        ">
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 0.75rem;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                    <span style="background: #F97316; color: white; padding: 0.25rem 0.75rem; border-radius: 6px; font-size: 0.85em; font-weight: 600;">
+                                        ${addr.label}
+                                    </span>
+                                    ${addr.isDefault ? '<span style="background: #10B981; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75em;">Default</span>' : ''}
+                                </div>
+                                <div style="display: flex; gap: 0.5rem;">
+                                    <button class="use-as-origin-btn" data-id="${addr.id}" style="
+                                        padding: 0.4rem 0.75rem;
+                                        background: #3B82F6;
+                                        color: white;
+                                        border: none;
+                                        border-radius: 6px;
+                                        font-size: 0.8em;
+                                        cursor: pointer;
+                                        transition: background 0.2s;
+                                    ">
+                                        <i class="fa-solid fa-location-dot"></i> Origin
+                                    </button>
+                                    <button class="use-as-dest-btn" data-id="${addr.id}" style="
+                                        padding: 0.4rem 0.75rem;
+                                        background: #8B5CF6;
+                                        color: white;
+                                        border: none;
+                                        border-radius: 6px;
+                                        font-size: 0.8em;
+                                        cursor: pointer;
+                                        transition: background 0.2s;
+                                    ">
+                                        <i class="fa-solid fa-location-crosshairs"></i> Destination
+                                    </button>
+                                </div>
+                            </div>
+                            <div style="color: #374151;">
+                                <p style="margin: 0; font-weight: 500;">${addr.name}${addr.company ? ` - ${addr.company}` : ''}</p>
+                                <p style="margin: 0.25rem 0 0 0; font-size: 0.9em; color: #6B7280;">
+                                    ${addr.street}, ${addr.city}, ${addr.postcode}<br>
+                                    ${addr.country}
+                                </p>
+                                ${addr.phone ? `<p style="margin: 0.25rem 0 0 0; font-size: 0.85em; color: #9CA3AF;"><i class="fa-solid fa-phone"></i> ${addr.phone}</p>` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div style="margin-top: 1.5rem; padding-top: 1.5rem; border-top: 2px solid #E5E7EB; display: flex; gap: 0.75rem;">
+                    <button id="close-address-book-btn" class="secondary-btn" style="flex: 1;">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Hover effects on address cards
+        modal.querySelectorAll('.address-select-card').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                (card as HTMLElement).style.borderColor = '#F97316';
+                (card as HTMLElement).style.transform = 'translateY(-2px)';
+                (card as HTMLElement).style.boxShadow = '0 4px 12px rgba(249, 115, 22, 0.15)';
+            });
+            card.addEventListener('mouseleave', () => {
+                (card as HTMLElement).style.borderColor = '#E5E7EB';
+                (card as HTMLElement).style.transform = 'translateY(0)';
+                (card as HTMLElement).style.boxShadow = 'none';
+            });
+        });
+        
+        // Use as origin button
+        modal.querySelectorAll('.use-as-origin-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const addressId = (btn as HTMLElement).dataset.id!;
+                const address = addresses.find(a => a.id === addressId);
+                if (address) {
+                    const fullAddress = `${address.street}, ${address.city}, ${address.postcode}, ${address.country}`;
+                    const originInput = document.getElementById('origin-address') as HTMLInputElement;
+                    if (originInput) {
+                        originInput.value = fullAddress;
+                        formData.originAddress = fullAddress;
+                        showToast(`✓ Origin address set to: ${address.label}`, 'success');
+                        modal.remove();
+                    }
+                }
+            });
+        });
+        
+        // Use as destination button
+        modal.querySelectorAll('.use-as-dest-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const addressId = (btn as HTMLElement).dataset.id!;
+                const address = addresses.find(a => a.id === addressId);
+                if (address) {
+                    const fullAddress = `${address.street}, ${address.city}, ${address.postcode}, ${address.country}`;
+                    const destInput = document.getElementById('destination-address') as HTMLInputElement;
+                    if (destInput) {
+                        destInput.value = fullAddress;
+                        formData.destinationAddress = fullAddress;
+                        showToast(`✓ Destination address set to: ${address.label}`, 'success');
+                        modal.remove();
+                    }
+                }
+            });
+        });
+        
+        // Close button
+        modal.querySelector('#close-address-book-btn')?.addEventListener('click', () => {
+            modal.remove();
+        });
+        
+        // Button hover effects
+        modal.querySelectorAll('.use-as-origin-btn').forEach(btn => {
+            btn.addEventListener('mouseenter', () => {
+                (btn as HTMLElement).style.background = '#2563EB';
+                (btn as HTMLElement).style.transform = 'scale(1.05)';
+            });
+            btn.addEventListener('mouseleave', () => {
+                (btn as HTMLElement).style.background = '#3B82F6';
+                (btn as HTMLElement).style.transform = 'scale(1)';
+            });
+        });
+        
+        modal.querySelectorAll('.use-as-dest-btn').forEach(btn => {
+            btn.addEventListener('mouseenter', () => {
+                (btn as HTMLElement).style.background = '#7C3AED';
+                (btn as HTMLElement).style.transform = 'scale(1.05)';
+            });
+            btn.addEventListener('mouseleave', () => {
+                (btn as HTMLElement).style.background = '#8B5CF6';
+                (btn as HTMLElement).style.transform = 'scale(1)';
+            });
+        });
+        
+    } catch (error) {
+        toggleLoading(false);
+        console.error('Error loading addresses:', error);
+        showToast('Failed to load saved addresses', 'error');
     }
 }
 

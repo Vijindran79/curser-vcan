@@ -4,20 +4,114 @@ import { State } from './state';
 import { showToast } from './ui';
 import { t } from './i18n';
 
-// Mock Data - In a real app, this would come from an API
-let mockAddressBook = [
-    { id: 1, label: 'My Office', name: 'John Doe', company: 'Vcanship', street: '123 Global Logistics Ave', city: 'Shipping City', postcode: '12345', country: 'USA', isDefault: true },
-    { id: 2, label: 'Warehouse A', name: 'Receiving Dept', company: 'Supplier Inc.', street: '456 Supplier St', city: 'Factory Town', postcode: '54321', country: 'China', isDefault: false },
-];
+// Saved addresses - now integrated with Firestore
+export interface SavedAddress {
+    id: string;
+    label: string;
+    name: string;
+    company?: string;
+    street: string;
+    city: string;
+    postcode: string;
+    country: string;
+    phone?: string;
+    email?: string;
+    isDefault: boolean;
+    userId: string;
+    createdAt: string;
+}
+
+let addressBookCache: SavedAddress[] = [];
 
 // --- ADDRESS BOOK ---
 
-export function renderAddressBook() {
+// Load saved addresses from Firestore
+export async function loadSavedAddresses(): Promise<SavedAddress[]> {
+    if (!State.currentUser) return [];
+    
+    try {
+        const firebase = (window as any).firebase;
+        if (!firebase) return [];
+        
+        const db = firebase.firestore();
+        const snapshot = await db.collection('savedAddresses')
+            .where('userId', '==', State.currentUser.uid)
+            .orderBy('isDefault', 'desc')
+            .orderBy('createdAt', 'desc')
+            .get();
+        
+        addressBookCache = snapshot.docs.map((doc: any) => ({
+            id: doc.id,
+            ...doc.data()
+        })) as SavedAddress[];
+        
+        return addressBookCache;
+    } catch (error) {
+        console.error('Error loading addresses:', error);
+        return [];
+    }
+}
+
+// Save address to Firestore
+export async function saveAddress(address: Partial<SavedAddress>): Promise<boolean> {
+    if (!State.currentUser) {
+        showToast('Please log in to save addresses', 'error');
+        return false;
+    }
+    
+    try {
+        const firebase = (window as any).firebase;
+        if (!firebase) return false;
+        
+        const db = firebase.firestore();
+        const addressData = {
+            ...address,
+            userId: State.currentUser.uid,
+            createdAt: address.createdAt || new Date().toISOString(),
+        };
+        
+        if (address.id) {
+            // Update existing
+            await db.collection('savedAddresses').doc(address.id).update(addressData);
+        } else {
+            // Create new
+            await db.collection('savedAddresses').add(addressData);
+        }
+        
+        return true;
+    } catch (error) {
+        console.error('Error saving address:', error);
+        return false;
+    }
+}
+
+// Delete address from Firestore
+export async function deleteAddress(addressId: string): Promise<boolean> {
+    try {
+        const firebase = (window as any).firebase;
+        if (!firebase) return false;
+        
+        const db = firebase.firestore();
+        await db.collection('savedAddresses').doc(addressId).delete();
+        return true;
+    } catch (error) {
+        console.error('Error deleting address:', error);
+        return false;
+    }
+}
+
+export async function renderAddressBook() {
     const page = DOMElements.pageAddressBook;
     if (!page) return;
+    
+    // Show loading state
+    page.innerHTML = '<div style="text-align: center; padding: 2rem;"><i class="fa-solid fa-spinner fa-spin" style="font-size: 2rem; color: #F97316;"></i></div>';
+    
+    // Load addresses from Firestore
+    const addresses = await loadSavedAddresses();
 
-    const addressesHtml = mockAddressBook.length > 0
-        ? mockAddressBook.map(addr => `
+    const addressesHtml = addresses.length > 0
+        ? addresses.map(addr => `
             <div class="address-card">
                 <div class="address-card-header">
                     <h4>${addr.label} ${addr.isDefault ? `<span class="default-badge">${t('account.address_book.default_badge')}</span>` : ''}</h4>
@@ -57,11 +151,40 @@ export function renderAddressBook() {
                 <h3 id="address-form-title">${t('account.address_book.form_title_add')}</h3>
                 <form id="address-form">
                     <input type="hidden" id="address-id">
-                    <div class="input-wrapper"><label for="address-label">${t('account.address_book.label_label')}</label><input type="text" id="address-label" required></div>
-                    <div class="input-wrapper"><label for="address-name">${t('account.address_book.name_label')}</label><input type="text" id="address-name" required></div>
-                    <div class="input-wrapper"><label for="address-street">${t('account.address_book.street_label')}</label><input type="text" id="address-street" required></div>
-                    <div class="input-wrapper"><label for="address-city">${t('account.address_book.city_label')}</label><input type="text" id="address-city" required></div>
-                    <div class="input-wrapper"><label for="address-country">${t('account.address_book.country_label')}</label><input type="text" id="address-country" required></div>
+                    <div class="input-wrapper">
+                        <label for="address-label">Label *</label>
+                        <input type="text" id="address-label" placeholder="e.g., Home, Office, Warehouse" required>
+                    </div>
+                    <div class="input-wrapper">
+                        <label for="address-name">Contact Name *</label>
+                        <input type="text" id="address-name" required>
+                    </div>
+                    <div class="input-wrapper">
+                        <label for="address-company">Company</label>
+                        <input type="text" id="address-company" placeholder="Optional">
+                    </div>
+                    <div class="input-wrapper">
+                        <label for="address-street">Street Address *</label>
+                        <input type="text" id="address-street" required>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                        <div class="input-wrapper">
+                            <label for="address-city">City *</label>
+                            <input type="text" id="address-city" required>
+                        </div>
+                        <div class="input-wrapper">
+                            <label for="address-postcode">Postcode *</label>
+                            <input type="text" id="address-postcode" required>
+                        </div>
+                    </div>
+                    <div class="input-wrapper">
+                        <label for="address-country">Country *</label>
+                        <input type="text" id="address-country" required>
+                    </div>
+                    <div class="input-wrapper">
+                        <label for="address-phone">Phone</label>
+                        <input type="tel" id="address-phone" placeholder="Optional">
+                    </div>
                     <div class="form-actions">
                         <button type="button" id="cancel-edit-btn" class="secondary-btn hidden">${t('account.address_book.cancel')}</button>
                         <button type="submit" class="main-submit-btn">${t('account.address_book.save')}</button>
@@ -74,56 +197,69 @@ export function renderAddressBook() {
     attachAddressBookListeners();
 }
 
-function handleAddressFormSubmit(e: Event) {
+async function handleAddressFormSubmit(e: Event) {
     e.preventDefault();
     const form = e.target as HTMLFormElement;
-    const id = parseInt((form.querySelector('#address-id') as HTMLInputElement).value, 10);
+    const id = (form.querySelector('#address-id') as HTMLInputElement).value;
     
-    const newAddress = {
-        id: id || Date.now(),
+    const addressData: Partial<SavedAddress> = {
+        id: id || undefined,
         label: (form.querySelector('#address-label') as HTMLInputElement).value,
         name: (form.querySelector('#address-name') as HTMLInputElement).value,
         street: (form.querySelector('#address-street') as HTMLInputElement).value,
         city: (form.querySelector('#address-city') as HTMLInputElement).value,
+        postcode: (form.querySelector('#address-postcode') as HTMLInputElement).value || '',
         country: (form.querySelector('#address-country') as HTMLInputElement).value,
-        company: '', // Placeholder
-        postcode: '', // Placeholder
-        isDefault: id ? mockAddressBook.find(a => a.id === id)!.isDefault : false,
+        phone: (form.querySelector('#address-phone') as HTMLInputElement)?.value || '',
+        company: (form.querySelector('#address-company') as HTMLInputElement)?.value || '',
+        isDefault: id ? addressBookCache.find(a => a.id === id)!.isDefault : false,
+        userId: State.currentUser?.uid || State.currentUser?.email || '',
+        createdAt: id ? addressBookCache.find(a => a.id === id)!.createdAt : new Date().toISOString(),
     };
 
-    if (id) { // Editing existing
-        mockAddressBook = mockAddressBook.map(addr => addr.id === id ? newAddress : addr);
-        showToast(t('toast.address_updated'), 'success');
-    } else { // Adding new
-        mockAddressBook.push(newAddress);
-        showToast(t('toast.address_added'), 'success');
-    }
+    const success = await saveAddress(addressData);
     
-    renderAddressBook(); // Re-render the whole page
+    if (success) {
+        showToast(id ? t('toast.address_updated') : t('toast.address_added'), 'success');
+        renderAddressBook(); // Re-render the whole page
+    } else {
+        showToast('Failed to save address. Please try again.', 'error');
+    }
 }
 
-function handleEditAddress(id: number) {
-    const address = mockAddressBook.find(addr => addr.id === id);
+function handleEditAddress(id: string) {
+    const address = addressBookCache.find(addr => addr.id === id);
     if (!address) return;
 
     const form = document.getElementById('address-form') as HTMLFormElement;
-    (form.querySelector('#address-id') as HTMLInputElement).value = String(id);
+    (form.querySelector('#address-id') as HTMLInputElement).value = id;
     (form.querySelector('#address-label') as HTMLInputElement).value = address.label;
     (form.querySelector('#address-name') as HTMLInputElement).value = address.name;
     (form.querySelector('#address-street') as HTMLInputElement).value = address.street;
     (form.querySelector('#address-city') as HTMLInputElement).value = address.city;
+    (form.querySelector('#address-postcode') as HTMLInputElement).value = address.postcode;
     (form.querySelector('#address-country') as HTMLInputElement).value = address.country;
+    if (form.querySelector('#address-phone')) {
+        (form.querySelector('#address-phone') as HTMLInputElement).value = address.phone || '';
+    }
+    if (form.querySelector('#address-company')) {
+        (form.querySelector('#address-company') as HTMLInputElement).value = address.company || '';
+    }
     
     (document.getElementById('address-form-title') as HTMLElement).textContent = t('account.address_book.form_title_edit');
     (document.getElementById('cancel-edit-btn') as HTMLElement).classList.remove('hidden');
     form.scrollIntoView({ behavior: 'smooth' });
 }
 
-function handleDeleteAddress(id: number) {
+async function handleDeleteAddress(id: string) {
     if (confirm(t('confirm.delete_address'))) {
-        mockAddressBook = mockAddressBook.filter(addr => addr.id !== id);
-        showToast(t('toast.address_deleted'), 'success');
-        renderAddressBook();
+        const success = await deleteAddress(id);
+        if (success) {
+            showToast(t('toast.address_deleted'), 'success');
+            renderAddressBook();
+        } else {
+            showToast('Failed to delete address. Please try again.', 'error');
+        }
     }
 }
 
@@ -138,10 +274,10 @@ function cancelEdit() {
 function attachAddressBookListeners() {
     document.getElementById('address-form')?.addEventListener('submit', handleAddressFormSubmit);
     document.querySelectorAll('.edit-address-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => handleEditAddress(Number((e.currentTarget as HTMLElement).dataset.id)));
+        btn.addEventListener('click', (e) => handleEditAddress((e.currentTarget as HTMLElement).dataset.id!));
     });
     document.querySelectorAll('.delete-address-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => handleDeleteAddress(Number((e.currentTarget as HTMLElement).dataset.id)));
+        btn.addEventListener('click', (e) => handleDeleteAddress((e.currentTarget as HTMLElement).dataset.id!));
     });
     document.getElementById('cancel-edit-btn')?.addEventListener('click', cancelEdit);
     document.getElementById('add-address-from-empty-btn')?.addEventListener('click', () => {

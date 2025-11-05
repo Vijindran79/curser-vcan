@@ -327,7 +327,7 @@ export interface AppState {
     currentPage: Page;
     currentService: Service | null;
     isLoggedIn: boolean;
-    currentUser: { name: string; email: string } | null;
+    currentUser: { name: string; email: string; uid?: string } | null;
     postLoginRedirectService: Service | string | null;
     subscriptionTier: 'guest' | 'free' | 'pro';
     aiLookupsRemaining: number;
