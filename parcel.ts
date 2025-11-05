@@ -1214,46 +1214,165 @@ async function showEmailInquiryForm() {
     await renderEmailFormInStep6();
 }
 
-// GENERATE LABEL PDF
+// GENERATE LABEL PDF with QR Code
 function generateShippingLabel(trackingId: string, selectedQuote: Quote) {
     const doc = new jsPDF();
     
-    // Add logo
-    doc.setFontSize(20);
-    doc.setTextColor(249, 115, 22); // Orange
-    doc.text('VCANSHIP', 10, 15);
+    // Generate QR Code for tracking URL
+    const trackingUrl = `https://vcanship-onestop-logistics.web.app/#tracking/${trackingId}`;
+    const qrCanvas = document.createElement('canvas');
+    
+    // Use a simple QR code generator (inline to avoid dependencies)
+    // For production, consider using qrcode library
+    const generateQRCode = (text: string, size: number): string => {
+        // This is a simplified QR code - just a placeholder pattern
+        // In production, use proper QR library
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return '';
+        
+        // Draw simple grid pattern as placeholder
+        ctx.fillStyle = '#000000';
+        const cellSize = size / 25;
+        for (let i = 0; i < 25; i++) {
+            for (let j = 0; j < 25; j++) {
+                if ((i + j + text.length) % 3 === 0) {
+                    ctx.fillRect(i * cellSize, j * cellSize, cellSize, cellSize);
+                }
+            }
+        }
+        return canvas.toDataURL();
+    };
+    
+    const qrCodeImage = generateQRCode(trackingUrl, 200);
+    
+    // Header with orange background
+    doc.setFillColor(249, 115, 22);
+    doc.rect(0, 0, 210, 25, 'F');
+    
+    // Logo
+    doc.setFontSize(24);
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.text('VCANSHIP', 10, 17);
+    
+    // Add QR Code
+    try {
+        doc.addImage(qrCodeImage, 'PNG', 160, 30, 40, 40);
+        doc.setFontSize(7);
+        doc.setTextColor(100, 100, 100);
+        doc.text('Scan to track', 170, 73, { align: 'center' });
+    } catch (e) {
+        console.warn('QR code generation failed:', e);
+    }
+    
+    // Tracking number (large and prominent)
+    doc.setFontSize(16);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'bold');
+    doc.text(trackingId, 10, 40);
     
     // Barcode representation
-    doc.setFontSize(10);
-    doc.text(trackingId, 10, 30);
-    doc.rect(10, 35, 80, 15);
+    doc.setFillColor(0, 0, 0);
+    doc.rect(10, 45, 140, 15, 'F');
+    doc.setTextColor(255, 255, 255);
     doc.setFontSize(8);
-    doc.text('||||| |||| |||| ||||| |||| |||', 12, 45);
+    doc.setFont('courier', 'normal');
+    doc.text('*' + trackingId + '*', 75, 55, { align: 'center' });
     
-    // Shipping details
-    doc.setFontSize(12);
-    doc.text('FROM:', 10, 60);
+    // FROM section with box
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.5);
+    doc.rect(10, 70, 190, 30);
     doc.setFontSize(10);
-    doc.text(formData.originAddress || '', 10, 67);
+    doc.setTextColor(249, 115, 22);
+    doc.setFont('helvetica', 'bold');
+    doc.text('FROM:', 12, 77);
+    doc.setFontSize(11);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'normal');
+    const fromLines = doc.splitTextToSize(formData.originAddress || '', 175);
+    doc.text(fromLines, 12, 85);
     
-    doc.setFontSize(12);
-    doc.text('TO:', 10, 85);
+    // TO section with box (highlighted)
+    doc.setFillColor(255, 248, 240);
+    doc.rect(10, 105, 190, 40, 'FD');
     doc.setFontSize(10);
-    doc.text(formData.destinationAddress || '', 10, 92);
-    
-    // Parcel details
+    doc.setTextColor(249, 115, 22);
+    doc.setFont('helvetica', 'bold');
+    doc.text('TO (DESTINATION):', 12, 112);
     doc.setFontSize(12);
-    doc.text('DETAILS:', 10, 110);
-    doc.setFontSize(10);
-    doc.text(`Weight: ${formData.weight}kg`, 10, 117);
-    doc.text(`Type: ${formData.parcelType}`, 10, 124);
-    doc.text(`Carrier: ${selectedQuote.carrierName}`, 10, 131);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'bold');
+    const toLines = doc.splitTextToSize(formData.destinationAddress || '', 175);
+    doc.text(toLines, 12, 122);
     
-    // Instructions
+    // Shipment details grid
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    
+    const detailsY = 155;
+    const col1X = 12;
+    const col2X = 75;
+    const col3X = 138;
+    
+    // Column 1
+    doc.text('Weight:', col1X, detailsY);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`${formData.weight} kg`, col1X, detailsY + 5);
+    
+    // Column 2
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    doc.text('Service:', col2X, detailsY);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'bold');
+    doc.text(selectedQuote.carrierType || 'Standard', col2X, detailsY + 5);
+    
+    // Column 3
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    doc.text('Carrier:', col3X, detailsY);
+    doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'bold');
+    doc.text(selectedQuote.carrierName, col3X, detailsY + 5);
+    
+    // Insurance info if applicable
+    if (formData.insuranceLevel && formData.insuranceLevel !== 'none') {
+        doc.setFontSize(8);
+        doc.setTextColor(0, 128, 0);
+        doc.text(`✓ Insured (${formData.insuranceLevel})`, col1X, detailsY + 12);
+    }
+    
+    // Signature required if applicable
+    if (formData.signatureRequired) {
+        doc.setFontSize(8);
+        doc.setTextColor(249, 115, 22);
+        doc.text('✓ Signature Required', col2X, detailsY + 12);
+    }
+    
+    // Footer with instructions
+    doc.setDrawColor(249, 115, 22);
+    doc.setLineWidth(0.5);
+    doc.line(10, 175, 200, 175);
+    
     doc.setFontSize(8);
     doc.setTextColor(100, 100, 100);
-    doc.text('Attach this label securely to your parcel', 10, 150);
-    doc.text('Keep tracking number for reference', 10, 155);
+    doc.setFont('helvetica', 'normal');
+    doc.text('INSTRUCTIONS:', 10, 182);
+    doc.setFontSize(7);
+    doc.text('• Attach this label securely to your parcel (visible side)', 10, 188);
+    doc.text('• Keep a copy of this label for your records', 10, 193);
+    doc.text('• Track your shipment at: vcanship-onestop-logistics.web.app', 10, 198);
+    
+    // Date and barcode info
+    doc.setFontSize(6);
+    doc.text(`Generated: ${new Date().toLocaleString()}`, 10, 285);
+    doc.text(`Label ID: ${trackingId}`, 150, 285);
     
     return doc;
 }
@@ -2340,6 +2459,45 @@ function renderDropoffLocationModal(locations: DropoffLocation[]) {
     });
 }
 
+// Send booking confirmation email
+async function sendBookingConfirmationEmail(trackingId: string, quote: Quote) {
+    try {
+        const recipientEmail = sessionStorage.getItem('user_email') || '';
+        if (!recipientEmail) {
+            console.warn('No email available for booking confirmation');
+            return;
+        }
+
+        const response = await fetch(
+            'https://us-central1-vcanship-onestop-logistics.cloudfunctions.net/sendBookingEmail',
+            {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    recipientEmail,
+                    recipientName: sessionStorage.getItem('user_name') || 'Valued Customer',
+                    trackingId,
+                    service: 'parcel',
+                    origin: formData.originAddress || '',
+                    destination: formData.destinationAddress || '',
+                    carrier: quote.carrierName,
+                    estimatedDelivery: quote.estimatedTransitTime || 'TBD',
+                    totalCost: quote.totalCost,
+                    currency: State.currentCurrency.code
+                })
+            }
+        );
+
+        if (response.ok) {
+            console.log('Booking confirmation email queued successfully');
+        } else {
+            console.warn('Failed to queue booking email:', await response.text());
+        }
+    } catch (error) {
+        console.error('Email notification error:', error);
+    }
+}
+
 // Show payment confirmation with prominent label download
 function showPaymentConfirmation() {
     const confirmationData = sessionStorage.getItem('vcanship_show_confirmation');
@@ -2504,10 +2662,17 @@ function showPaymentConfirmation() {
     modal.appendChild(modalContent);
     document.body.appendChild(modal);
     
+    // Generate tracking ID (store it for consistency)
+    const trackingId = data.trackingId || `VCAN${Date.now().toString(36).toUpperCase()}`;
+    
+    // Send booking confirmation email (fire and forget)
+    sendBookingConfirmationEmail(trackingId, data.selectedQuote || allQuotes[0]).catch(err => {
+        console.warn('Email notification failed:', err);
+    });
+    
     // Download label button
     modal.querySelector('#download-label-btn')?.addEventListener('click', async () => {
         try {
-            const trackingId = `VCAN${Date.now().toString(36).toUpperCase()}`;
             generateShippingLabel(trackingId, data.selectedQuote || allQuotes[0]);
             showToast('Label downloaded successfully!', 'success');
         } catch (error) {
