@@ -1377,35 +1377,160 @@ function generateShippingLabel(trackingId: string, selectedQuote: Quote) {
     return doc;
 }
 
-// GENERATE RECEIPT PDF
+// GENERATE PROFESSIONAL RECEIPT PDF
 function generateReceipt(trackingId: string, selectedQuote: Quote) {
     const doc = new jsPDF();
     
-    // Header
-    doc.setFontSize(20);
-    doc.setTextColor(249, 115, 22);
-    doc.text('VCANSHIP', 10, 15);
-    doc.setFontSize(10);
-    doc.setTextColor(0, 0, 0);
-    doc.text('Shipping Receipt', 10, 22);
-    doc.text(`Date: ${new Date().toLocaleDateString()}`, 10, 28);
-    doc.text(`Tracking: ${trackingId}`, 10, 34);
+    // Header with orange background
+    doc.setFillColor(249, 115, 22);
+    doc.rect(0, 0, 210, 35, 'F');
     
-    // Table
+    // Logo and title
+    doc.setFontSize(26);
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.text('VCANSHIP', 10, 15);
+    doc.setFontSize(14);
+    doc.text('PAYMENT RECEIPT', 10, 25);
+    
+    // Receipt number and date
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Receipt #: ${trackingId}`, 150, 15, { align: 'right' });
+    doc.text(`Date: ${new Date().toLocaleString()}`, 150, 22, { align: 'right' });
+    
+    // Customer info box
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('CUSTOMER DETAILS', 10, 48);
+    
+    doc.setDrawColor(200, 200, 200);
+    doc.setLineWidth(0.5);
+    doc.rect(10, 52, 190, 25);
+    
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    const guestEmail = sessionStorage.getItem('user_email') || 'Not provided';
+    doc.text(`Email: ${guestEmail}`, 12, 60);
+    doc.text(`Tracking ID: ${trackingId}`, 12, 67);
+    doc.text(`Payment Date: ${new Date().toLocaleDateString()}`, 12, 74);
+    
+    // Shipment details
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('SHIPMENT DETAILS', 10, 88);
+    
+    // Use autoTable for clean formatting
     autoTable(doc, {
-        startY: 45,
-        head: [['Item', 'Details']],
+        startY: 92,
+        head: [['Description', 'Details']],
+        headStyles: {
+            fillColor: [249, 115, 22],
+            textColor: [255, 255, 255],
+            fontStyle: 'bold',
+            fontSize: 10
+        },
         body: [
-            ['From', formData.originAddress || ''],
-            ['To', formData.destinationAddress || ''],
-            ['Weight', `${formData.weight} kg`],
-            ['Type', formData.parcelType || ''],
+            ['Origin', formData.originAddress || 'Not specified'],
+            ['Destination', formData.destinationAddress || 'Not specified'],
+            ['Weight', `${formData.weight || 0} kg`],
+            ['Parcel Type', formData.parcelType || 'Standard'],
+            ['Service Type', formData.pickupType === 'pickup' ? 'Home Pickup' : 'Drop-off'],
             ['Carrier', selectedQuote.carrierName],
-            ['Service', selectedQuote.carrierType],
-            ['Transit Time', selectedQuote.estimatedTransitTime],
-            ['Total Cost', `${State.currentCurrency.symbol}${selectedQuote.totalCost.toFixed(2)}`]
-        ]
+            ['Service Level', selectedQuote.carrierType],
+            ['Estimated Transit', selectedQuote.estimatedTransitTime]
+        ],
+        styles: {
+            fontSize: 9,
+            cellPadding: 4
+        },
+        columnStyles: {
+            0: { fontStyle: 'bold', cellWidth: 60 },
+            1: { cellWidth: 130 }
+        }
     });
+    
+    // Calculate final Y position
+    const finalY = (doc as any).lastAutoTable.finalY + 10;
+    
+    // Additional services (if any)
+    if (formData.insuranceLevel && formData.insuranceLevel !== 'none') {
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('ADDITIONAL SERVICES', 10, finalY);
+        
+        autoTable(doc, {
+            startY: finalY + 4,
+            head: [['Service', 'Details']],
+            headStyles: {
+                fillColor: [249, 115, 22],
+                textColor: [255, 255, 255],
+                fontStyle: 'bold',
+                fontSize: 10
+            },
+            body: [
+                ['Insurance', `${formData.insuranceLevel} coverage`],
+                ...(formData.signatureRequired ? [['Signature Required', 'Yes']] : []),
+                ...(formData.leaveInSafePlace ? [['Safe Place Delivery', formData.safePlaceDescription || 'Enabled']] : [])
+            ],
+            styles: {
+                fontSize: 9,
+                cellPadding: 4
+            }
+        });
+    }
+    
+    const costY = (doc as any).lastAutoTable ? (doc as any).lastAutoTable.finalY + 15 : finalY + 15;
+    
+    // Cost breakdown
+    doc.setFillColor(245, 245, 245);
+    doc.rect(10, costY, 190, 30, 'F');
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(0, 0, 0);
+    doc.text('Shipping Cost:', 12, costY + 10);
+    doc.text(`${State.currentCurrency.symbol}${selectedQuote.totalCost.toFixed(2)}`, 198, costY + 10, { align: 'right' });
+    
+    // Add insurance cost if applicable
+    let totalCost = selectedQuote.totalCost;
+    if (formData.insuranceLevel && formData.insuranceLevel !== 'none') {
+        const insuranceCost = formData.insuranceLevel === 'standard' ? selectedQuote.totalCost * 0.01 : selectedQuote.totalCost * 0.02;
+        doc.text('Insurance:', 12, costY + 17);
+        doc.text(`${State.currentCurrency.symbol}${insuranceCost.toFixed(2)}`, 198, costY + 17, { align: 'right' });
+        totalCost += insuranceCost;
+    }
+    
+    // Total
+    doc.setLineWidth(0.5);
+    doc.line(12, costY + 22, 198, costY + 22);
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('TOTAL PAID:', 12, costY + 28);
+    doc.text(`${State.currentCurrency.symbol}${totalCost.toFixed(2)}`, 198, costY + 28, { align: 'right' });
+    
+    // Payment method
+    const paymentY = costY + 40;
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 100, 100);
+    doc.text('Payment Method: Card Payment (Stripe)', 12, paymentY);
+    doc.text('Status: PAID', 12, paymentY + 6);
+    
+    // Footer
+    doc.setDrawColor(249, 115, 22);
+    doc.setLineWidth(1);
+    doc.line(10, 270, 200, 270);
+    
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.text('Thank you for choosing Vcanship!', 105, 277, { align: 'center' });
+    doc.text('For support, visit vcanship-onestop-logistics.web.app or contact support@vcanship.com', 105, 283, { align: 'center' });
+    doc.text(`This is a computer-generated receipt. Receipt ID: ${trackingId}`, 105, 289, { align: 'center' });
+    
+    // Download the PDF
+    doc.save(`Vcanship-Receipt-${trackingId}.pdf`);
     
     return doc;
 }
@@ -2650,6 +2775,234 @@ async function sendBookingConfirmationEmail(trackingId: string, quote: Quote) {
     }
 }
 
+// Show optional registration prompt for guest users
+function showRegistrationPrompt() {
+    const isGuest = sessionStorage.getItem('guest_user') === 'true';
+    const guestEmail = sessionStorage.getItem('user_email');
+    
+    if (!isGuest || !guestEmail) return;
+    
+    // Only show once per session
+    if (sessionStorage.getItem('registration_prompt_shown')) return;
+    sessionStorage.setItem('registration_prompt_shown', 'true');
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10001;
+        padding: 1rem;
+        animation: fadeIn 0.3s;
+    `;
+    
+    const modalContent = document.createElement('div');
+    modalContent.style.cssText = `
+        background: white;
+        border-radius: 16px;
+        max-width: 500px;
+        width: 100%;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        overflow: hidden;
+    `;
+    
+    modalContent.innerHTML = `
+        <div style="
+            background: linear-gradient(135deg, #F97316 0%, #EA580C 100%);
+            padding: 2rem;
+            text-align: center;
+        ">
+            <div style="
+                background: white;
+                width: 80px;
+                height: 80px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin: 0 auto 1rem;
+            ">
+                <i class="fa-solid fa-rocket" style="font-size: 2.5rem; color: #F97316;"></i>
+            </div>
+            <h2 style="color: white; margin: 0 0 0.5rem; font-size: 1.75rem;">
+                Want to save time on future shipments?
+            </h2>
+            <p style="color: rgba(255, 255, 255, 0.9); margin: 0; font-size: 1rem;">
+                Create a free account and unlock these benefits
+            </p>
+        </div>
+        
+        <div style="padding: 2rem;">
+            <div style="display: grid; gap: 1rem; margin-bottom: 2rem;">
+                <div style="display: flex; align-items: start; gap: 1rem;">
+                    <div style="
+                        background: #FEF3C7;
+                        color: #92400E;
+                        width: 40px;
+                        height: 40px;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        flex-shrink: 0;
+                    ">
+                        <i class="fa-solid fa-history"></i>
+                    </div>
+                    <div>
+                        <h4 style="margin: 0 0 0.25rem; color: #1f2937;">Track All Your Shipments</h4>
+                        <p style="margin: 0; color: #6b7280; font-size: 0.9rem;">View complete history and real-time tracking</p>
+                    </div>
+                </div>
+                
+                <div style="display: flex; align-items: start; gap: 1rem;">
+                    <div style="
+                        background: #DBEAFE;
+                        color: #1E40AF;
+                        width: 40px;
+                        height: 40px;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        flex-shrink: 0;
+                    ">
+                        <i class="fa-solid fa-address-book"></i>
+                    </div>
+                    <div>
+                        <h4 style="margin: 0 0 0.25rem; color: #1f2937;">Save Favorite Addresses</h4>
+                        <p style="margin: 0; color: #6b7280; font-size: 0.9rem;">No more re-typing addresses every time</p>
+                    </div>
+                </div>
+                
+                <div style="display: flex; align-items: start; gap: 1rem;">
+                    <div style="
+                        background: #D1FAE5;
+                        color: #065F46;
+                        width: 40px;
+                        height: 40px;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        flex-shrink: 0;
+                    ">
+                        <i class="fa-solid fa-bolt"></i>
+                    </div>
+                    <div>
+                        <h4 style="margin: 0 0 0.25rem; color: #1f2937;">Faster Checkouts</h4>
+                        <p style="margin: 0; color: #6b7280; font-size: 0.9rem;">One-click shipping with saved preferences</p>
+                    </div>
+                </div>
+                
+                <div style="display: flex; align-items: start; gap: 1rem;">
+                    <div style="
+                        background: #FCE7F3;
+                        color: #9F1239;
+                        width: 40px;
+                        height: 40px;
+                        border-radius: 50%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        flex-shrink: 0;
+                    ">
+                        <i class="fa-solid fa-percent"></i>
+                    </div>
+                    <div>
+                        <h4 style="margin: 0 0 0.25rem; color: #1f2937;">Exclusive Discounts</h4>
+                        <p style="margin: 0; color: #6b7280; font-size: 0.9rem;">Members get special rates and promotions</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                <button id="create-account-btn" style="
+                    flex: 1;
+                    min-width: 200px;
+                    background: linear-gradient(135deg, #F97316 0%, #EA580C 100%);
+                    color: white;
+                    border: none;
+                    border-radius: 8px;
+                    padding: 1rem 2rem;
+                    font-size: 1rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: transform 0.2s;
+                ">
+                    <i class="fa-solid fa-user-plus"></i> Create Free Account
+                </button>
+                <button id="maybe-later-btn" style="
+                    flex: 1;
+                    min-width: 150px;
+                    background: white;
+                    color: #6b7280;
+                    border: 2px solid #e5e7eb;
+                    border-radius: 8px;
+                    padding: 1rem 2rem;
+                    font-size: 1rem;
+                    font-weight: 600;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                ">
+                    Maybe Later
+                </button>
+            </div>
+            
+            <p style="text-align: center; margin-top: 1rem; color: #9ca3af; font-size: 0.85rem;">
+                We pre-filled your email: ${guestEmail}
+            </p>
+        </div>
+    `;
+    
+    modal.appendChild(modalContent);
+    document.body.appendChild(modal);
+    
+    // Create account button
+    modal.querySelector('#create-account-btn')?.addEventListener('click', () => {
+        modal.remove();
+        // Import and show auth modal dynamically
+        import('./ui').then(({ showAuthModal }) => {
+            showAuthModal();
+        });
+    });
+    
+    // Maybe later button
+    modal.querySelector('#maybe-later-btn')?.addEventListener('click', () => {
+        modal.remove();
+    });
+    
+    // Hover effects
+    const createBtn = modal.querySelector('#create-account-btn') as HTMLElement;
+    const laterBtn = modal.querySelector('#maybe-later-btn') as HTMLElement;
+    
+    if (createBtn) {
+        createBtn.addEventListener('mouseenter', () => {
+            createBtn.style.transform = 'scale(1.02)';
+        });
+        createBtn.addEventListener('mouseleave', () => {
+            createBtn.style.transform = 'scale(1)';
+        });
+    }
+    
+    if (laterBtn) {
+        laterBtn.addEventListener('mouseenter', () => {
+            laterBtn.style.borderColor = '#F97316';
+            laterBtn.style.color = '#F97316';
+        });
+        laterBtn.addEventListener('mouseleave', () => {
+            laterBtn.style.borderColor = '#e5e7eb';
+            laterBtn.style.color = '#6b7280';
+        });
+    }
+}
+
 // Show payment confirmation with prominent label download
 function showPaymentConfirmation() {
     const confirmationData = sessionStorage.getItem('vcanship_show_confirmation');
@@ -2657,6 +3010,9 @@ function showPaymentConfirmation() {
     
     sessionStorage.removeItem('vcanship_show_confirmation');
     const data = JSON.parse(confirmationData);
+    
+    // Show registration prompt first (if guest user), then confirmation
+    setTimeout(() => showRegistrationPrompt(), 2000);
     
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';

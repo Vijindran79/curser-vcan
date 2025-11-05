@@ -219,6 +219,35 @@ async function mountPaymentForm() {
                                 </div>
                             </div>
                             
+                            <!-- Guest Email (for receipt and tracking) -->
+                            <div class="guest-email-section card" style="margin-bottom: 1.5rem;">
+                                <h3 style="margin-bottom: 0.75rem;">
+                                    <i class="fa-solid fa-envelope"></i> Email for Receipt & Tracking
+                                </h3>
+                                <p style="color: var(--medium-gray); font-size: 0.9rem; margin-bottom: 1rem;">
+                                    We'll send your shipping label, receipt, and tracking updates to this email. No account required!
+                                </p>
+                                <div class="input-wrapper">
+                                    <input 
+                                        type="email" 
+                                        id="guest-email-input" 
+                                        placeholder="your.email@example.com"
+                                        required
+                                        style="
+                                            width: 100%;
+                                            padding: 0.875rem;
+                                            border: 2px solid #e5e7eb;
+                                            border-radius: 8px;
+                                            font-size: 1rem;
+                                            transition: border-color 0.3s;
+                                        "
+                                    />
+                                    <small style="color: var(--medium-gray); font-size: 0.85rem; display: block; margin-top: 0.5rem;">
+                                        <i class="fa-solid fa-lock"></i> Your email is secure and will never be shared
+                                    </small>
+                                </div>
+                            </div>
+                            
                             <!-- Order Summary -->
                             <div id="payment-overview" class="payment-overview card">
                                 <h3>Order Summary</h3>
@@ -749,6 +778,16 @@ async function handlePaymentSubmit(event: Event) {
         if (paymentIntent && paymentIntent.status === 'succeeded') {
             showToast('Payment successful!', 'success');
             
+            // Get guest email
+            const guestEmailInput = document.getElementById('guest-email-input') as HTMLInputElement;
+            const guestEmail = guestEmailInput?.value || '';
+            
+            // Store guest email in session for confirmation page
+            if (guestEmail) {
+                sessionStorage.setItem('user_email', guestEmail);
+                sessionStorage.setItem('guest_user', 'true'); // Flag as guest
+            }
+            
             if (State.paymentContext) {
                  const { quote, addons, shipmentId, origin, destination, service } = State.paymentContext;
                  const totalCost = quote.totalCost + (addons?.reduce((sum, addon) => sum + addon.cost, 0) || 0);
@@ -763,8 +802,13 @@ async function handlePaymentSubmit(event: Event) {
                     currency: State.currentCurrency.code,
                  });
 
-                 // Store confirmation details for the service page to pick up
-                 sessionStorage.setItem('vcanship_show_confirmation', JSON.stringify(State.paymentContext));
+                 // Store confirmation details including email
+                 const confirmationData = {
+                     ...State.paymentContext,
+                     guestEmail: guestEmail,
+                     paymentDate: new Date().toISOString()
+                 };
+                 sessionStorage.setItem('vcanship_show_confirmation', JSON.stringify(confirmationData));
                  
                  // Navigate to the service's confirmation page
                  mountService(service);
