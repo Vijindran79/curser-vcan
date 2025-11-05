@@ -662,6 +662,16 @@ async function initializeCoreApp() {
             console.warn('Rotation popup failed:', error);
         }
 
+        // 🛒 Initialize guest checkout system
+        try {
+            const { checkShowSignupPrompt } = await import('./guest-checkout');
+            // Check if should show post-payment signup prompt
+            checkShowSignupPrompt();
+            console.log('✅ Guest checkout initialized');
+        } catch (error) {
+            console.warn('Guest checkout initialization failed:', error);
+        }
+
         // Now that translations are ready, initialize the rest of the app.
         initializeStaticPages();
         initializeSidebar();
