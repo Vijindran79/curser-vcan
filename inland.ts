@@ -169,6 +169,16 @@ function renderInlandPage() {
 // --- LOGIC ---
 async function handleInlandFormSubmit(e: Event) {
     e.preventDefault();
+    
+    // Show skeleton loader immediately
+    const skeletonLoader = await import('./skeleton-loader');
+    skeletonLoader.showSkeletonLoader({
+        service: 'inland',
+        estimatedTime: 8,
+        showCarrierLogos: true,
+        showProgressBar: true
+    });
+    
     toggleLoading(true, "Finding available trucks...");
 
     const details = {
@@ -184,6 +194,7 @@ async function handleInlandFormSubmit(e: Event) {
     
     try {
         const trucks = await getMockTrucksApiResponse(details);
+        skeletonLoader.hideSkeletonLoader();
         setState({ availableTrucks: trucks });
         
         const truckBoard = document.getElementById('inland-truck-board');
@@ -209,6 +220,7 @@ async function handleInlandFormSubmit(e: Event) {
         goToInlandStep(2);
     } catch (error) {
         console.error("Inland quote error:", error);
+        skeletonLoader.hideSkeletonLoader();
         showToast("Could not find available trucks. Please try again.", "error");
     } finally {
         toggleLoading(false);

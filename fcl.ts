@@ -917,6 +917,15 @@ async function handleFclFormSubmit(e: Event) {
     setState({ fclDetails: details });
 
     try {
+        // Show skeleton loader immediately
+        const skeletonLoader = await import('./skeleton-loader');
+        skeletonLoader.showSkeletonLoader({
+            service: 'fcl',
+            estimatedTime: 15,
+            showCarrierLogos: true,
+            showProgressBar: true
+        });
+
         // Try to fetch from Sea Rates API with 20-second timeout (Pro users get real rates)
         if (State.subscriptionTier === 'pro') {
             try {
@@ -943,6 +952,7 @@ async function handleFclFormSubmit(e: Event) {
                 const realQuotes = await Promise.race([apiPromise, timeoutPromise]) as Quote[];
                 
                 if (realQuotes && realQuotes.length > 0) {
+                    skeletonLoader.hideSkeletonLoader();
                     currentFclQuotes = realQuotes;
                     setState({ fclComplianceDocs: [] }); // Compliance docs from real API
                     renderFclResultsStep({ status: 'verified', summary: 'Rates from Sea Rates API' });
@@ -960,10 +970,12 @@ async function handleFclFormSubmit(e: Event) {
         }
         
         // Fallback: Use FAST AI for instant estimates (keeps customers engaged!)
+        skeletonLoader.updateSkeletonProgress(50, '⚡ Generating instant AI quote... (2-3 seconds)');
         toggleLoading(true, "⚡ Generating instant AI quote... (2-3 seconds)");
         
         if (!State.api) {
             // If AI is not available, show demo quotes immediately
+            skeletonLoader.hideSkeletonLoader();
             showToast("Showing demo quotes (AI not configured)", "info");
             currentFclQuotes = generateDemoFclQuotes(details);
             renderFclResultsStep({ status: 'demo', summary: 'Demo quotes - configure AI for estimates' });
@@ -1073,12 +1085,15 @@ async function handleFclFormSubmit(e: Event) {
 
         const docs: ComplianceDoc[] = parsedResult.complianceReport.requirements.map((r: any) => ({ ...r, id: `doc-${r.title.replace(/\s/g, '-')}`, status: 'pending', file: null, required: true }));
         
+        skeletonLoader.hideSkeletonLoader();
+        
         currentFclQuotes = quotesWithBreakdown;
         setState({ fclComplianceDocs: docs });
         await renderFclResultsStep(parsedResult.complianceReport);
         goToFclStep(2);
     } catch (error) {
         console.error("FCL quote error:", error);
+        skeletonLoader.hideSkeletonLoader();
         showToast("Could not generate an estimate. Please try again.", "error");
     } finally {
         toggleLoading(false);
