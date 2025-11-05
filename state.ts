@@ -102,6 +102,13 @@ export interface FclContainer {
     weight: number;
     weightUnit: 'TON' | 'KG' | 'LBS';
 }
+export interface FclInsurance {
+    enabled: boolean;
+    tier: 'basic' | 'standard' | 'premium';
+    cargoValue: number;
+    premium: number;
+    rate: number;
+}
 export interface FclDetails {
     mainService?: 'ocean-only' | 'full-forwarding'; // Main service selection
     serviceType: FclServiceType;
@@ -114,6 +121,7 @@ export interface FclDetails {
     cargoDescription: string;
     hsCode: string;
     containers: FclContainer[];
+    insurance?: FclInsurance; // Optional cargo insurance
 }
 export interface FclFlashSlot {
     id: string;

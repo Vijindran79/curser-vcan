@@ -1,7 +1,7 @@
 // fcl.ts
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { State, setState, resetFclState, Quote, FclDetails, ComplianceDoc, FclContainer } from './state';
+import { State, setState, resetFclState, Quote, FclDetails, ComplianceDoc, FclContainer, FclInsurance } from './state';
 import { switchPage, updateProgressBar, showToast, toggleLoading } from './ui';
 import { getHsCodeSuggestions } from './api';
 import { detectCountry } from './compliance';
@@ -214,6 +214,136 @@ function renderFclPage() {
                         <p class="helper-text" style="margin-top: 0.5rem; text-align: center;">
                             💡 AI analyzes your cargo description and suggests the most cost-effective container size
                         </p>
+                    </div>
+
+                    <!-- Cargo Insurance Section -->
+                    <div class="form-section" style="background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 2px solid #0ea5e9; border-radius: 12px; padding: 1.5rem;">
+                        <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                            <i class="fa-solid fa-shield-halved" style="font-size: 2rem; color: #0ea5e9;"></i>
+                            <div style="flex: 1;">
+                                <h4 style="margin: 0; color: #0c4a6e; display: flex; align-items: center; gap: 0.5rem;">
+                                    Cargo Insurance (Optional)
+                                    <span style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 0.25rem 0.75rem; border-radius: 12px; font-size: 0.7rem; font-weight: 600;">RECOMMENDED</span>
+                                </h4>
+                                <p style="margin: 0.25rem 0 0 0; font-size: 0.875rem; color: #475569;">
+                                    Protect your shipment against loss or damage during transit
+                                </p>
+                            </div>
+                            <label class="insurance-toggle-switch">
+                                <input type="checkbox" id="fcl-insurance-enabled">
+                                <span class="insurance-toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div id="fcl-insurance-details" style="display: none; animation: slideDown 0.3s ease;">
+                            <!-- Coverage Tier Selection -->
+                            <div style="margin-bottom: 1.5rem;">
+                                <label style="display: block; margin-bottom: 0.75rem; font-weight: 500; color: #0c4a6e;">
+                                    Coverage Level
+                                </label>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem;">
+                                    <label class="insurance-tier-card" data-rate="2.5">
+                                        <input type="radio" name="fcl-insurance-tier" value="basic" checked style="display: none;">
+                                        <div class="insurance-tier-content">
+                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                                <span style="font-weight: 600; color: #0c4a6e;">Basic</span>
+                                                <span style="background: #dbeafe; color: #1e40af; padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">2.5%</span>
+                                            </div>
+                                            <div style="font-size: 0.8rem; color: #64748b;">
+                                                <i class="fa-solid fa-check" style="color: #22c55e; margin-right: 0.25rem;"></i> Loss/Theft<br>
+                                                <i class="fa-solid fa-check" style="color: #22c55e; margin-right: 0.25rem;"></i> Fire/Collision
+                                            </div>
+                                        </div>
+                                    </label>
+
+                                    <label class="insurance-tier-card" data-rate="3.5">
+                                        <input type="radio" name="fcl-insurance-tier" value="standard" style="display: none;">
+                                        <div class="insurance-tier-content">
+                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                                <span style="font-weight: 600; color: #0c4a6e;">Standard</span>
+                                                <span style="background: #fef3c7; color: #92400e; padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">3.5%</span>
+                                            </div>
+                                            <div style="font-size: 0.8rem; color: #64748b;">
+                                                <i class="fa-solid fa-check" style="color: #22c55e; margin-right: 0.25rem;"></i> All Basic Coverage<br>
+                                                <i class="fa-solid fa-check" style="color: #22c55e; margin-right: 0.25rem;"></i> Weather/Water Damage<br>
+                                                <i class="fa-solid fa-check" style="color: #22c55e; margin-right: 0.25rem;"></i> Customs Delays
+                                            </div>
+                                        </div>
+                                    </label>
+
+                                    <label class="insurance-tier-card" data-rate="5.0">
+                                        <input type="radio" name="fcl-insurance-tier" value="premium" style="display: none;">
+                                        <div class="insurance-tier-content">
+                                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                                                <span style="font-weight: 600; color: #0c4a6e;">Premium</span>
+                                                <span style="background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%); color: white; padding: 0.25rem 0.5rem; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">5.0%</span>
+                                            </div>
+                                            <div style="font-size: 0.8rem; color: #64748b;">
+                                                <i class="fa-solid fa-check" style="color: #22c55e; margin-right: 0.25rem;"></i> All Standard Coverage<br>
+                                                <i class="fa-solid fa-check" style="color: #22c55e; margin-right: 0.25rem;"></i> War/Strike/Riots<br>
+                                                <i class="fa-solid fa-check" style="color: #22c55e; margin-right: 0.25rem;"></i> Complete All-Risk
+                                            </div>
+                                        </div>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- Cargo Value Input -->
+                            <div class="input-wrapper">
+                                <label for="fcl-cargo-value">
+                                    Cargo Value (USD) <span style="color: #ef4444;">*</span>
+                                </label>
+                                <div style="position: relative;">
+                                    <span style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #64748b; font-weight: 500;">$</span>
+                                    <input 
+                                        type="number" 
+                                        id="fcl-cargo-value" 
+                                        placeholder="Enter total cargo value"
+                                        min="100"
+                                        step="100"
+                                        style="padding-left: 32px;"
+                                    >
+                                </div>
+                                <p class="helper-text">Enter the total commercial invoice value of your cargo</p>
+                            </div>
+
+                            <!-- Insurance Premium Display -->
+                            <div id="fcl-insurance-premium" style="background: white; border: 2px solid #0ea5e9; border-radius: 8px; padding: 1rem; margin-top: 1rem; display: none;">
+                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <div style="font-size: 0.875rem; color: #64748b; margin-bottom: 0.25rem;">Insurance Premium</div>
+                                        <div style="font-size: 1.75rem; font-weight: 700; color: #0c4a6e;">
+                                            $<span id="fcl-insurance-premium-amount">0.00</span>
+                                        </div>
+                                        <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.25rem;">
+                                            Coverage: $<span id="fcl-insurance-coverage-amount">0.00</span>
+                                        </div>
+                                    </div>
+                                    <div style="text-align: right;">
+                                        <div style="background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); color: white; padding: 0.5rem 1rem; border-radius: 8px; font-weight: 600;">
+                                            <i class="fa-solid fa-circle-check"></i> Protected
+                                        </div>
+                                        <div style="font-size: 0.75rem; color: #64748b; margin-top: 0.5rem;">
+                                            Instant Claims Processing
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Insurance Benefits -->
+                            <div style="background: #f8fafc; border-radius: 8px; padding: 1rem; margin-top: 1rem;">
+                                <div style="font-weight: 600; color: #0c4a6e; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+                                    <i class="fa-solid fa-star" style="color: #f59e0b;"></i>
+                                    Why Choose Our Insurance?
+                                </div>
+                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.75rem; font-size: 0.875rem; color: #475569;">
+                                    <div><i class="fa-solid fa-bolt" style="color: #f59e0b; margin-right: 0.5rem;"></i>Instant approval - no waiting</div>
+                                    <div><i class="fa-solid fa-globe" style="color: #3b82f6; margin-right: 0.5rem;"></i>Worldwide coverage included</div>
+                                    <div><i class="fa-solid fa-clock" style="color: #10b981; margin-right: 0.5rem;"></i>24-48 hour claims processing</div>
+                                    <div><i class="fa-solid fa-headset" style="color: #8b5cf6; margin-right: 0.5rem;"></i>Dedicated claims support</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div class="form-actions">
@@ -875,8 +1005,12 @@ async function handleFclFormSubmit(e: Event) {
 
         const parsedResult = JSON.parse(result.response.text());
 
+        // Add insurance premium to total cost if insurance is enabled
+        const insurancePremium = State.fclDetails?.insurance?.enabled ? State.fclDetails.insurance.premium : 0;
+        
         const quotesWithBreakdown: Quote[] = parsedResult.quotes.map((q: any) => ({
             ...q,
+            totalCost: q.totalCost + insurancePremium, // Add insurance to total
             carrierType: "Ocean Carrier",
             chargeableWeight: 0,
             chargeableWeightUnit: 'N/A',
@@ -886,7 +1020,7 @@ async function handleFclFormSubmit(e: Event) {
                 baseShippingCost: q.totalCost / (1 + MARKUP_CONFIG.fcl.standard),
                 fuelSurcharge: 0,
                 estimatedCustomsAndTaxes: 0,
-                optionalInsuranceCost: 0,
+                optionalInsuranceCost: insurancePremium,
                 ourServiceFee: q.totalCost - (q.totalCost / (1 + MARKUP_CONFIG.fcl.standard))
             },
             serviceProvider: 'Vcanship AI'
@@ -1085,6 +1219,81 @@ async function suggestHsCodeFromImage(file: File, inputElementId: string) {
     } finally {
         toggleLoading(false);
     }
+}
+
+/**
+ * Initialize cargo insurance handlers and calculations
+ */
+function initializeInsuranceHandlers() {
+    const insuranceToggle = document.getElementById('fcl-insurance-enabled') as HTMLInputElement;
+    const insuranceDetails = document.getElementById('fcl-insurance-details');
+    const cargoValueInput = document.getElementById('fcl-cargo-value') as HTMLInputElement;
+    const premiumDisplay = document.getElementById('fcl-insurance-premium');
+    const premiumAmount = document.getElementById('fcl-insurance-premium-amount');
+    const coverageAmount = document.getElementById('fcl-insurance-coverage-amount');
+
+    if (!insuranceToggle || !insuranceDetails) return;
+
+    // Toggle insurance details visibility
+    insuranceToggle.addEventListener('change', () => {
+        if (insuranceToggle.checked) {
+            insuranceDetails.style.display = 'block';
+        } else {
+            insuranceDetails.style.display = 'none';
+            if (premiumDisplay) premiumDisplay.style.display = 'none';
+        }
+    });
+
+    // Calculate premium when cargo value or tier changes
+    function calculateInsurancePremium() {
+        if (!cargoValueInput || !premiumAmount || !coverageAmount || !premiumDisplay) return;
+
+        const cargoValue = parseFloat(cargoValueInput.value) || 0;
+        if (cargoValue < 100) {
+            premiumDisplay.style.display = 'none';
+            return;
+        }
+
+        // Get selected tier rate
+        const selectedTier = document.querySelector('input[name="fcl-insurance-tier"]:checked') as HTMLInputElement;
+        const tierCard = selectedTier?.closest('.insurance-tier-card') as HTMLElement;
+        const rate = parseFloat(tierCard?.dataset.rate || '2.5');
+
+        // Calculate premium (rate is percentage)
+        const premium = (cargoValue * rate) / 100;
+        const coverage = cargoValue;
+
+        // Update display
+        premiumAmount.textContent = premium.toFixed(2);
+        coverageAmount.textContent = coverage.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        premiumDisplay.style.display = 'block';
+
+        // Store in state for later use
+        if (State.fclDetails) {
+            setState({
+                fclDetails: {
+                    ...State.fclDetails,
+                    insurance: {
+                        enabled: insuranceToggle.checked,
+                        tier: selectedTier?.value || 'basic',
+                        cargoValue: coverage,
+                        premium: premium,
+                        rate: rate
+                    }
+                }
+            });
+        }
+    }
+
+    // Attach event listeners
+    if (cargoValueInput) {
+        cargoValueInput.addEventListener('input', calculateInsurancePremium);
+    }
+
+    // Listen to tier selection changes
+    document.querySelectorAll('input[name="fcl-insurance-tier"]').forEach(radio => {
+        radio.addEventListener('change', calculateInsurancePremium);
+    });
 }
 
 /**
@@ -1302,6 +1511,9 @@ function attachFclEventListeners() {
 
     // Initialize address autocomplete
     initializeAddressAutocomplete();
+
+    // Insurance toggle and calculations
+    initializeInsuranceHandlers();
 
     // Documentation handling options
     const docHandlingRadios = document.querySelectorAll('input[name="fcl-doc-handling"]');
