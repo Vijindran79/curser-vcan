@@ -85,14 +85,15 @@ function switchAuthView(viewToShow: 'email-entry' | 'password-entry' | 'signup' 
  * Finalizes the login process for any authentication method.
  * @param user The Firebase user object.
  */
-function completeLogin(user: { displayName: string | null, email: string | null }) {
+function completeLogin(user: { displayName: string | null, email: string | null, uid?: string }) {
     if (!user.email) {
         showToast(t('auth.errors.no_email'), "error");
         return;
     }
     const userProfile = { 
         name: user.displayName || user.email.split('@')[0].replace(/[^a-zA-Z]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()),
-        email: user.email 
+        email: user.email,
+        uid: user.uid || user.email // Fallback to email as uid if not provided
     };
 
     localStorage.setItem('vcanship_user', JSON.stringify(userProfile));
