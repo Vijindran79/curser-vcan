@@ -28,6 +28,31 @@ import {
 let canvas: HTMLCanvasElement, ctx: CanvasRenderingContext2D, painting = false;
 let currentFclQuotes: Quote[] = [];
 
+// --- DEMO QUOTES FALLBACK ---
+function generateDemoFclQuotes(details: FclDetails): Quote[] {
+    const carriers = ['Maersk Line', 'MSC Mediterranean Shipping', 'CMA CGM', 'COSCO Shipping', 'Hapag-Lloyd', 'ONE - Ocean Network Express'];
+    const baseCost = details.containers.reduce((sum, c) => sum + (c.quantity * (c.type.includes('40') ? 2500 : 1800)), 0);
+    
+    return carriers.slice(0, 3).map((carrier, i) => ({
+        carrierName: carrier,
+        carrierType: 'FCL',
+        totalCost: baseCost * (1 + (i * 0.15)) * (1 + MARKUP_CONFIG.fcl.standard),
+        estimatedTransitTime: `${20 + (i * 5)}-${25 + (i * 5)} days`,
+        serviceProvider: 'Demo Quote',
+        isSpecialOffer: i === 0,
+        chargeableWeight: 0,
+        chargeableWeightUnit: 'N/A',
+        weightBasis: 'Per Container',
+        costBreakdown: {
+            baseShippingCost: baseCost * (1 + (i * 0.15)),
+            fuelSurcharge: baseCost * 0.15,
+            estimatedCustomsAndTaxes: 0,
+            optionalInsuranceCost: 0,
+            ourServiceFee: baseCost * MARKUP_CONFIG.fcl.standard
+        }
+    }));
+}
+
 // --- UI RENDERING & STEP MANAGEMENT ---
 
 function goToFclStep(step: number) {
@@ -892,14 +917,15 @@ async function handleFclFormSubmit(e: Event) {
     setState({ fclDetails: details });
 
     try {
-        // Try to fetch from Sea Rates API with 5-second timeout (Pro users get real rates)
+        // Try to fetch from Sea Rates API with 20-second timeout (Pro users get real rates)
         if (State.subscriptionTier === 'pro') {
             try {
+                toggleLoading(true, '🌊 Fetching real ocean freight rates... This may take 10-15 seconds');
                 const { fetchSeaRatesQuotes } = await import('./backend-api');
                 
-                // Race between API call and 5-second timeout
+                // Race between API call and 20-second timeout (API needs time!)
                 const timeoutPromise = new Promise((_, reject) => 
-                    setTimeout(() => reject(new Error('API timeout')), 5000)
+                    setTimeout(() => reject(new Error('API timeout')), 20000)
                 );
                 
                 const apiPromise = fetchSeaRatesQuotes({
@@ -916,22 +942,32 @@ async function handleFclFormSubmit(e: Event) {
                 
                 const realQuotes = await Promise.race([apiPromise, timeoutPromise]) as Quote[];
                 
-                currentFclQuotes = realQuotes;
-                setState({ fclComplianceDocs: [] }); // Compliance docs from real API
-                renderFclResultsStep({ status: 'verified', summary: 'Rates from Sea Rates API' });
-                goToFclStep(2);
-                return;
+                if (realQuotes && realQuotes.length > 0) {
+                    currentFclQuotes = realQuotes;
+                    setState({ fclComplianceDocs: [] }); // Compliance docs from real API
+                    renderFclResultsStep({ status: 'verified', summary: 'Rates from Sea Rates API' });
+                    goToFclStep(2);
+                    toggleLoading(false);
+                    return;
+                } else {
+                    throw new Error('No quotes returned from API');
+                }
             } catch (apiError: any) {
                 console.warn('Sea Rates API timeout or failed, using instant AI estimates:', apiError);
+                showToast('⚡ Using instant AI estimates (API timed out)', 'info', 3000);
                 // Fall back to AI estimates if API times out or fails
             }
         }
         
         // Fallback: Use FAST AI for instant estimates (keeps customers engaged!)
-        toggleLoading(true, "⚡ Generating instant quote...");
+        toggleLoading(true, "⚡ Generating instant AI quote... (2-3 seconds)");
         
         if (!State.api) {
-            showToast("AI service is not available. Please check your API configuration.", "error");
+            // If AI is not available, show demo quotes immediately
+            showToast("Showing demo quotes (AI not configured)", "info");
+            currentFclQuotes = generateDemoFclQuotes(details);
+            renderFclResultsStep({ status: 'demo', summary: 'Demo quotes - configure AI for estimates' });
+            goToFclStep(2);
             toggleLoading(false);
             return;
         }
