@@ -10,6 +10,7 @@ import { SchemaType } from '@google/generative-ai';
 import { checkCompliance, type ComplianceCheck, COUNTRY_PICKUP_RULES, detectCountry } from './compliance';
 import { getLogisticsProviderLogo } from './utils';
 import { loadSavedAddresses, saveAddress, type SavedAddress } from './account';
+import { showHSCodeSearchModal } from './hs-code-intelligence';
 
 // TYPES
 interface ParcelFormData {
@@ -1852,25 +1853,23 @@ function attachWizardListeners() {
         });
     });
     
-    // Step 4: Generate HS Code
-    page.querySelector('#generate-hs-code-btn')?.addEventListener('click', async () => {
+    // Step 4: Generate HS Code - ENHANCED with AI Intelligence
+    page.querySelector('#generate-hs-code-btn')?.addEventListener('click', () => {
         if (!formData.itemDescription) {
             showToast('Please enter item description first', 'warning');
             return;
         }
-        toggleLoading(true, 'Generating HS code...');
-        try {
-            const suggestions = await getHsCodeSuggestions(formData.itemDescription);
-            if (suggestions.length > 0) {
-                formData.hsCode = suggestions[0].code;
-                (page.querySelector('#hs-code-display') as HTMLInputElement).value = formData.hsCode;
-                showToast('HS code generated successfully', 'success');
+        
+        // Use the enhanced HS Code Intelligence system
+        showHSCodeSearchModal();
+        
+        // Pre-fill the cargo description from form data
+        setTimeout(() => {
+            const descTextarea = document.getElementById('cargo-description') as HTMLTextAreaElement;
+            if (descTextarea) {
+                descTextarea.value = formData.itemDescription || '';
             }
-        } catch (error) {
-            showToast('Failed to generate HS code', 'error');
-        } finally {
-            toggleLoading(false);
-        }
+        }, 100);
     });
     
     // Step 4: Insurance options

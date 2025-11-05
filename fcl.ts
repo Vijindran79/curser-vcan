@@ -198,7 +198,10 @@ function renderFclPage() {
                             <div class="input-wrapper">
                                 <label for="fcl-hs-code">HS Code (Harmonized System)</label>
                                 <div class="hs-code-input-group">
-                                    <input type="text" id="fcl-hs-code" autocomplete="off" placeholder="Type description to get suggestions">
+                                    <input type="text" id="fcl-hs-code" data-hs-code-input autocomplete="off" placeholder="Type description to get suggestions">
+                                    <button type="button" id="fcl-ai-hs-code-btn" class="secondary-btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
+                                        <i class="fa-solid fa-wand-magic-sparkles"></i> AI Generate
+                                    </button>
                                     <button type="button" id="fcl-hs-image-suggester-btn" class="secondary-btn hs-image-suggester-btn">
                                         <i class="fa-solid fa-camera"></i> Image
                                     </button>
@@ -1641,6 +1644,28 @@ function attachFclEventListeners() {
 
     document.getElementById('fcl-add-container-btn')?.addEventListener('click', addContainerItem);
     document.getElementById('fcl-ai-suggest-container-btn')?.addEventListener('click', suggestOptimalContainer);
+
+    // AI HS Code Generator
+    document.getElementById('fcl-ai-hs-code-btn')?.addEventListener('click', () => {
+        const cargoDesc = (document.getElementById('fcl-cargo-description') as HTMLTextAreaElement)?.value;
+        if (!cargoDesc || cargoDesc.trim().length < 10) {
+            showToast('Please enter a detailed cargo description first', 'warning');
+            return;
+        }
+        
+        // Import and show HS code modal
+        import('./hs-code-intelligence').then(({ showHSCodeSearchModal }) => {
+            showHSCodeSearchModal();
+            
+            // Pre-fill the cargo description
+            setTimeout(() => {
+                const descTextarea = document.getElementById('cargo-description') as HTMLTextAreaElement;
+                if (descTextarea) {
+                    descTextarea.value = cargoDesc;
+                }
+            }, 100);
+        });
+    });
 
     // Initialize address autocomplete
     initializeAddressAutocomplete();
