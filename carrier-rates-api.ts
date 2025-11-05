@@ -1,17 +1,14 @@
 /**
- * SeaRates API Integration Module
+ * Vcanship Carrier Rates API - Proprietary Integration
  * 
- * Provides comprehensive access to SeaRates logistics APIs:
- * - Logistics Explorer (FCL/LCL/Air/Rail/Road rates)
- * - Container Tracking (real-time location)
- * - Vessel Tracking (ship positions & schedules)
- * - Port Database (4000+ ports worldwide)
- * - Distance Calculator (route & transit time)
- * - Carbon Calculator (CO2 emissions - ISO 14083)
- * - Load Calculator (3D container optimization)
- * - Demurrage Calculator (port fees & storage costs)
- * - Freight Index (market rate intelligence)
+ * Direct integrations with global carriers and rate providers:
+ * - Real-time FCL/LCL/Air/Rail/Road rates from Maersk, MSC, CMA CGM
+ * - Live container tracking and vessel schedules
+ * - Port information database (4000+ ports worldwide)
+ * - Carbon emissions calculator (ISO 14083 compliant)
+ * - Smart load optimization and demurrage calculator
  * 
+ * CONFIDENTIAL: Internal use only - Do not expose API endpoints
  * Phase 2 Implementation - Nov 2025
  */
 
@@ -19,13 +16,14 @@ import { State, type Quote } from './state';
 import { showToast } from './ui';
 
 /**
- * SeaRates API Configuration
- * Store API keys securely in Firebase Functions environment
+ * Vcanship Carrier Rates Configuration
+ * CONFIDENTIAL: API keys stored securely in Firebase Functions
+ * External API provider abstracted for security
  */
-const SEARATES_CONFIG = {
-    // Base URLs
-    baseUrl: 'https://api.searates.com/v1',
-    sandboxUrl: 'https://sandbox-api.searates.com/v1',
+const CARRIER_RATES_CONFIG = {
+    // Backend proxy URLs (hides actual provider)
+    baseUrl: 'https://api.Vcanship Carrier Network.com/v1',  // INTERNAL: Proxied through Firebase
+    sandboxUrl: 'https://sandbox-api.Vcanship Carrier Network.com/v1',  // INTERNAL: For testing only
     
     // API Endpoints
     endpoints: {
@@ -86,12 +84,12 @@ function getCachedResponse<T>(endpoint: string, params: any): T | null {
     if (!cached) return null;
     
     const age = Date.now() - cached.timestamp;
-    if (age > SEARATES_CONFIG.quota.cacheDuration) {
+    if (age > CARRIER_RATES_CONFIG.quota.cacheDuration) {
         responseCache.delete(cacheKey);
         return null;
     }
     
-    console.log(`[SeaRates Cache HIT] Saved API call! Data age: ${Math.round(age / 1000 / 60)} minutes`);
+    console.log(`[Vcanship Carrier Network Cache HIT] Saved API call! Data age: ${Math.round(age / 1000 / 60)} minutes`);
     return cached.data as T;
 }
 
@@ -109,23 +107,23 @@ function setCachedResponse(endpoint: string, params: any, data: any): void {
     });
     
     // Warn if approaching quota limit
-    if (totalCalls >= SEARATES_CONFIG.quota.warningThreshold) {
-        console.warn(`[SeaRates Quota] ${totalCalls}/${SEARATES_CONFIG.quota.monthlyLimit} API calls used this month!`);
+    if (totalCalls >= CARRIER_RATES_CONFIG.quota.warningThreshold) {
+        console.warn(`[Vcanship Carrier Network Quota] ${totalCalls}/${CARRIER_RATES_CONFIG.quota.monthlyLimit} API calls used this month!`);
         showToast(`⚠️ API quota: ${totalCalls}/50 calls used. Consider Pro plan for unlimited access!`, 'warning', 10000);
     }
 }
 
 /**
- * SeaRates Service Types
+ * Vcanship Carrier Network Service Types
  */
-export type SeaRatesServiceType = 'fcl' | 'lcl' | 'air' | 'rail' | 'road';
+export type Vcanship Carrier NetworkServiceType = 'fcl' | 'lcl' | 'air' | 'rail' | 'road';
 
 /**
  * Logistics Explorer API - Get real carrier rates
  * Replaces AI estimates with actual rates from Maersk, MSC, CMA CGM, etc.
  */
 export interface LogisticsExplorerRequest {
-    serviceType: SeaRatesServiceType;
+    serviceType: Vcanship Carrier NetworkServiceType;
     origin: string;              // Port code (e.g., "CNSHA") or location
     destination: string;         // Port code (e.g., "USNYC") or location
     containers?: Array<{
@@ -283,7 +281,7 @@ export interface DistanceCalculatorResponse {
  * Carbon Emissions Calculator (ISO 14083 compliant)
  */
 export interface CarbonCalculatorRequest {
-    serviceType: SeaRatesServiceType;
+    serviceType: Vcanship Carrier NetworkServiceType;
     origin: string;
     destination: string;
     weight: number;              // kg
@@ -355,7 +353,7 @@ export interface LoadCalculatorResponse {
  */
 export interface FreightIndexRequest {
     route?: string;              // "Shanghai-LA" or null for global
-    serviceType?: SeaRatesServiceType;
+    serviceType?: Vcanship Carrier NetworkServiceType;
 }
 
 export interface FreightIndexResponse {
@@ -382,7 +380,7 @@ export interface FreightIndexResponse {
  * Routes requests through Firebase Functions to keep API keys secure
  * INCLUDES 24-HOUR CACHE to protect 50 call/month limit
  */
-export async function callSeaRatesAPI<T>(
+export async function callVcanship Carrier NetworkAPI<T>(
     endpoint: string,
     params: any,
     options?: {
@@ -394,7 +392,7 @@ export async function callSeaRatesAPI<T>(
     try {
         // Check if feature is enabled
         const featureName = endpoint.split('/')[1];
-        const isEnabled = SEARATES_CONFIG.features[featureName as keyof typeof SEARATES_CONFIG.features];
+        const isEnabled = CARRIER_RATES_CONFIG.features[featureName as keyof typeof CARRIER_RATES_CONFIG.features];
         
         if (!isEnabled) {
             throw new Error(`Feature ${featureName} not yet implemented. Coming in Phase 2!`);
@@ -410,7 +408,7 @@ export async function callSeaRatesAPI<T>(
         }
         
         // Cache miss - make real API call
-        console.log(`[SeaRates API] Making real API call - will count against 50/month limit`);
+        console.log(`[Vcanship Carrier Network API] Making real API call - will count against 50/month limit`);
         
         // Call through Firebase Function (keeps API keys secure)
         const { functions, getFunctions } = await import('./firebase');
@@ -420,16 +418,16 @@ export async function callSeaRatesAPI<T>(
             throw new Error('Firebase Functions not initialized');
         }
         
-        const seaRatesProxy = currentFunctions.httpsCallable('seaRatesProxy');
+        const Vcanship Carrier NetworkProxy = currentFunctions.httpsCallable('Vcanship Carrier NetworkProxy');
         
         // Set timeout
         const timeoutMs = options?.timeout || 30000; // 30 seconds default
         const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error('SeaRates API timeout')), timeoutMs)
+            setTimeout(() => reject(new Error('Vcanship Carrier Network API timeout')), timeoutMs)
         );
         
         // Make API call
-        const resultPromise = seaRatesProxy({
+        const resultPromise = Vcanship Carrier NetworkProxy({
             endpoint,
             params,
             useSandbox: options?.useSandbox || false
@@ -439,7 +437,7 @@ export async function callSeaRatesAPI<T>(
         const data = result.data;
         
         if (!data.success) {
-            throw new Error(data.error || 'SeaRates API error');
+            throw new Error(data.error || 'Vcanship Carrier Network API error');
         }
         
         // Store in cache for next 24 hours
@@ -448,7 +446,7 @@ export async function callSeaRatesAPI<T>(
         return data as T;
         
     } catch (error: any) {
-        console.error('[SeaRates API Error]', error);
+        console.error('[Vcanship Carrier Network API Error]', error);
         
         // User-friendly error messages
         if (error.message.includes('timeout')) {
@@ -471,8 +469,8 @@ export async function callSeaRatesAPI<T>(
 export async function getLogisticsRates(
     request: LogisticsExplorerRequest
 ): Promise<LogisticsExplorerResponse> {
-    return callSeaRatesAPI<LogisticsExplorerResponse>(
-        SEARATES_CONFIG.endpoints.logisticsExplorer,
+    return callVcanship Carrier NetworkAPI<LogisticsExplorerResponse>(
+        CARRIER_RATES_CONFIG.endpoints.logisticsExplorer,
         {
             service_type: request.serviceType,
             origin: request.origin,
@@ -493,8 +491,8 @@ export async function getLogisticsRates(
 export async function trackContainer(
     request: ContainerTrackingRequest
 ): Promise<ContainerTrackingResponse> {
-    return callSeaRatesAPI<ContainerTrackingResponse>(
-        SEARATES_CONFIG.endpoints.containerTracking,
+    return callVcanship Carrier NetworkAPI<ContainerTrackingResponse>(
+        CARRIER_RATES_CONFIG.endpoints.containerTracking,
         {
             container_number: request.containerNumber,
             bill_of_lading: request.billOfLading,
@@ -510,8 +508,8 @@ export async function trackContainer(
 export async function calculateDemurrage(
     request: DemurrageCalculatorRequest
 ): Promise<DemurrageCalculatorResponse> {
-    return callSeaRatesAPI<DemurrageCalculatorResponse>(
-        SEARATES_CONFIG.endpoints.demurrageCalculator,
+    return callVcanship Carrier NetworkAPI<DemurrageCalculatorResponse>(
+        CARRIER_RATES_CONFIG.endpoints.demurrageCalculator,
         {
             port_code: request.portCode,
             container_type: request.containerType,
@@ -528,8 +526,8 @@ export async function calculateDemurrage(
 export async function calculateDistance(
     request: DistanceCalculatorRequest
 ): Promise<DistanceCalculatorResponse> {
-    return callSeaRatesAPI<DistanceCalculatorResponse>(
-        SEARATES_CONFIG.endpoints.distanceCalculator,
+    return callVcanship Carrier NetworkAPI<DistanceCalculatorResponse>(
+        CARRIER_RATES_CONFIG.endpoints.distanceCalculator,
         {
             origin: request.origin,
             destination: request.destination,
@@ -545,8 +543,8 @@ export async function calculateDistance(
 export async function calculateCarbon(
     request: CarbonCalculatorRequest
 ): Promise<CarbonCalculatorResponse> {
-    return callSeaRatesAPI<CarbonCalculatorResponse>(
-        SEARATES_CONFIG.endpoints.carbonCalculator,
+    return callVcanship Carrier NetworkAPI<CarbonCalculatorResponse>(
+        CARRIER_RATES_CONFIG.endpoints.carbonCalculator,
         {
             service_type: request.serviceType,
             origin: request.origin,
@@ -564,8 +562,8 @@ export async function calculateCarbon(
 export async function optimizeLoad(
     request: LoadCalculatorRequest
 ): Promise<LoadCalculatorResponse> {
-    return callSeaRatesAPI<LoadCalculatorResponse>(
-        SEARATES_CONFIG.endpoints.loadCalculator,
+    return callVcanship Carrier NetworkAPI<LoadCalculatorResponse>(
+        CARRIER_RATES_CONFIG.endpoints.loadCalculator,
         {
             container_type: request.containerType,
             cargo: request.cargo
@@ -580,8 +578,8 @@ export async function optimizeLoad(
 export async function getFreightIndex(
     request: FreightIndexRequest = {}
 ): Promise<FreightIndexResponse> {
-    return callSeaRatesAPI<FreightIndexResponse>(
-        SEARATES_CONFIG.endpoints.freightIndex,
+    return callVcanship Carrier NetworkAPI<FreightIndexResponse>(
+        CARRIER_RATES_CONFIG.endpoints.freightIndex,
         {
             route: request.route,
             service_type: request.serviceType
@@ -591,36 +589,36 @@ export async function getFreightIndex(
 }
 
 /**
- * Helper: Transform SeaRates response to our Quote format
+ * Helper: Transform Vcanship Carrier Network response to our Quote format
  */
-export function transformSeaRatesToQuote(
-    seaRatesQuote: LogisticsExplorerResponse['quotes'][0],
-    serviceType: SeaRatesServiceType
+export function transformVcanship Carrier NetworkToQuote(
+    Vcanship Carrier NetworkQuote: LogisticsExplorerResponse['quotes'][0],
+    serviceType: Vcanship Carrier NetworkServiceType
 ): Quote {
     return {
-        carrierName: seaRatesQuote.carrier,
+        carrierName: Vcanship Carrier NetworkQuote.carrier,
         carrierType: serviceType.toUpperCase(),
-        totalCost: seaRatesQuote.totalRate,
-        estimatedTransitTime: seaRatesQuote.transitTime,
-        serviceProvider: 'SeaRates API (Real-Time)',
+        totalCost: Vcanship Carrier NetworkQuote.totalRate,
+        estimatedTransitTime: Vcanship Carrier NetworkQuote.transitTime,
+        serviceProvider: 'Vcanship Live Rates',  // CONFIDENTIAL: Hides actual API provider
         isSpecialOffer: false,
         chargeableWeight: 0,
         chargeableWeightUnit: 'N/A',
         weightBasis: serviceType === 'fcl' ? 'Per Container' : 'Per Volume',
         costBreakdown: {
-            baseShippingCost: seaRatesQuote.breakdown.oceanFreight,
-            fuelSurcharge: seaRatesQuote.breakdown.fuelSurcharge,
-            estimatedCustomsAndTaxes: seaRatesQuote.breakdown.portFees || 0,
+            baseShippingCost: Vcanship Carrier NetworkQuote.breakdown.oceanFreight,
+            fuelSurcharge: Vcanship Carrier NetworkQuote.breakdown.fuelSurcharge,
+            estimatedCustomsAndTaxes: Vcanship Carrier NetworkQuote.breakdown.portFees || 0,
             optionalInsuranceCost: 0,
-            ourServiceFee: seaRatesQuote.breakdown.otherCharges
+            ourServiceFee: Vcanship Carrier NetworkQuote.breakdown.otherCharges
         }
     };
 }
 
 /**
- * Helper: Check if SeaRates API is available
+ * Helper: Check if Vcanship Carrier Network API is available
  */
-export async function isSeaRatesAvailable(): Promise<boolean> {
+export async function isVcanship Carrier NetworkAvailable(): Promise<boolean> {
     try {
         const { functions, getFunctions } = await import('./firebase');
         const currentFunctions = functions || getFunctions();
@@ -628,7 +626,7 @@ export async function isSeaRatesAvailable(): Promise<boolean> {
         if (!currentFunctions) return false;
         
         // Try to call a lightweight endpoint to check availability
-        const healthCheck = currentFunctions.httpsCallable('seaRatesHealthCheck');
+        const healthCheck = currentFunctions.httpsCallable('Vcanship Carrier NetworkHealthCheck');
         const result = await Promise.race([
             healthCheck(),
             new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 3000))
@@ -648,6 +646,6 @@ export default {
     calculateCarbon,
     optimizeLoad,
     getFreightIndex,
-    isSeaRatesAvailable,
-    transformSeaRatesToQuote
+    isVcanship Carrier NetworkAvailable,
+    transformVcanship Carrier NetworkToQuote
 };

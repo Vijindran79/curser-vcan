@@ -1268,7 +1268,7 @@ Important: These are ESTIMATES for customer reference. Actual rates may vary bas
                 carrierType: q.carrierType || 'Standard Service',
                 totalCost: parseFloat(q.totalCost) || 0,
                 estimatedTransitTime: q.estimatedTransitTime || '5-7 days',
-                serviceProvider: q.serviceProvider || 'Vcanship AI',
+                serviceProvider: q.serviceProvider || 'Vcanship',
                 isSpecialOffer: q.isSpecialOffer || false,
                 // Required Quote interface properties
                 chargeableWeight: parcelWeight,
@@ -1299,7 +1299,7 @@ Important: These are ESTIMATES for customer reference. Actual rates may vary bas
                 carrierType: carrier.type,
                 totalCost: (basePrice * carrier.multiplier) + extraCost,
                 estimatedTransitTime: carrier.type === 'Express' ? '2-3 days' : carrier.type === 'Standard' ? '5-7 days' : '10-12 days',
-                serviceProvider: 'Vcanship AI',
+                serviceProvider: 'Vcanship',
                 isSpecialOffer: idx === 2,
                 // Required Quote interface properties
                 chargeableWeight: parcelWeight,

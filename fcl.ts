@@ -1080,7 +1080,7 @@ async function handleFclFormSubmit(e: Event) {
                 optionalInsuranceCost: insurancePremium,
                 ourServiceFee: q.totalCost - (q.totalCost / (1 + MARKUP_CONFIG.fcl.standard))
             },
-            serviceProvider: 'Vcanship AI'
+            serviceProvider: 'Vcanship'
         }));
 
         const docs: ComplianceDoc[] = parsedResult.complianceReport.requirements.map((r: any) => ({ ...r, id: `doc-${r.title.replace(/\s/g, '-')}`, status: 'pending', file: null, required: true }));
