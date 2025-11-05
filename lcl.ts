@@ -300,7 +300,7 @@ async function handleLclFormSubmit(e: Event) {
             ...q,
             carrierType: "LCL Consolidator",
             chargeableWeight: 0, chargeableWeightUnit: 'CBM', weightBasis: 'Volume',
-            isSpecialOffer: false, serviceProvider: 'Vcanship AI'
+            isSpecialOffer: false, serviceProvider: 'Vcanship'
         }));
 
         renderLclResultsStep();

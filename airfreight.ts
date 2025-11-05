@@ -388,7 +388,7 @@ async function handleGetQuote() {
                 baseShippingCost: q.totalCost / (1 + MARKUP_CONFIG.airfreight.standard),
                 fuelSurcharge: 0, estimatedCustomsAndTaxes: 0, optionalInsuranceCost: 0,
                 ourServiceFee: q.totalCost - (q.totalCost / (1 + MARKUP_CONFIG.airfreight.standard))
-            }, serviceProvider: 'Vcanship AI'
+            }, serviceProvider: 'Vcanship'
         }));
 
         const docs: ComplianceDoc[] = parsedResult.complianceReport.requirements.map((r: any) => ({ ...r, id: `doc-${r.title.replace(/\s/g, '-')}`, status: 'pending', file: null, required: true }));
