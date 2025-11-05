@@ -20,7 +20,8 @@ const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' });
  */
 export const createSubscriptionCheckout = onCall<{ priceId: string; plan: string; userEmail?: string }>(
     {
-        memory: '256MiB'
+        memory: '256MiB',
+        cors: ['https://vcanship-onestop-logistics.web.app', 'https://vcanship-onestop-logistics.firebaseapp.com']
     },
     async (req: CallableRequest<{ priceId: string; plan: string; userEmail?: string }>) => {
         if (!req.auth) {
