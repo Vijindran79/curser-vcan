@@ -1,7 +1,7 @@
 // fcl.ts
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { State, setState, resetFclState, Quote, FclDetails, ComplianceDoc, FclContainer, FclInsurance } from './state';
+import { State, setState, resetFclState, Quote, FclDetails, ComplianceDoc, FclContainer, FclInsurance, Service } from './state';
 import { switchPage, updateProgressBar, showToast, toggleLoading } from './ui';
 import { getHsCodeSuggestions } from './api';
 import { detectCountry } from './compliance';
@@ -1222,6 +1222,57 @@ async function suggestHsCodeFromImage(file: File, inputElementId: string) {
 }
 
 /**
+ * Handle FCL quote selection and proceed to payment
+ */
+async function handleFclQuoteSelection(selectBtn: HTMLButtonElement) {
+    const quote: Quote = JSON.parse(selectBtn.dataset.quote!.replace(/&quot;/g, '"'));
+    
+    // Mark quote as selected
+    setState({ fclQuote: quote });
+    document.querySelectorAll('#fcl-quotes-container .quote-card').forEach(c => c.classList.remove('selected'));
+    selectBtn.closest('.quote-card')?.classList.add('selected');
+    
+    // Generate shipment ID
+    const shipmentId = 'FCL-' + Date.now().toString(36).toUpperCase();
+    
+    // Prepare origin and destination strings
+    const origin = State.fclDetails?.pickupAddress?.name || State.fclDetails?.pickupPort || 'Origin';
+    const destination = State.fclDetails?.deliveryAddress?.name || State.fclDetails?.deliveryPort || 'Destination';
+    
+    // Prepare addons array (insurance if selected)
+    const addons: any[] = [];
+    if (State.fclDetails?.insurance?.enabled) {
+        addons.push({
+            name: `Cargo Insurance (${State.fclDetails.insurance.tier})`,
+            price: State.fclDetails.insurance.premium,
+            description: `${State.fclDetails.insurance.rate}% of cargo value ($${State.fclDetails.insurance.cargoValue.toLocaleString()})`
+        });
+    }
+    
+    // Set up payment context for payment page
+    setState({
+        paymentContext: {
+            service: 'fcl' as Service,
+            quote: quote,
+            shipmentId: shipmentId,
+            origin: origin,
+            destination: destination,
+            addons: addons
+        }
+    });
+    
+    // Show loading
+    toggleLoading(true, 'Proceeding to payment...');
+    
+    // Wait a moment for user feedback
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // Navigate to payment page
+    toggleLoading(false);
+    switchPage('payment');
+}
+
+/**
  * Initialize cargo insurance handlers and calculations
  */
 function initializeInsuranceHandlers() {
@@ -1270,12 +1321,13 @@ function initializeInsuranceHandlers() {
 
         // Store in state for later use
         if (State.fclDetails) {
+            const tierValue = (selectedTier?.value || 'basic') as 'basic' | 'standard' | 'premium';
             setState({
                 fclDetails: {
                     ...State.fclDetails,
                     insurance: {
                         enabled: insuranceToggle.checked,
-                        tier: selectedTier?.value || 'basic',
+                        tier: tierValue,
                         cargoValue: coverage,
                         premium: premium,
                         rate: rate
@@ -1461,11 +1513,7 @@ function attachFclEventListeners() {
         
         const selectBtn = target.closest<HTMLButtonElement>('.select-quote-btn');
         if (selectBtn?.dataset.quote) {
-            const quote: Quote = JSON.parse(selectBtn.dataset.quote.replace(/&quot;/g, '"'));
-            setState({ fclQuote: quote });
-            document.querySelectorAll('#fcl-quotes-container .quote-card').forEach(c => c.classList.remove('selected'));
-            selectBtn.closest('.quote-card')?.classList.add('selected');
-            (document.getElementById('fcl-to-agreement-btn') as HTMLButtonElement).disabled = false;
+            handleFclQuoteSelection(selectBtn);
         }
         if (target.closest('#fcl-hs-image-suggester-btn')) {
             document.getElementById('fcl-hs-image-input')?.click();
