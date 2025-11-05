@@ -1276,6 +1276,26 @@ function sortAndRenderFclQuotes(sortBy: 'price' | 'speed') {
     }
     
     quotesContainer.innerHTML = sortedQuotes.map(q => createQuoteCard(q)).join('');
+    
+    // Add compliance checklist summary after quotes
+    const complianceDiv = document.createElement('div');
+    complianceDiv.id = 'fcl-compliance-summary';
+    quotesContainer.appendChild(complianceDiv);
+    
+    // Show inline compliance summary
+    const originCountry = State.fclDetails?.pickupAddress?.country || State.fclDetails?.pickupPort || 'Unknown';
+    const destCountry = State.fclDetails?.deliveryAddress?.country || State.fclDetails?.deliveryPort || 'Unknown';
+    
+    if (State.fclDetails && originCountry && destCountry) {
+        import('./compliance-checklist').then(({ showInlineComplianceSummary }) => {
+            showInlineComplianceSummary(
+                'fcl-compliance-summary',
+                originCountry,
+                destCountry,
+                State.fclDetails.cargoDescription || 'General cargo'
+            );
+        });
+    }
 
     document.querySelectorAll('#fcl-results-controls .sort-btn').forEach(btn => {
         btn.classList.toggle('active', btn.getAttribute('data-sort') === sortBy);
