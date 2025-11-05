@@ -476,6 +476,10 @@ export interface AppState {
     // Promotions
     promotions: Promotion[];
     activePromotionInterval: number | null;
+    
+    // Container Tracking (Phase 2C)
+    trackedContainers?: any[];  // TrackedContainer[] from container-tracking.ts
+    currentTrackedContainer?: any;  // TrackedContainer from container-tracking.ts
 }
 
 export let State: AppState = {
