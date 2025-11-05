@@ -18,8 +18,9 @@ import { makeDraggable } from './utils';
 import { getChatbotResponse } from './api';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-// Expose switchPage to global scope for HTML onclick handlers
+// Expose switchPage and mountService to global scope for HTML onclick handlers
 (window as any).switchPage = switchPage;
+(window as any).mountService = mountService;
 
 // --- Global state for chat ---
 let conversationHistory: { role: 'user' | 'model', text: string }[] = [];
