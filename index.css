@@ -1778,15 +1778,58 @@ html[data-theme="dark"] footer {
 
 
 /* Modals */
+.modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 1001; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
+.modal.active { opacity: 1; pointer-events: auto; }
+.modal.fade-out { opacity: 0; }
 .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 1001; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; }
 .modal-overlay.active { opacity: 1; pointer-events: auto; }
-.modal-content { background-color: var(--background-color); padding: 2rem; border-radius: var(--card-border-radius); width: 90%; max-width: 500px; position: relative; }
+.modal-content { background-color: var(--background-color); color: var(--text-color); padding: 2rem; border-radius: var(--card-border-radius); width: 90%; max-width: 500px; position: relative; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
 .modal-content.large { max-width: 800px; }
 .modal-content.extra-large { max-width: 1000px; }
 .close-btn { position: absolute; top: 1rem; right: 1rem; background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--medium-gray); z-index: 10; }
 .modal-footer { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color); }
 .agreement-text { height: 300px; overflow-y: auto; padding: 1rem; border: 1px solid var(--border-color); border-radius: 8px; background-color: var(--light-gray); }
 .hidden { display: none !important; }
+
+/* Guest Checkout Animations */
+@keyframes slideInUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Guest Checkout Input Styles */
+.modal-content input[type="email"],
+.modal-content input[type="text"],
+.modal-content input[type="password"],
+.modal-content input[type="tel"] {
+  background: var(--light-gray);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+}
+
+.modal-content input[type="email"]:focus,
+.modal-content input[type="text"]:focus,
+.modal-content input[type="password"]:focus,
+.modal-content input[type="tel"]:focus {
+  outline: none;
+  border-color: var(--primary-orange);
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1);
+}
+
+html[data-theme="dark"] .modal-content input[type="email"],
+html[data-theme="dark"] .modal-content input[type="text"],
+html[data-theme="dark"] .modal-content input[type="password"],
+html[data-theme="dark"] .modal-content input[type="tel"] {
+  background: #1a1a1a;
+  border-color: #2a2a2a;
+  color: var(--text-color);
+}
 
 /* My Account Dropdown & Header Dropdowns */
 .header-dropdown-container {

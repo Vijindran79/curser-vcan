@@ -3,6 +3,7 @@ import { State, setState, type Quote, type Address } from './state';
 import { showToast, toggleLoading } from './ui';
 import { mountService } from './router';
 import { logShipment, functions } from './firebase';
+import { storeGuestOrder, showPostPaymentSignup, GuestOrderData } from './guest-checkout';
 // FIX: Removed unused v9 `httpsCallable` import as we are now using the v8 namespaced API.
 // import { httpsCallable } from 'firebase/functions';
 
@@ -809,6 +810,29 @@ async function handlePaymentSubmit(event: Event) {
                      paymentDate: new Date().toISOString()
                  };
                  sessionStorage.setItem('vcanship_show_confirmation', JSON.stringify(confirmationData));
+                 
+                 // GUEST CHECKOUT: Store order data and show signup prompt
+                 if (!State.isLoggedIn && guestEmail) {
+                     const guestOrderData: GuestOrderData = {
+                         shipmentId: shipmentId,
+                         service: service,
+                         email: guestEmail,
+                         totalAmount: totalCost,
+                         paymentIntentId: paymentIntent.id,
+                         timestamp: Date.now(),
+                         origin: origin,
+                         destination: destination,
+                         quote: quote
+                     };
+                     
+                     // Store guest order for post-payment signup
+                     storeGuestOrder(guestOrderData);
+                     
+                     // Show signup prompt after a short delay (let them see success first)
+                     setTimeout(() => {
+                         showPostPaymentSignup();
+                     }, 2000);
+                 }
                  
                  // Navigate to the service's confirmation page
                  mountService(service);
