@@ -541,29 +541,13 @@
         <p id="loading-progress-text" data-i18n="loading.default">Please wait...</p>
     </div>
 
-    <!-- Load Google Maps Places API for address autocomplete -->
-    <!-- Loaded dynamically only if API key is available -->
+    <!-- Google Maps API is now loaded via secure proxy - no client-side API key needed -->
     <script>
-        // Initialize Google Maps when script loads
+        // Mark Maps as not loaded - address autocomplete will work via proxy
+        window.googleMapsLoaded = false;
         window.initGoogleMaps = function() {
             window.googleMapsLoaded = true;
         };
-        
-        // Load Google Maps API dynamically only if key is available
-        (function() {
-            // Check localStorage first, then environment variable (set via window variable from build)
-            const googleApiKey = localStorage.getItem('google_maps_api_key') || (window.ENV && window.ENV.VITE_GOOGLE_MAPS_API_KEY) || '';
-            if (googleApiKey && googleApiKey !== 'YOUR_GOOGLE_API_KEY' && googleApiKey.length > 10) {
-                const script = document.createElement('script');
-                script.src = 'https://maps.googleapis.com/maps/api/js?key=' + encodeURIComponent(googleApiKey) + '&libraries=places&callback=initGoogleMaps';
-                script.async = true;
-                script.defer = true;
-                script.onerror = function() {
-                    // Silently fail if Maps API can't load
-                };
-                document.head.appendChild(script);
-            }
-        })();
     </script>
     
     <!-- Load Firebase scripts directly before main app -->
