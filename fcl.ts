@@ -332,17 +332,150 @@ function renderContainerItems() {
     const list = document.getElementById('fcl-container-list');
     if (!list) return;
     const items = State.fclDetails?.containers || [];
+    
+    // Comprehensive container type list with descriptions
+    const containerTypes = [
+        { value: '20GP', label: '20ft Dry (Standard)', desc: 'Most common, general cargo' },
+        { value: '40GP', label: '40ft Dry (Standard)', desc: 'General cargo, double capacity' },
+        { value: '40HC', label: '40ft High Cube', desc: 'Extra height for voluminous cargo' },
+        { value: '45HC', label: '45ft High Cube', desc: 'Maximum capacity dry container' },
+        { value: '20RF', label: '20ft Refrigerated (Reefer)', desc: 'Temperature-controlled goods' },
+        { value: '40RH', label: '40ft Reefer High Cube', desc: 'Large refrigerated shipments' },
+        { value: '20OT', label: '20ft Open Top', desc: 'Oversized cargo, top loading' },
+        { value: '40OT', label: '40ft Open Top', desc: 'Large oversized items' },
+        { value: '20FR', label: '20ft Flat Rack', desc: 'Heavy machinery, vehicles' },
+        { value: '40FR', label: '40ft Flat Rack', desc: 'Heavy/oversized equipment' },
+        { value: '20OR', label: '20ft Open Rack (Collapsible)', desc: 'Machinery, construction equipment' },
+        { value: '40OR', label: '40ft Open Rack (Collapsible)', desc: 'Large construction materials' },
+        { value: '20TK', label: '20ft Tank Container', desc: 'Liquids, chemicals, food grade' },
+        { value: '20PL', label: '20ft Platform', desc: 'Flat platform, no walls' },
+        { value: '40PL', label: '40ft Platform', desc: 'Large flat shipments' },
+        { value: '20VH', label: '20ft Ventilated', desc: 'Coffee, cocoa, agricultural products' },
+        { value: '40VH', label: '40ft Ventilated High Cube', desc: 'Bulk agricultural goods' },
+        { value: '20ISO', label: '20ft Insulated', desc: 'Temperature-sensitive (non-powered)' },
+        { value: '40ISO', label: '40ft Insulated', desc: 'Large temperature-sensitive cargo' }
+    ];
+    
     list.innerHTML = items.map((item, index) => `
-        <div class="card" data-index="${index}" style="margin-bottom: 1rem; padding: 1rem;">
-            <div class="form-grid" style="grid-template-columns: 2fr 1fr 1fr 1fr auto; gap: 1rem; align-items: flex-end;">
-                <div class="input-wrapper" style="margin-bottom: 0;"><label>Container Type</label><select class="fcl-container-type"><option ${item.type === '20GP' ? 'selected':''}>20GP</option><option ${item.type === '40GP' ? 'selected':''}>40GP</option><option ${item.type === '40HC' ? 'selected':''}>40HC</option></select></div>
-                <div class="input-wrapper" style="margin-bottom: 0;"><label>Quantity</label><input type="number" class="fcl-container-quantity" value="${item.quantity}" min="1"></div>
-                <div class="input-wrapper" style="margin-bottom: 0;"><label>Weight</label><input type="number" class="fcl-container-weight" value="${item.weight || ''}" min="1"></div>
-                <div class="input-wrapper" style="margin-bottom: 0;"><label>Unit</label><select class="fcl-container-weight-unit"><option ${item.weightUnit === 'KG' ? 'selected':''}>KG</option><option ${item.weightUnit === 'TON' ? 'selected':''}>TON</option></select></div>
-                <button type="button" class="secondary-btn fcl-remove-container-btn">&times;</button>
+        <div class="card" data-index="${index}" style="margin-bottom: 1rem; padding: 1.5rem; border: 2px solid var(--border-color); border-radius: 12px; position: relative;">
+            <div style="position: absolute; top: 0.75rem; right: 0.75rem;">
+                <button type="button" class="secondary-btn fcl-remove-container-btn" style="padding: 0.5rem 0.75rem; background: var(--error-color); color: white; border: none;">
+                    <i class="fa-solid fa-trash"></i> Remove
+                </button>
+            </div>
+            
+            <h4 style="margin: 0 0 1rem 0; color: var(--text-primary);">
+                <i class="fa-solid fa-container-storage"></i> Container #${index + 1}
+            </h4>
+            
+            <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="input-wrapper">
+                    <label>Container Type</label>
+                    <select class="fcl-container-type" style="font-family: monospace; font-size: 0.95rem;">
+                        <optgroup label="📦 Standard Dry Containers">
+                            ${containerTypes.filter(t => ['20GP', '40GP', '40HC', '45HC'].includes(t.value)).map(ct => `
+                                <option value="${ct.value}" ${item.type === ct.value ? 'selected' : ''}>
+                                    ${ct.label} - ${ct.desc}
+                                </option>
+                            `).join('')}
+                        </optgroup>
+                        <optgroup label="❄️ Refrigerated (Reefer)">
+                            ${containerTypes.filter(t => ['20RF', '40RH'].includes(t.value)).map(ct => `
+                                <option value="${ct.value}" ${item.type === ct.value ? 'selected' : ''}>
+                                    ${ct.label} - ${ct.desc}
+                                </option>
+                            `).join('')}
+                        </optgroup>
+                        <optgroup label="🔓 Open Top & Flat Rack">
+                            ${containerTypes.filter(t => ['20OT', '40OT', '20FR', '40FR'].includes(t.value)).map(ct => `
+                                <option value="${ct.value}" ${item.type === ct.value ? 'selected' : ''}>
+                                    ${ct.label} - ${ct.desc}
+                                </option>
+                            `).join('')}
+                        </optgroup>
+                        <optgroup label="🏗️ Open Rack (Collapsible)">
+                            ${containerTypes.filter(t => ['20OR', '40OR'].includes(t.value)).map(ct => `
+                                <option value="${ct.value}" ${item.type === ct.value ? 'selected' : ''}>
+                                    ${ct.label} - ${ct.desc}
+                                </option>
+                            `).join('')}
+                        </optgroup>
+                        <optgroup label="🛢️ Specialized Containers">
+                            ${containerTypes.filter(t => ['20TK', '20PL', '40PL', '20VH', '40VH', '20ISO', '40ISO'].includes(t.value)).map(ct => `
+                                <option value="${ct.value}" ${item.type === ct.value ? 'selected' : ''}>
+                                    ${ct.label} - ${ct.desc}
+                                </option>
+                            `).join('')}
+                        </optgroup>
+                    </select>
+                    <p class="helper-text" style="margin-top: 0.25rem; font-size: 0.8rem;">
+                        <i class="fa-solid fa-info-circle"></i> Select the container type that best fits your cargo
+                    </p>
+                </div>
+                
+                <div class="input-wrapper">
+                    <label>Quantity</label>
+                    <input type="number" class="fcl-container-quantity" value="${item.quantity}" min="1" max="999" style="font-size: 1.1rem; font-weight: 600;">
+                    <p class="helper-text" style="margin-top: 0.25rem; font-size: 0.8rem;">How many containers of this type?</p>
+                </div>
+                
+                <div class="input-wrapper">
+                    <label>Cargo Weight <span style="font-weight: normal; color: var(--text-secondary);">(per container)</span></label>
+                    <div style="display: grid; grid-template-columns: 1fr auto; gap: 0.5rem;">
+                        <input type="number" class="fcl-container-weight" value="${item.weight || ''}" min="0" step="0.01" placeholder="0">
+                        <select class="fcl-container-weight-unit" style="width: 90px;">
+                            <option value="KG" ${item.weightUnit === 'KG' ? 'selected' : ''}>KG</option>
+                            <option value="TON" ${item.weightUnit === 'TON' ? 'selected' : ''}>TON</option>
+                            <option value="LBS" ${item.weightUnit === 'LBS' ? 'selected' : ''}>LBS</option>
+                        </select>
+                    </div>
+                    <p class="helper-text" style="margin-top: 0.25rem; font-size: 0.8rem;">
+                        ${item.type?.includes('GP') || item.type?.includes('HC') ? '💡 Tip: 20ft max ~28 tons, 40ft max ~26 tons' : 
+                          item.type?.includes('RF') || item.type?.includes('RH') ? '❄️ Reefer payload slightly less due to cooling unit' :
+                          item.type?.includes('OT') || item.type?.includes('FR') || item.type?.includes('OR') ? '🏗️ Weight limits vary by equipment' :
+                          '⚖️ Check weight limits for specialized containers'}
+                    </p>
+                </div>
+                
+                <div class="input-wrapper" style="display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%); padding: 1rem; border-radius: 8px; border: 2px solid #F59E0B;">
+                    <div style="text-align: center;">
+                        <div style="font-size: 0.85rem; color: #92400E; font-weight: 600; margin-bottom: 0.25rem;">
+                            Container Dimensions
+                        </div>
+                        <div id="fcl-container-dims-${index}" style="font-size: 0.8rem; color: #78350F; line-height: 1.4;">
+                            ${getContainerDimensions(item.type)}
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     `).join('');
+}
+
+// Helper function to get container dimensions
+function getContainerDimensions(type: string): string {
+    const dims: Record<string, string> = {
+        '20GP': 'L:5.9m W:2.35m H:2.39m<br>Vol: 33m³ / 1,172ft³',
+        '40GP': 'L:12m W:2.35m H:2.39m<br>Vol: 67m³ / 2,385ft³',
+        '40HC': 'L:12m W:2.35m H:2.69m<br>Vol: 76m³ / 2,694ft³',
+        '45HC': 'L:13.6m W:2.35m H:2.69m<br>Vol: 86m³ / 3,040ft³',
+        '20RF': 'L:5.44m W:2.29m H:2.27m<br>Vol: 28m³ / 988ft³',
+        '40RH': 'L:11.56m W:2.29m H:2.50m<br>Vol: 67m³ / 2,366ft³',
+        '20OT': 'L:5.9m W:2.35m<br>Open top for oversized cargo',
+        '40OT': 'L:12m W:2.35m<br>Open top for large items',
+        '20FR': 'L:5.9m W:2.35m<br>Flat rack, no sides/roof',
+        '40FR': 'L:12m W:2.4m<br>Flat rack for heavy equipment',
+        '20OR': 'L:5.9m W:2.35m<br>Collapsible sides for machinery',
+        '40OR': 'L:12m W:2.4m<br>Collapsible for construction gear',
+        '20TK': 'L:6m W:2.4m H:2.4m<br>Liquid cargo, 21,000L capacity',
+        '20PL': 'L:6m W:2.4m<br>Flat platform, no walls',
+        '40PL': 'L:12m W:2.4m<br>Large flat platform',
+        '20VH': 'L:5.9m W:2.35m H:2.39m<br>Ventilated for agricultural',
+        '40VH': 'L:12m W:2.35m H:2.69m<br>Ventilated high cube',
+        '20ISO': 'L:5.9m W:2.35m H:2.39m<br>Insulated, non-powered',
+        '40ISO': 'L:12m W:2.35m H:2.39m<br>Large insulated container'
+    };
+    return dims[type] || 'Dimensions vary by specific model';
 }
 
 function updateContainersFromUI() {
@@ -351,8 +484,8 @@ function updateContainersFromUI() {
         containers.push({
             type: (el.querySelector('.fcl-container-type') as HTMLSelectElement).value,
             quantity: parseInt((el.querySelector('.fcl-container-quantity') as HTMLInputElement).value) || 1,
-            weight: parseInt((el.querySelector('.fcl-container-weight') as HTMLInputElement).value) || 0,
-            weightUnit: (el.querySelector('.fcl-container-weight-unit') as HTMLSelectElement).value as 'KG' | 'TON',
+            weight: parseFloat((el.querySelector('.fcl-container-weight') as HTMLInputElement).value) || 0,
+            weightUnit: (el.querySelector('.fcl-container-weight-unit') as HTMLSelectElement).value as 'KG' | 'TON' | 'LBS',
         });
     });
     setState({ fclDetails: { ...State.fclDetails, containers } as FclDetails });
@@ -924,7 +1057,8 @@ function attachFclEventListeners() {
 
 function addContainerItem() {
     const currentContainers = State.fclDetails?.containers || [];
-    const newContainers: FclContainer[] = [...currentContainers, { type: '20GP', quantity: 1, weight: 0, weightUnit: 'KG' as const }];
+    // Default to TON for ocean freight (standard practice in shipping industry)
+    const newContainers: FclContainer[] = [...currentContainers, { type: '20GP', quantity: 1, weight: 0, weightUnit: 'TON' as const }];
     setState({ fclDetails: { ...State.fclDetails, containers: newContainers } as FclDetails });
     renderContainerItems();
 }
