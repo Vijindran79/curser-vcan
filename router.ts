@@ -79,6 +79,10 @@ function getStaticPageRenderer(page: string): (() => void) | null {
                     if (page) {
                         page.innerHTML = renderSubscriptionPage();
                         attachSubscriptionListeners();
+                        switchPage('subscription');
+                    } else {
+                        console.error('Subscription page element not found');
+                        showToast('Subscription page not available', 'error');
                     }
                 } catch (error) {
                     console.error('Failed to load subscription page:', error);
