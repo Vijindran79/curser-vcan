@@ -101,8 +101,42 @@ function renderFclPage() {
             <!-- Step 1: Details -->
             <div id="fcl-step-1" class="service-step">
                 <form id="fcl-quote-form" novalidate>
+                    <!-- Service Selection: Ocean Only vs Full Forwarding -->
+                    <div class="form-section" style="margin-bottom: 2rem;">
+                        <h3>📦 What Service Do You Need?</h3>
+                        <div id="fcl-main-service-selector" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1rem;">
+                            <label class="main-service-card active" data-service="ocean-only" style="position: relative; padding: 1.5rem; border: 3px solid #F97316; background: linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%); border-radius: 12px; cursor: pointer; transition: all 0.3s;">
+                                <input type="radio" name="fcl-main-service" value="ocean-only" checked style="position: absolute; opacity: 0;">
+                                <div style="display: flex; align-items: start; gap: 1rem;">
+                                    <div style="font-size: 2.5rem;">🚢</div>
+                                    <div style="flex: 1;">
+                                        <h4 style="margin: 0 0 0.5rem 0; color: #EA580C; font-size: 1.1rem;">Ocean Freight Only</h4>
+                                        <p style="margin: 0; font-size: 0.875rem; color: #9A3412; line-height: 1.5;">Port-to-port shipping. You handle customs, documentation, and inland transport.</p>
+                                        <div style="margin-top: 0.75rem; padding: 0.5rem; background: white; border-radius: 6px; font-size: 0.8rem;">
+                                            <strong style="color: #EA580C;">✓ Best for:</strong> <span style="color: #78350F;">Experienced importers/exporters</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </label>
+                            
+                            <label class="main-service-card" data-service="full-forwarding" style="position: relative; padding: 1.5rem; border: 2px solid #E5E7EB; background: white; border-radius: 12px; cursor: pointer; transition: all 0.3s;">
+                                <input type="radio" name="fcl-main-service" value="full-forwarding" style="position: absolute; opacity: 0;">
+                                <div style="display: flex; align-items: start; gap: 1rem;">
+                                    <div style="font-size: 2.5rem;">✨</div>
+                                    <div style="flex: 1;">
+                                        <h4 style="margin: 0 0 0.5rem 0; color: #1F2937; font-size: 1.1rem;">Full Forwarding Service</h4>
+                                        <p style="margin: 0; font-size: 0.875rem; color: #6B7280; line-height: 1.5;">Complete door-to-door service with customs clearance, documentation, and compliance.</p>
+                                        <div style="margin-top: 0.75rem; padding: 0.5rem; background: #F3F4F6; border-radius: 6px; font-size: 0.8rem;">
+                                            <strong style="color: #1F2937;">✓ Best for:</strong> <span style="color: #4B5563;">First-time shippers, hassle-free experience</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                
                     <div class="form-section">
-                        <h3>Service Type</h3>
+                        <h3>🚚 Transport Type</h3>
                         <div id="fcl-service-type-selector" class="service-type-selector">
                             <button type="button" class="service-type-btn active" data-type="port-to-port"><strong>Port-to-Port</strong><span>You handle transport to/from ports.</span></button>
                             <button type="button" class="service-type-btn" data-type="door-to-port"><strong>Door-to-Port</strong><span>We pick up from your door.</span></button>
