@@ -22,6 +22,11 @@ import {
     ParsedAddress,
     cleanupAutocomplete 
 } from './address-autocomplete';
+import { 
+    calculatePortFees, 
+    getCompleteCostBreakdown,
+    formatCostBreakdown 
+} from './port-fees';
 
 
 // --- MODULE STATE ---
@@ -1147,6 +1152,149 @@ function handleFclDocumentUpload(files: FileList) {
 }
 
 /**
+ * Render port fees breakdown for FCL shipment (PHASE 2B)
+ */
+function renderPortFeesInfo(): string {
+    const fclDetails = State.fclDetails;
+    
+    if (!fclDetails || !fclDetails.pickupPort || !fclDetails.deliveryPort) {
+        return '';
+    }
+    
+    // Get first container type and total quantity
+    const containerType = fclDetails.containers[0]?.type || '40HC';
+    const totalContainers = fclDetails.containers.reduce((sum, c) => sum + c.quantity, 0);
+    
+    // Calculate origin port fees
+    const originFees = calculatePortFees(fclDetails.pickupPort, containerType, totalContainers);
+    
+    // Calculate destination port fees
+    const destFees = calculatePortFees(fclDetails.deliveryPort, containerType, totalContainers);
+    
+    const totalPortFees = originFees.fees.total + destFees.fees.total;
+    
+    return `
+        <div style="margin-top: 1.5rem;">
+            <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 1rem; border-radius: 8px 8px 0 0;">
+                <h4 style="margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fa-solid fa-anchor"></i>
+                    Port Fees & Charges
+                </h4>
+                <p style="margin: 0.5rem 0 0; font-size: 0.875rem; opacity: 0.95;">
+                    Complete cost breakdown for origin and destination ports
+                </p>
+            </div>
+            
+            <div style="background: var(--card-bg); padding: 1rem; border: 1px solid var(--border-color); border-top: none; border-radius: 0 0 8px 8px;">
+                <!-- Total Port Fees -->
+                <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem; background: #fef3c7; border-radius: 8px; margin-bottom: 1rem;">
+                    <span style="font-weight: 600; color: #92400e;">Total Port Fees:</span>
+                    <span style="font-size: 1.25rem; font-weight: 700; color: #92400e;">$${totalPortFees.toLocaleString()}</span>
+                </div>
+                
+                <!-- Origin Port -->
+                <div style="margin-bottom: 1.5rem;">
+                    <h5 style="margin: 0 0 0.75rem; color: var(--text-color); display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fa-solid fa-ship" style="color: #10b981;"></i>
+                        ${originFees.port.name}, ${originFees.port.country} (Origin)
+                    </h5>
+                    <div style="font-size: 0.875rem; line-height: 1.6; color: var(--text-secondary);">
+                        <div style="display: flex; justify-content: space-between; padding: 0.375rem 0;">
+                            <span>Port Charges:</span>
+                            <span style="color: var(--text-color);">$${originFees.fees.portCharges}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 0.375rem 0;">
+                            <span>Terminal Handling:</span>
+                            <span style="color: var(--text-color);">$${originFees.fees.terminalHandling}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 0.375rem 0;">
+                            <span>Documentation:</span>
+                            <span style="color: var(--text-color);">$${originFees.fees.documentation}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; margin-top: 0.5rem; border-top: 1px solid var(--border-color); font-weight: 600;">
+                            <span>Origin Subtotal:</span>
+                            <span style="color: var(--text-color);">$${originFees.fees.total}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Destination Port -->
+                <div>
+                    <h5 style="margin: 0 0 0.75rem; color: var(--text-color); display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fa-solid fa-location-dot" style="color: #ef4444;"></i>
+                        ${destFees.port.name}, ${destFees.port.country} (Destination)
+                    </h5>
+                    <div style="font-size: 0.875rem; line-height: 1.6; color: var(--text-secondary);">
+                        <div style="display: flex; justify-content: space-between; padding: 0.375rem 0;">
+                            <span>Port Charges:</span>
+                            <span style="color: var(--text-color);">$${destFees.fees.portCharges}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 0.375rem 0;">
+                            <span>Terminal Handling:</span>
+                            <span style="color: var(--text-color);">$${destFees.fees.terminalHandling}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 0.375rem 0;">
+                            <span>Documentation:</span>
+                            <span style="color: var(--text-color);">$${destFees.fees.documentation}</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; padding: 0.5rem 0; margin-top: 0.5rem; border-top: 1px solid var(--border-color); font-weight: 600;">
+                            <span>Destination Subtotal:</span>
+                            <span style="color: var(--text-color);">$${destFees.fees.total}</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Demurrage Info (CRITICAL!) -->
+                    <div style="margin-top: 1rem; padding: 0.875rem; background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); border-radius: 8px; border: 2px solid #f59e0b;">
+                        <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                            <i class="fa-solid fa-clock" style="color: #d97706; font-size: 1.25rem;"></i>
+                            <strong style="color: #92400e;">⚠️ Demurrage & Detention</strong>
+                        </div>
+                        <div style="font-size: 0.8125rem; color: #78350f; line-height: 1.6;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 0.25rem;">
+                                <span>Free Storage Period:</span>
+                                <strong>${destFees.demurrage.freeDays} days</strong>
+                            </div>
+                            <div style="display: flex; justify-content: space-between;">
+                                <span>After Free Period:</span>
+                                <strong style="color: #dc2626;">$${destFees.demurrage.ratePerDayTotal}/day</strong>
+                            </div>
+                            <div style="margin-top: 0.75rem; padding-top: 0.75rem; border-top: 1px solid rgba(120, 53, 15, 0.2);">
+                                <strong>💡 Pro Tip:</strong> Pick up within ${destFees.demurrage.freeDays} days to avoid demurrage charges!
+                                After ${destFees.demurrage.freeDays} days, you'll pay <strong style="color: #dc2626;">$${destFees.demurrage.ratePerDayTotal} per day</strong>.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    ${destFees.congestion.warning ? `
+                        <div style="margin-top: 0.75rem; padding: 0.75rem; background: #fee2e2; border-left: 4px solid #ef4444; border-radius: 4px;">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fa-solid fa-triangle-exclamation" style="color: #dc2626;"></i>
+                                <span style="font-size: 0.8125rem; color: #7f1d1d;"><strong>Port Alert:</strong> ${destFees.congestion.warning}</span>
+                            </div>
+                        </div>
+                    ` : ''}
+                    
+                    ${destFees.notes ? `
+                        <div style="margin-top: 0.75rem; padding: 0.625rem; font-size: 0.75rem; color: var(--text-secondary); background: rgba(59, 130, 246, 0.05); border-radius: 4px;">
+                            <i class="fa-solid fa-info-circle" style="color: #3b82f6;"></i> ${destFees.notes}
+                        </div>
+                    ` : ''}
+                </div>
+                
+                <!-- Important Disclaimer -->
+                <div style="margin-top: 1.25rem; padding: 0.75rem; background: rgba(239, 68, 68, 0.1); border-radius: 6px;">
+                    <p style="font-size: 0.75rem; color: var(--text-secondary); margin: 0; line-height: 1.5;">
+                        <i class="fa-solid fa-exclamation-circle" style="color: #ef4444;"></i>
+                        <strong>Why we show this:</strong> Hidden port fees are the #1 complaint in freight forwarding. 
+                        We believe in complete transparency - what you see is what you pay. No surprise charges!
+                    </p>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+/**
  * Render local charges information for destination country
  */
 function renderLocalChargesInfo(): string {
@@ -1260,6 +1408,8 @@ async function renderFclResultsStep(complianceReport: any) {
                         </div>
                     </div>
                 ` : ''}
+                
+                ${renderPortFeesInfo()}
                 
                 ${renderLocalChargesInfo()}
              </div>
