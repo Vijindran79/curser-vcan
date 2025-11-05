@@ -1286,3 +1286,157 @@ export const googleMapsProxy = functionsV2.onRequest({
     invoker: 'public'
 }, googleMapsProxyApp);
 
+// ==========================================
+// SEARATES API PROXY (PHASE 2)
+// ==========================================
+
+/**
+ * SeaRates API Proxy Function
+ * Keeps API keys secure on backend while providing frontend access
+ * 
+ * Endpoints supported:
+ * - /logistics-explorer (FCL/LCL/Air/Rail/Road rates)
+ * - /container-tracking (real-time location)
+ * - /vessel-tracking (ship positions)
+ * - /demurrage (port fees calculator)
+ * - /distance (route calculator)
+ * - /carbon-emissions (CO2 footprint)
+ * - /load-calculator (3D optimization)
+ * - /freight-index (market intelligence)
+ */
+export const seaRatesProxy = functions.https.onCall(async (data, context) => {
+    try {
+        const { endpoint, params, useSandbox = false } = data;
+
+        if (!endpoint || !params) {
+            throw new functions.https.HttpsError(
+                'invalid-argument',
+                'endpoint and params are required'
+            );
+        }
+
+        // Get SeaRates API key from environment
+        const SEARATES_API_KEY = process.env.SEARATES_API_KEY || 
+                                 functions.config().searates?.api_key;
+
+        if (!SEARATES_API_KEY) {
+            console.warn('[SeaRates] API key not configured - Phase 2 not yet deployed');
+            throw new functions.https.HttpsError(
+                'failed-precondition',
+                'SeaRates API not configured. Please contact support.'
+            );
+        }
+
+        // Determine base URL
+        const baseUrl = useSandbox 
+            ? 'https://sandbox-api.searates.com/v1'
+            : 'https://api.searates.com/v1';
+
+        // Build full URL
+        const url = `${baseUrl}${endpoint}`;
+
+        console.log(`[SeaRates] Calling ${endpoint} with params:`, JSON.stringify(params).substring(0, 200));
+
+        // Make API call with timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 25000); // 25 second timeout
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${SEARATES_API_KEY}`,
+                'User-Agent': 'Vcanship/1.0'
+            },
+            body: JSON.stringify(params),
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`[SeaRates] API error (${response.status}):`, errorText);
+            
+            // Handle specific error codes
+            if (response.status === 401) {
+                throw new functions.https.HttpsError(
+                    'unauthenticated',
+                    'SeaRates API authentication failed'
+                );
+            } else if (response.status === 429) {
+                throw new functions.https.HttpsError(
+                    'resource-exhausted',
+                    'SeaRates API quota exceeded. Please upgrade your plan.'
+                );
+            } else if (response.status === 404) {
+                throw new functions.https.HttpsError(
+                    'not-found',
+                    'SeaRates endpoint not found'
+                );
+            }
+            
+            throw new functions.https.HttpsError(
+                'internal',
+                `SeaRates API error: ${response.statusText}`
+            );
+        }
+
+        const responseData = await response.json();
+
+        console.log(`[SeaRates] Success: ${endpoint}`);
+
+        return {
+            success: true,
+            ...responseData
+        };
+
+    } catch (error: any) {
+        console.error('[SeaRates] Proxy error:', error);
+
+        if (error.name === 'AbortError') {
+            throw new functions.https.HttpsError(
+                'deadline-exceeded',
+                'SeaRates API request timed out'
+            );
+        }
+
+        if (error instanceof functions.https.HttpsError) {
+            throw error;
+        }
+
+        throw new functions.https.HttpsError(
+            'internal',
+            `Failed to fetch from SeaRates: ${error.message}`
+        );
+    }
+});
+
+/**
+ * SeaRates Health Check
+ * Quick check to see if SeaRates API is configured and accessible
+ */
+export const seaRatesHealthCheck = functions.https.onCall(async (data, context) => {
+    try {
+        const SEARATES_API_KEY = process.env.SEARATES_API_KEY || 
+                                 functions.config().searates?.api_key;
+
+        return {
+            available: !!SEARATES_API_KEY,
+            configured: !!SEARATES_API_KEY,
+            phase: SEARATES_API_KEY ? 'Phase 2 Active' : 'Phase 1 (AI Only)',
+            message: SEARATES_API_KEY 
+                ? 'SeaRates API is configured and ready'
+                : 'SeaRates API not yet configured. Using AI estimates.'
+        };
+    } catch (error: any) {
+        console.error('[SeaRates] Health check error:', error);
+        return {
+            available: false,
+            configured: false,
+            phase: 'Phase 1 (AI Only)',
+            message: 'SeaRates API check failed'
+        };
+    }
+});
+
