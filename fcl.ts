@@ -10,6 +10,12 @@ import { checkAndDecrementLookup } from './api';
 import { SchemaType } from '@google/generative-ai';
 import { createQuoteCard } from './components';
 import { blobToBase64 } from './utils';
+import { 
+    createEnhancedAddressInput, 
+    attachEnhancedAddressListeners, 
+    ParsedAddress,
+    cleanupAutocomplete 
+} from './address-autocomplete';
 
 
 // --- MODULE STATE ---
@@ -149,8 +155,12 @@ function renderFclPage() {
                         <div id="fcl-origin-section">
                             <h4>Origin</h4>
                             <div id="fcl-pickup-address-fields" class="hidden">
-                                <div class="input-wrapper"><label for="fcl-pickup-name">Sender Name/Company</label><input type="text" id="fcl-pickup-name"></div>
-                                <div class="input-wrapper"><label for="fcl-pickup-country">Country</label><input type="text" id="fcl-pickup-country"></div>
+                                <div class="input-wrapper">
+                                    <label for="fcl-pickup-name">Sender Name/Company <span style="color: #ef4444;">*</span></label>
+                                    <input type="text" id="fcl-pickup-name" required placeholder="Company or individual name">
+                                </div>
+                                <div id="fcl-pickup-address-autocomplete"></div>
+                                <input type="hidden" id="fcl-pickup-address-data" />
                             </div>
                              <div id="fcl-pickup-location-fields">
                                 <div class="input-wrapper"><label for="fcl-pickup-port">Port of Loading</label><input type="text" id="fcl-pickup-port" placeholder="e.g., Shanghai or CNSHA"></div>
@@ -159,8 +169,12 @@ function renderFclPage() {
                          <div id="fcl-destination-section">
                             <h4>Destination</h4>
                             <div id="fcl-delivery-address-fields" class="hidden">
-                                <div class="input-wrapper"><label for="fcl-delivery-name">Recipient Name/Company</label><input type="text" id="fcl-delivery-name"></div>
-                                <div class="input-wrapper"><label for="fcl-delivery-country">Country</label><input type="text" id="fcl-delivery-country"></div>
+                                <div class="input-wrapper">
+                                    <label for="fcl-delivery-name">Recipient Name/Company <span style="color: #ef4444;">*</span></label>
+                                    <input type="text" id="fcl-delivery-name" required placeholder="Company or individual name">
+                                </div>
+                                <div id="fcl-delivery-address-autocomplete"></div>
+                                <input type="hidden" id="fcl-delivery-address-data" />
                             </div>
                             <div id="fcl-delivery-location-fields">
                                 <div class="input-wrapper"><label for="fcl-delivery-port">Port of Discharge</label><input type="text" id="fcl-delivery-port" placeholder="e.g., Los Angeles or USLAX"></div>
@@ -336,6 +350,11 @@ function handleServiceTypeChange(type: string) {
     document.getElementById('fcl-pickup-location-fields')?.classList.toggle('hidden', showOriginAddress);
     document.getElementById('fcl-delivery-address-fields')?.classList.toggle('hidden', !showDestAddress);
     document.getElementById('fcl-delivery-location-fields')?.classList.toggle('hidden', showDestAddress);
+    
+    // Re-initialize address autocomplete when address fields become visible
+    if (showOriginAddress || showDestAddress) {
+        setTimeout(() => initializeAddressAutocomplete(), 100);
+    }
 }
 
 function renderContainerItems() {
@@ -1068,6 +1087,122 @@ async function suggestHsCodeFromImage(file: File, inputElementId: string) {
     }
 }
 
+/**
+ * Initialize address autocomplete for pickup and delivery
+ */
+function initializeAddressAutocomplete() {
+    // Cleanup any existing autocomplete instances
+    cleanupAutocomplete();
+
+    // Initialize pickup address autocomplete
+    const pickupContainer = document.getElementById('fcl-pickup-address-autocomplete');
+    if (pickupContainer) {
+        pickupContainer.innerHTML = createEnhancedAddressInput(
+            'fcl-pickup-address-autocomplete',
+            'fcl-pickup-address-input',
+            'Pickup Address',
+            (address: ParsedAddress) => {
+                // Store parsed address data
+                const dataInput = document.getElementById('fcl-pickup-address-data') as HTMLInputElement;
+                if (dataInput) {
+                    dataInput.value = JSON.stringify(address);
+                }
+                
+                // Update state
+                if (State.fclDetails) {
+                    setState({
+                        fclDetails: {
+                            ...State.fclDetails,
+                            pickupAddress: {
+                                name: address.streetAddress,
+                                country: address.country
+                            }
+                        }
+                    });
+                }
+                
+                showToast(`Pickup address set: ${address.city}, ${address.country}`, 'success');
+            },
+            { showPostalCodeSearch: true, showCurrentLocation: true, required: true }
+        );
+        
+        // Attach event listeners after DOM is ready
+        setTimeout(() => {
+            attachEnhancedAddressListeners('fcl-pickup-address-input', (address: ParsedAddress) => {
+                const dataInput = document.getElementById('fcl-pickup-address-data') as HTMLInputElement;
+                if (dataInput) {
+                    dataInput.value = JSON.stringify(address);
+                }
+                if (State.fclDetails) {
+                    setState({
+                        fclDetails: {
+                            ...State.fclDetails,
+                            pickupAddress: {
+                                name: address.streetAddress,
+                                country: address.country
+                            }
+                        }
+                    });
+                }
+            });
+        }, 100);
+    }
+
+    // Initialize delivery address autocomplete
+    const deliveryContainer = document.getElementById('fcl-delivery-address-autocomplete');
+    if (deliveryContainer) {
+        deliveryContainer.innerHTML = createEnhancedAddressInput(
+            'fcl-delivery-address-autocomplete',
+            'fcl-delivery-address-input',
+            'Delivery Address',
+            (address: ParsedAddress) => {
+                // Store parsed address data
+                const dataInput = document.getElementById('fcl-delivery-address-data') as HTMLInputElement;
+                if (dataInput) {
+                    dataInput.value = JSON.stringify(address);
+                }
+                
+                // Update state
+                if (State.fclDetails) {
+                    setState({
+                        fclDetails: {
+                            ...State.fclDetails,
+                            deliveryAddress: {
+                                name: address.streetAddress,
+                                country: address.country
+                            }
+                        }
+                    });
+                }
+                
+                showToast(`Delivery address set: ${address.city}, ${address.country}`, 'success');
+            },
+            { showPostalCodeSearch: true, showCurrentLocation: true, required: true }
+        );
+        
+        // Attach event listeners after DOM is ready
+        setTimeout(() => {
+            attachEnhancedAddressListeners('fcl-delivery-address-input', (address: ParsedAddress) => {
+                const dataInput = document.getElementById('fcl-delivery-address-data') as HTMLInputElement;
+                if (dataInput) {
+                    dataInput.value = JSON.stringify(address);
+                }
+                if (State.fclDetails) {
+                    setState({
+                        fclDetails: {
+                            ...State.fclDetails,
+                            deliveryAddress: {
+                                name: address.streetAddress,
+                                country: address.country
+                            }
+                        }
+                    });
+                }
+            });
+        }, 100);
+    }
+}
+
 function attachFclEventListeners() {
     const page = document.getElementById('page-fcl');
     if (!page) return;
@@ -1164,6 +1299,9 @@ function attachFclEventListeners() {
 
     document.getElementById('fcl-add-container-btn')?.addEventListener('click', addContainerItem);
     document.getElementById('fcl-ai-suggest-container-btn')?.addEventListener('click', suggestOptimalContainer);
+
+    // Initialize address autocomplete
+    initializeAddressAutocomplete();
 
     // Documentation handling options
     const docHandlingRadios = document.querySelectorAll('input[name="fcl-doc-handling"]');
