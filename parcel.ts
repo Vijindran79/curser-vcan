@@ -7,7 +7,7 @@ import { showToast, switchPage, toggleLoading } from './ui';
 import { t } from './i18n';
 import { MARKUP_CONFIG } from './pricing';
 import { SchemaType } from '@google/generative-ai';
-import { checkCompliance, type ComplianceCheck } from './compliance';
+import { checkCompliance, type ComplianceCheck, COUNTRY_PICKUP_RULES, detectCountry } from './compliance';
 import { getLogisticsProviderLogo } from './utils';
 
 // TYPES
@@ -25,6 +25,14 @@ interface ParcelFormData {
     hsCode?: string;
     documents: File[];
     savedAddressId?: string;
+    // Insurance options
+    insurance: 'none' | 'standard' | 'full';
+    insuranceValue?: number;
+    // Delivery options
+    signatureRequired: boolean;
+    leaveInSafePlace: boolean;
+    safePlaceDescription?: string;
+    specialInstructions?: string;
 }
 
 let currentStep = 1;
@@ -47,22 +55,60 @@ declare global {
 
 // STEP 1: Service Type Selection
 function renderStep1(): string {
+    // Detect origin country and check pickup availability
+    const originCountry = formData.originAddress ? detectCountry(formData.originAddress) : null;
+    const pickupRules = originCountry ? COUNTRY_PICKUP_RULES[originCountry] : null;
+    const pickupAvailable = pickupRules?.homePickupAvailable ?? true; // Default to true if not detected yet
+    
+    // Show warning if pickup not available
+    const pickupWarning = !pickupAvailable ? `
+        <div class="info-card warning-card" style="margin-bottom: 1.5rem; padding: 1rem; background: #FEF2F2; border-left: 4px solid #EF4444; border-radius: 8px;">
+            <h5 style="color: #991B1B; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fa-solid fa-exclamation-triangle"></i> Home Pickup Not Available
+            </h5>
+            <p style="color: #7F1D1D; margin: 0;">
+                ${pickupRules ? `Home pickup is not available in ${pickupRules.name}. Please use the drop-off option below.` : 'Home pickup may not be available in your area. Please use the drop-off option or contact support.'}
+            </p>
+        </div>
+    ` : '';
+    
+    // Show pickup info if available
+    const pickupInfo = pickupAvailable && pickupRules ? `
+        <div class="info-card" style="margin-bottom: 1.5rem; padding: 1rem; background: #F0FDF4; border-left: 4px solid #10B981; border-radius: 8px;">
+            <h5 style="color: #065F46; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                <i class="fa-solid fa-check-circle"></i> Home Pickup Available
+            </h5>
+            <p style="color: #047857; margin: 0; font-size: 0.9em;">
+                Available carriers: ${pickupRules.pickupCarriers.join(', ')} • 
+                ${pickupRules.pickupMinimumNotice}h advance notice • 
+                ${pickupRules.pickupFee === 0 ? 'Free pickup' : `$${pickupRules.pickupFee} fee`}
+            </p>
+        </div>
+    ` : '';
+    
     return `
         <div class="step-content">
             <h3>How would you like to send your parcel?</h3>
             <p class="subtitle">Choose the most convenient option for you</p>
             
+            ${pickupWarning}
+            ${!pickupWarning && originCountry ? pickupInfo : ''}
+            
             <div class="service-type-selector" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 2rem;">
                 <button type="button" 
                     class="service-type-card${formData.serviceType === 'pickup' ? ' selected' : ''}" 
                     data-type="pickup"
-                    ${formData.serviceType === 'pickup' ? 'style="border-color: #f97316 !important; box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.3) !important; background-color: #FFF7ED !important;"' : ''}>
+                    ${!pickupAvailable ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : ''}
+                    ${formData.serviceType === 'pickup' && pickupAvailable ? 'style="border-color: #f97316 !important; box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.3) !important; background-color: #FFF7ED !important;"' : ''}>
                     <div class="service-icon">
                         <i class="fa-solid fa-house"></i>
                     </div>
                     <h4>Home Pickup</h4>
                     <p>We collect from your door</p>
-                    <span class="badge">Free pickup</span>
+                    ${pickupAvailable ? 
+                        `<span class="badge">${pickupRules?.pickupFee === 0 ? 'Free pickup' : `$${pickupRules?.pickupFee || 0} fee`}</span>` : 
+                        '<span class="badge" style="background: #EF4444;">Not available</span>'
+                    }
                 </button>
                 
                 <button type="button" 
@@ -77,6 +123,25 @@ function renderStep1(): string {
                     <span class="badge">Save up to 20%</span>
                 </button>
             </div>
+            
+            ${formData.serviceType === 'dropoff' ? `
+                <div class="info-card" style="margin-top: 1.5rem; padding: 1rem; background: #EFF6FF; border-left: 4px solid #3B82F6; border-radius: 8px;">
+                    <h5 style="color: #1E40AF; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                        <i class="fa-solid fa-map-marker-alt"></i> Drop-off Locations
+                    </h5>
+                    <p style="color: #1E3A8A; margin: 0;">
+                        After booking, you'll receive a confirmation email with:
+                    </p>
+                    <ul style="color: #1E3A8A; margin: 0.5rem 0 0 1.5rem;">
+                        <li><strong>Nearest drop-off points</strong> with full addresses</li>
+                        <li><strong>Opening hours</strong> and contact details</li>
+                        <li><strong>Your shipping label</strong> to print and attach</li>
+                    </ul>
+                    <p style="color: #1E3A8A; margin: 0.5rem 0 0 0; font-size: 0.9em;">
+                        💡 Common locations: Post offices, convenience stores (Evri, InPost, Yodel shops)
+                    </p>
+                </div>
+            ` : ''}
         </div>
     `;
 }
@@ -248,23 +313,27 @@ function renderStep4(): string {
             </div>
             
             <div class="compliance-section">
-                <h4><i class="fa-solid fa-shield-halved"></i> Compliance & HS Code</h4>
+                <h4><i class="fa-solid fa-shield-halved"></i> Customs Information (Optional)</h4>
                 <div class="hs-code-generator">
                     <div class="input-wrapper">
-                        <label for="hs-code-display">HS Code (Harmonized System)</label>
+                        <label for="hs-code-display">
+                            HS Code 
+                            <span style="color: var(--medium-gray); font-weight: 400; font-size: 0.9em;">(Optional - We'll handle this for you)</span>
+                        </label>
                         <input 
                             type="text" 
                             id="hs-code-display" 
-                            value="${formData.hsCode || 'Click to generate'}"
+                            value="${formData.hsCode || 'Not generated yet'}"
                             readonly
+                            style="background-color: #f5f5f5;"
                         />
                         <button type="button" id="generate-hs-code-btn" class="secondary-btn" style="margin-top: 0.5rem;">
                             <i class="fa-solid fa-wand-magic-sparkles"></i> 
-                            Auto-Generate HS Code
+                            Auto-Generate HS Code (Optional)
                         </button>
-                        <small class="helper-text" id="hs-code-helper">
-                            <span id="hs-code-local-text">Optional: Recommended for accurate customs classification</span>
-                            <span id="hs-code-international-text" style="display: none; color: var(--primary-orange); font-weight: 600;">Required for international shipments & customs clearance</span>
+                        <small class="helper-text" style="color: var(--medium-gray);">
+                            <i class="fa-solid fa-info-circle"></i> 
+                            <strong>For personal effects/used goods:</strong> No HS code needed. We'll use the standard personal effects classification (9803.00.00) during customs clearance.
                         </small>
                     </div>
                 </div>
@@ -281,6 +350,106 @@ function renderStep4(): string {
                 </div>
                 
                 <div id="compliance-alerts"></div>
+            </div>
+            
+            <div class="insurance-section">
+                <h4><i class="fa-solid fa-shield-halved"></i> Parcel Insurance (Recommended)</h4>
+                <p class="helper-text">Protect your shipment against loss or damage</p>
+                
+                <div class="insurance-options" style="display: grid; grid-template-columns: 1fr; gap: 1rem; margin-top: 1rem;">
+                    <label class="insurance-option-card ${formData.insurance === 'none' || !formData.insurance ? 'selected' : ''}" style="display: flex; align-items: center; gap: 1rem; padding: 1rem; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                        <input type="radio" name="insurance" value="none" ${formData.insurance === 'none' || !formData.insurance ? 'checked' : ''} style="width: 20px; height: 20px; cursor: pointer;">
+                        <div style="flex: 1;">
+                            <strong style="font-size: 1rem; color: var(--dark-text);">No Insurance</strong><br>
+                            <small style="color: var(--medium-gray);">Carrier liability only ($100 included)</small>
+                        </div>
+                        <span class="option-price" style="font-size: 1.1rem; font-weight: 600; color: var(--primary);">Free</span>
+                    </label>
+                    
+                    <label class="insurance-option-card ${formData.insurance === 'standard' ? 'selected' : ''}" style="display: flex; align-items: center; gap: 1rem; padding: 1rem; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                        <input type="radio" name="insurance" value="standard" ${formData.insurance === 'standard' ? 'checked' : ''} style="width: 20px; height: 20px; cursor: pointer;">
+                        <div style="flex: 1;">
+                            <strong style="font-size: 1rem; color: var(--dark-text);">Standard Coverage</strong><br>
+                            <small style="color: var(--medium-gray);">Up to $1,000 protection (1% of parcel value)</small>
+                        </div>
+                        <span class="option-price" style="font-size: 1.1rem; font-weight: 600; color: var(--primary);" id="standard-insurance-price">
+                            +$10.00
+                        </span>
+                    </label>
+                    
+                    <label class="insurance-option-card ${formData.insurance === 'full' ? 'selected' : ''}" style="display: flex; align-items: center; gap: 1rem; padding: 1rem; border: 2px solid #e5e7eb; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+                        <input type="radio" name="insurance" value="full" ${formData.insurance === 'full' ? 'checked' : ''} style="width: 20px; height: 20px; cursor: pointer;">
+                        <div style="flex: 1;">
+                            <strong style="font-size: 1rem; color: var(--dark-text);">Full Coverage</strong><br>
+                            <small style="color: var(--medium-gray);">Full value protection (2% of parcel value)</small>
+                        </div>
+                        <span class="option-price" style="font-size: 1.1rem; font-weight: 600; color: var(--primary);" id="full-insurance-price">
+                            +$20.00
+                        </span>
+                    </label>
+                </div>
+                
+                ${(formData.insurance === 'standard' || formData.insurance === 'full') ? `
+                    <div class="input-wrapper" style="margin-top: 1rem;">
+                        <label for="insurance-value">Parcel Value ($)</label>
+                        <input 
+                            type="number" 
+                            id="insurance-value" 
+                            placeholder="Enter parcel value"
+                            value="${formData.insuranceValue || ''}"
+                            min="1"
+                            step="1"
+                            inputmode="numeric"
+                            required
+                        />
+                        <small class="helper-text">This is the replacement cost of your items</small>
+                    </div>
+                ` : ''}
+            </div>
+            
+            <div class="delivery-options-section">
+                <h4><i class="fa-solid fa-truck"></i> Delivery Options</h4>
+                
+                <label class="checkbox-option" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; margin-bottom: 0.5rem; border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer;">
+                    <input type="checkbox" id="signature-required" ${formData.signatureRequired ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer;">
+                    <div>
+                        <strong style="font-size: 0.95rem;">Signature Required</strong><br>
+                        <small style="color: var(--medium-gray);">Ensures delivery confirmation (+$3.00)</small>
+                    </div>
+                </label>
+                
+                <label class="checkbox-option" style="display: flex; align-items: center; gap: 0.75rem; padding: 0.75rem; border: 1px solid #e5e7eb; border-radius: 6px; cursor: pointer;">
+                    <input type="checkbox" id="leave-safe-place" ${formData.leaveInSafePlace ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer;">
+                    <div>
+                        <strong style="font-size: 0.95rem;">Leave in Safe Place</strong><br>
+                        <small style="color: var(--medium-gray);">Driver can leave parcel if no one home (Free)</small>
+                    </div>
+                </label>
+                
+                ${formData.leaveInSafePlace ? `
+                    <div class="input-wrapper" style="margin-top: 0.5rem; margin-left: 2.5rem;">
+                        <label for="safe-place-description">Where should the driver leave it?</label>
+                        <input 
+                            type="text" 
+                            id="safe-place-description" 
+                            placeholder="e.g., Behind gate, with neighbor at #12"
+                            value="${formData.safePlaceDescription || ''}"
+                            maxlength="100"
+                        />
+                    </div>
+                ` : ''}
+                
+                <div class="input-wrapper" style="margin-top: 1rem;">
+                    <label for="special-instructions">Special Delivery Instructions (Optional)</label>
+                    <textarea 
+                        id="special-instructions" 
+                        placeholder="e.g., Ring doorbell twice, use back entrance"
+                        maxlength="200"
+                        rows="3"
+                        style="resize: vertical;"
+                    >${formData.specialInstructions || ''}</textarea>
+                    <small class="helper-text">Max 200 characters</small>
+                </div>
             </div>
             
             <div class="document-upload-section">
@@ -692,15 +861,8 @@ function validateCurrentStep(): boolean {
             // Update formData
             formData.sendDay = selectedDay;
             
-            // Check if international shipment - HS code required only for international
-            const isInternational = isInternationalShipment();
-            if (isInternational && !formData.hsCode) {
-                // Warning but don't block - just notify
-                const hsCodeDisplay = page4.querySelector('#hs-code-display') as HTMLInputElement;
-                if (!hsCodeDisplay || !hsCodeDisplay.value || hsCodeDisplay.value === 'Click to generate') {
-                    showToast('HS code recommended for international shipments. You can proceed without it.', 'warning');
-                }
-            }
+            // HS code is completely optional - we handle personal effects classification automatically
+            // No warning needed
             
             return true;
         case 5:
@@ -1319,6 +1481,65 @@ function attachWizardListeners() {
         } finally {
             toggleLoading(false);
         }
+    });
+    
+    // Step 4: Insurance options
+    page.querySelectorAll('input[name="insurance"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            formData.insurance = (e.target as HTMLInputElement).value as any;
+            // Update card styling
+            page.querySelectorAll('.insurance-option-card').forEach(card => {
+                card.classList.remove('selected');
+                (card as HTMLElement).style.borderColor = '#e5e7eb';
+                (card as HTMLElement).style.backgroundColor = 'white';
+            });
+            const selectedCard = (e.target as HTMLInputElement).closest('.insurance-option-card');
+            if (selectedCard) {
+                selectedCard.classList.add('selected');
+                (selectedCard as HTMLElement).style.borderColor = '#f97316';
+                (selectedCard as HTMLElement).style.backgroundColor = '#FFF7ED';
+            }
+            renderPage(); // Re-render to show/hide insurance value input
+        });
+    });
+    
+    // Step 4: Insurance value input
+    const insuranceValueInput = page.querySelector('#insurance-value') as HTMLInputElement;
+    insuranceValueInput?.addEventListener('blur', () => {
+        const val = parseFloat(insuranceValueInput.value);
+        if (!isNaN(val) && val > 0) {
+            formData.insuranceValue = val;
+            // Update insurance price displays
+            const standardPrice = page.querySelector('#standard-insurance-price');
+            const fullPrice = page.querySelector('#full-insurance-price');
+            if (standardPrice) standardPrice.textContent = `+$${(val * 0.01).toFixed(2)}`;
+            if (fullPrice) fullPrice.textContent = `+$${(val * 0.02).toFixed(2)}`;
+        }
+    });
+    
+    // Step 4: Signature required checkbox
+    const signatureCheckbox = page.querySelector('#signature-required') as HTMLInputElement;
+    signatureCheckbox?.addEventListener('change', (e) => {
+        formData.signatureRequired = (e.target as HTMLInputElement).checked;
+    });
+    
+    // Step 4: Leave in safe place checkbox
+    const safePlaceCheckbox = page.querySelector('#leave-safe-place') as HTMLInputElement;
+    safePlaceCheckbox?.addEventListener('change', (e) => {
+        formData.leaveInSafePlace = (e.target as HTMLInputElement).checked;
+        renderPage(); // Re-render to show/hide safe place description input
+    });
+    
+    // Step 4: Safe place description input
+    const safePlaceInput = page.querySelector('#safe-place-description') as HTMLInputElement;
+    safePlaceInput?.addEventListener('blur', () => {
+        formData.safePlaceDescription = safePlaceInput.value;
+    });
+    
+    // Step 4: Special instructions input
+    const specialInstructionsInput = page.querySelector('#special-instructions') as HTMLTextAreaElement;
+    specialInstructionsInput?.addEventListener('blur', () => {
+        formData.specialInstructions = specialInstructionsInput.value;
     });
     
     // Step 4: Document upload

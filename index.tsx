@@ -345,16 +345,8 @@ function initializeSimpleChatFab() {
         });
     }
     
-    // Settings Panel: Theme toggle
-    const panelThemeToggle = document.getElementById('panel-theme-toggle');
-    if (panelThemeToggle) {
-        panelThemeToggle.addEventListener('click', (e) => {
-            e.preventDefault();
-            const currentTheme = document.documentElement.getAttribute('data-theme') || 'light';
-            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-            applyTheme(newTheme);
-        });
-    }
+    // Settings Panel: Theme toggle - handled by event delegation on body
+    // No need for separate handler, the .theme-switch class triggers the global handler
     
     // Settings Panel: Login button
     const panelLoginBtn = document.getElementById('panel-login-btn');
