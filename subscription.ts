@@ -224,36 +224,66 @@ async function initializeCheckout(plan: 'monthly' | 'yearly') {
     toggleLoading(true, 'Preparing checkout...');
     
     try {
+        // Check if functions are available
         if (!functions) {
-            throw new Error('Functions not available. Please try again later.');
+            throw new Error('Payment system is currently being set up. Please try again in a few minutes or contact support@vcanship.com');
+        }
+        
+        // Load Stripe if not already loaded
+        if (!stripe) {
+            await loadStripe();
+        }
+        
+        if (!stripe) {
+            throw new Error('Payment system is initializing. Please refresh the page and try again.');
         }
         
         // Create Stripe Checkout Session via Firebase Function
         const createCheckoutSession = functions.httpsCallable('createSubscriptionCheckout');
+        
         const result = await createCheckoutSession({
             priceId: SUBSCRIPTION_PRICES[plan].priceId,
             plan: plan,
-            userEmail: State.currentUser?.email
+            userEmail: State.currentUser?.email,
+            successUrl: `${window.location.origin}/?subscription=success`,
+            cancelUrl: `${window.location.origin}/?subscription=cancelled`
         });
         
         const session = result.data;
         
         if (session?.url) {
-            // Redirect to Stripe Checkout
+            // Redirect to Stripe Checkout (preferred method)
+            toggleLoading(true, 'Redirecting to secure checkout...');
             window.location.href = session.url;
-        } else if (session?.sessionId && stripe) {
+        } else if (session?.sessionId) {
             // Alternative: Use Stripe Elements for embedded checkout
+            toggleLoading(true, 'Opening secure checkout...');
             const checkoutResult = await stripe.redirectToCheckout({ sessionId: session.sessionId });
             if (checkoutResult.error) {
                 throw new Error(checkoutResult.error.message);
             }
         } else {
-            throw new Error('Failed to create checkout session');
+            throw new Error('Payment system error. Please contact support@vcanship.com with error code: NO_SESSION');
         }
     } catch (error: any) {
         console.error('Checkout error:', error);
-        showToast(error.message || 'Failed to start checkout. Please try again.', 'error');
-    } finally {
+        
+        // User-friendly error messages
+        let errorMessage = 'Failed to start checkout. ';
+        
+        if (error.message?.includes('not found') || error.message?.includes('does not exist')) {
+            errorMessage = '⚠️ Payment system is still being configured. Please try again later or contact support@vcanship.com';
+        } else if (error.message?.includes('permission') || error.message?.includes('PERMISSION_DENIED')) {
+            errorMessage = '⚠️ Payment setup required. Please contact support@vcanship.com to complete subscription setup.';
+        } else if (error.message?.includes('network') || error.message?.includes('offline')) {
+            errorMessage = 'Network error. Please check your connection and try again.';
+        } else if (error.message) {
+            errorMessage = error.message;
+        } else {
+            errorMessage += 'Please contact support@vcanship.com';
+        }
+        
+        showToast(errorMessage, 'error', 8000);
         toggleLoading(false);
     }
 }
