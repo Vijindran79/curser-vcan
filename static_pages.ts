@@ -617,21 +617,21 @@ export function initializeStaticPages() {
         ];
 
         const getTickerCarrierLogo = (carrierName: string) => {
-            // Carrier logo map with high-quality logos
+            // Carrier logo map with working CDN sources (logos-world.net is down)
             const logoMap: { [key: string]: string } = {
-                'Maersk': 'https://logos-world.net/wp-content/uploads/2020/08/Maersk-Logo.png',
-                'CMA CGM': 'https://logos-world.net/wp-content/uploads/2021/08/CMA-CGM-Logo.png',
-                'Hapag-Lloyd': 'https://logos-world.net/wp-content/uploads/2021/09/Hapag-Lloyd-Logo.png',
-                'ONE': 'https://logos-world.net/wp-content/uploads/2021/09/ONE-Logo.png',
-                'Evergreen': 'https://logos-world.net/wp-content/uploads/2021/09/Evergreen-Line-Logo.png',
-                'Lufthansa Cargo': 'https://logos-world.net/wp-content/uploads/2020/05/Lufthansa-Logo.png',
-                'Emirates SkyCargo': 'https://logos-world.net/wp-content/uploads/2020/08/Emirates-Logo.png',
-                'Cathay Cargo': 'https://logos-world.net/wp-content/uploads/2021/03/Cathay-Pacific-Logo.png',
-                'Atlas Air': 'https://logos-world.net/wp-content/uploads/2021/08/Atlas-Air-Logo.png',
-                'DHL': 'https://logos-world.net/wp-content/uploads/2020/04/DHL-Logo.png',
-                'FedEx': 'https://logos-world.net/wp-content/uploads/2020/05/FedEx-Logo.png',
-                'UPS': 'https://logos-world.net/wp-content/uploads/2021/03/UPS-Logo.png',
-                'DPD': 'https://logos-world.net/wp-content/uploads/2021/02/DPD-Logo.png'
+                'Maersk': 'https://cdn.brandfetch.io/id1LQGJ5c6/w/400/h/400/theme/dark/logo.png?t=1729589866449',
+                'CMA CGM': 'https://cdn.brandfetch.io/idXvzB9Gl4/w/400/h/400/theme/dark/logo.png?t=1729589541074',
+                'Hapag-Lloyd': 'https://cdn.brandfetch.io/idCHd2SqLE/w/400/h/400/theme/dark/logo.png?t=1729589704917',
+                'ONE': 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Ocean_Network_Express_logo.svg/320px-Ocean_Network_Express_logo.svg.png',
+                'Evergreen': 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/Evergreen_Marine_logo.svg/320px-Evergreen_Marine_logo.svg.png',
+                'Lufthansa Cargo': 'https://cdn.brandfetch.io/idhVOwbILQ/w/400/h/400/theme/dark/logo.png?t=1729589843473',
+                'Emirates SkyCargo': 'https://cdn.brandfetch.io/idY-nIS0xH/w/400/h/400/theme/dark/logo.png?t=1729590437011',
+                'Cathay Cargo': 'https://cdn.brandfetch.io/idEUfXJlq4/w/400/h/400/theme/dark/logo.png?t=1729589504091',
+                'Atlas Air': 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/Atlas_Air_Logo.svg/320px-Atlas_Air_Logo.svg.png',
+                'DHL': 'https://cdn.brandfetch.io/idXHzdEwBt/w/400/h/400/theme/dark/logo.png?t=1729590579258',
+                'FedEx': 'https://cdn.brandfetch.io/idjYkIwM7Z/w/400/h/400/theme/dark/logo.png?t=1729590467758',
+                'UPS': 'https://cdn.brandfetch.io/idCd1mUn0_/w/400/h/400/theme/dark/logo.png?t=1729590685863',
+                'DPD': 'https://cdn.brandfetch.io/idTdiFzVnI/w/400/h/400/theme/dark/logo.png?t=1729590384929'
             };
             
             return logoMap[carrierName] || '';
