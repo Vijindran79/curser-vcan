@@ -7,6 +7,12 @@ import * as admin from 'firebase-admin';
 import express from 'express';
 import cors from 'cors';
 // import { onDocumentCreated } from 'firebase-functions/v2/firestore'; // Commented out to avoid v1/v2 mixing
+import {
+    sendWelcomeEmail,
+    sendBookingConfirmationEmail,
+    sendTrackingUpdateEmail,
+    sendPasswordResetEmail
+} from './emailService';
 
 // Initialize Firebase Admin - Uses Application Default Credentials (ADC) automatically
 // When deployed to Firebase, credentials are automatically provided
@@ -917,7 +923,8 @@ sendBookingEmailApp.post('/', async (req, res) => {
             origin, 
             destination, 
             carrier,
-            estimatedDelivery,
+            transitTime,
+            weight,
             totalCost,
             currency
         } = req.body;
@@ -926,8 +933,28 @@ sendBookingEmailApp.post('/', async (req, res) => {
             return res.status(400).json({ error: 'Missing required fields' });
         }
 
-        // Store email notification in Firestore
-        // In production, integrate with SendGrid, Mailgun, or AWS SES
+        // Send actual email using AWS SES
+        const emailSent = await sendBookingConfirmationEmail(
+            recipientEmail,
+            {
+                trackingId,
+                recipientName: recipientName || 'Valued Customer',
+                origin: origin || '',
+                destination: destination || '',
+                weight: weight || 0,
+                carrier: carrier || '',
+                service: service || 'Standard',
+                transitTime: transitTime || '3-5 business days',
+                totalCost: totalCost || 0,
+                currency: currency || 'USD'
+            }
+        );
+
+        if (!emailSent) {
+            throw new Error('Failed to send email via AWS SES');
+        }
+
+        // Also store notification record in Firestore for tracking
         await getDb().collection('emailNotifications').add({
             recipientEmail,
             recipientName: recipientName || 'Valued Customer',
@@ -936,26 +963,38 @@ sendBookingEmailApp.post('/', async (req, res) => {
             origin: origin || '',
             destination: destination || '',
             carrier: carrier || '',
-            estimatedDelivery: estimatedDelivery || '',
             totalCost: totalCost || 0,
             currency: currency || 'USD',
             emailType: 'booking_confirmation',
-            status: 'queued',
+            status: 'sent',
             createdAt: admin.firestore.FieldValue.serverTimestamp(),
-            sentAt: null
+            sentAt: admin.firestore.FieldValue.serverTimestamp()
         });
 
-        // TODO: Integrate with email service provider
-        // For now, we'll return success
-        console.log(`Email notification queued for ${recipientEmail}, tracking: ${trackingId}`);
+        console.log(`✅ Booking confirmation email sent to ${recipientEmail}, tracking: ${trackingId}`);
 
         return res.status(200).json({ 
             success: true,
-            message: 'Email notification queued successfully'
+            message: 'Booking confirmation email sent successfully'
         });
 
     } catch (error: any) {
         console.error('[sendBookingEmail] Error:', error);
+        
+        // Store failed email attempt for retry
+        try {
+            await getDb().collection('emailNotifications').add({
+                recipientEmail: req.body.recipientEmail,
+                trackingId: req.body.trackingId,
+                emailType: 'booking_confirmation',
+                status: 'failed',
+                error: error.message,
+                createdAt: admin.firestore.FieldValue.serverTimestamp()
+            });
+        } catch (dbError) {
+            console.error('[sendBookingEmail] Failed to log error:', dbError);
+        }
+        
         return res.status(500).json({ 
             error: 'internal', 
             message: error.message || 'Failed to send email' 
@@ -969,4 +1008,197 @@ export const sendBookingEmail = functionsV2.onRequest({
     timeoutSeconds: 30,
     invoker: 'public'
 }, sendBookingEmailApp);
+
+
+// ==========================================
+// WELCOME EMAIL
+// ==========================================
+
+const sendWelcomeEmailApp = express();
+sendWelcomeEmailApp.use(cors({ origin: true }));
+sendWelcomeEmailApp.use(express.json());
+
+sendWelcomeEmailApp.post('/', async (req, res) => {
+    try {
+        const { recipientEmail, recipientName } = req.body;
+
+        if (!recipientEmail || !recipientName) {
+            return res.status(400).json({ error: 'Missing recipientEmail or recipientName' });
+        }
+
+        const emailSent = await sendWelcomeEmail(recipientEmail, recipientName);
+
+        if (!emailSent) {
+            throw new Error('Failed to send welcome email via AWS SES');
+        }
+
+        // Log email sent
+        await getDb().collection('emailNotifications').add({
+            recipientEmail,
+            recipientName,
+            emailType: 'welcome',
+            status: 'sent',
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            sentAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        console.log(`✅ Welcome email sent to ${recipientEmail}`);
+
+        return res.status(200).json({ 
+            success: true,
+            message: 'Welcome email sent successfully'
+        });
+
+    } catch (error: any) {
+        console.error('[sendWelcomeEmail] Error:', error);
+        return res.status(500).json({ 
+            error: 'internal', 
+            message: error.message || 'Failed to send welcome email' 
+        });
+    }
+});
+
+export const sendWelcomeEmailFunction = functionsV2.onRequest({ 
+    region: 'us-central1',
+    memory: '256MiB',
+    timeoutSeconds: 30,
+    invoker: 'public'
+}, sendWelcomeEmailApp);
+
+
+// ==========================================
+// TRACKING UPDATE EMAIL
+// ==========================================
+
+const sendTrackingUpdateEmailApp = express();
+sendTrackingUpdateEmailApp.use(cors({ origin: true }));
+sendTrackingUpdateEmailApp.use(express.json());
+
+sendTrackingUpdateEmailApp.post('/', async (req, res) => {
+    try {
+        const { 
+            recipientEmail, 
+            recipientName, 
+            trackingId, 
+            status, 
+            location, 
+            timestamp,
+            nextUpdate
+        } = req.body;
+
+        if (!recipientEmail || !trackingId || !status) {
+            return res.status(400).json({ error: 'Missing required fields' });
+        }
+
+        const emailSent = await sendTrackingUpdateEmail(
+            recipientEmail,
+            {
+                trackingId,
+                recipientName: recipientName || 'Valued Customer',
+                status,
+                location: location || 'In transit',
+                timestamp: timestamp || new Date().toLocaleString(),
+                nextUpdate: nextUpdate || 'We will update you when your parcel reaches the next checkpoint.'
+            }
+        );
+
+        if (!emailSent) {
+            throw new Error('Failed to send tracking update email via AWS SES');
+        }
+
+        // Log email sent
+        await getDb().collection('emailNotifications').add({
+            recipientEmail,
+            recipientName: recipientName || 'Valued Customer',
+            trackingId,
+            shipmentStatus: status,
+            location,
+            emailType: 'tracking_update',
+            emailStatus: 'sent',
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            sentAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        console.log(`✅ Tracking update email sent to ${recipientEmail}, tracking: ${trackingId}`);
+
+        return res.status(200).json({ 
+            success: true,
+            message: 'Tracking update email sent successfully'
+        });
+
+    } catch (error: any) {
+        console.error('[sendTrackingUpdateEmail] Error:', error);
+        return res.status(500).json({ 
+            error: 'internal', 
+            message: error.message || 'Failed to send tracking update email' 
+        });
+    }
+});
+
+export const sendTrackingUpdateEmailFunction = functionsV2.onRequest({ 
+    region: 'us-central1',
+    memory: '256MiB',
+    timeoutSeconds: 30,
+    invoker: 'public'
+}, sendTrackingUpdateEmailApp);
+
+
+// ==========================================
+// PASSWORD RESET EMAIL
+// ==========================================
+
+const sendPasswordResetEmailApp = express();
+sendPasswordResetEmailApp.use(cors({ origin: true }));
+sendPasswordResetEmailApp.use(express.json());
+
+sendPasswordResetEmailApp.post('/', async (req, res) => {
+    try {
+        const { recipientEmail, recipientName, resetLink } = req.body;
+
+        if (!recipientEmail || !resetLink) {
+            return res.status(400).json({ error: 'Missing recipientEmail or resetLink' });
+        }
+
+        const emailSent = await sendPasswordResetEmail(
+            recipientEmail,
+            recipientName || 'User',
+            resetLink
+        );
+
+        if (!emailSent) {
+            throw new Error('Failed to send password reset email via AWS SES');
+        }
+
+        // Log email sent
+        await getDb().collection('emailNotifications').add({
+            recipientEmail,
+            recipientName: recipientName || 'User',
+            emailType: 'password_reset',
+            status: 'sent',
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            sentAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+
+        console.log(`✅ Password reset email sent to ${recipientEmail}`);
+
+        return res.status(200).json({ 
+            success: true,
+            message: 'Password reset email sent successfully'
+        });
+
+    } catch (error: any) {
+        console.error('[sendPasswordResetEmail] Error:', error);
+        return res.status(500).json({ 
+            error: 'internal', 
+            message: error.message || 'Failed to send password reset email' 
+        });
+    }
+});
+
+export const sendPasswordResetEmailFunction = functionsV2.onRequest({ 
+    region: 'us-central1',
+    memory: '256MiB',
+    timeoutSeconds: 30,
+    invoker: 'public'
+}, sendPasswordResetEmailApp);
 
