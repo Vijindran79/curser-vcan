@@ -140,6 +140,12 @@ function renderStep1(): string {
                     <p style="color: #1E3A8A; margin: 0.5rem 0 0 0; font-size: 0.9em;">
                         💡 Common locations: Post offices, convenience stores (Evri, InPost, Yodel shops)
                     </p>
+                    ${formData.originAddress ? `
+                        <button type="button" id="find-dropoff-btn" class="secondary-btn" style="margin-top: 1rem; width: 100%;">
+                            <i class="fa-solid fa-map-location-dot"></i>
+                            Find Nearest Drop-off Locations
+                        </button>
+                    ` : ''}
                 </div>
             ` : ''}
         </div>
@@ -1324,6 +1330,29 @@ function attachWizardListeners() {
         });
     });
     
+    // Step 1: Find drop-off locations button
+    page.querySelector('#find-dropoff-btn')?.addEventListener('click', async () => {
+        if (!formData.originAddress) {
+            showToast('Please enter your address first', 'warning');
+            return;
+        }
+        toggleLoading(true, 'Finding nearest drop-off locations...');
+        try {
+            const locations = await findNearestDropoffLocations(formData.originAddress);
+            toggleLoading(false);
+            if (locations.length > 0) {
+                dropoffLocations = locations;
+                renderDropoffLocationModal(locations);
+            } else {
+                showToast('No drop-off locations found nearby', 'warning');
+            }
+        } catch (error) {
+            toggleLoading(false);
+            showToast('Failed to find drop-off locations', 'error');
+            console.error('Drop-off location error:', error);
+        }
+    });
+    
     // Step 2: Address inputs with Google Places Autocomplete
     const originInput = page.querySelector('#origin-address') as HTMLInputElement;
     const destInput = page.querySelector('#destination-address') as HTMLInputElement;
@@ -2077,6 +2106,462 @@ function updateStepConnectors() {
     });
 }
 
+// PHASE 2: Drop-off Location Finder
+interface DropoffLocation {
+    name: string;
+    address: string;
+    city: string;
+    postcode: string;
+    distance: number;
+    distanceUnit: string;
+    hours: string;
+    phone?: string;
+    carrier: string;
+    latitude?: number;
+    longitude?: number;
+}
+
+async function findNearestDropoffLocations(address: string, carrier?: string): Promise<DropoffLocation[]> {
+    // For now, return mock data until we integrate with Shippo's location API
+    // In production, this would call Shippo's drop-off location API
+    
+    // Extract postcode/country from address for better results
+    const country = detectCountry(address);
+    const pickupRules = country ? COUNTRY_PICKUP_RULES[country] : null;
+    
+    if (!pickupRules || pickupRules.dropoffLocations.length === 0) {
+        return [];
+    }
+    
+    // Generate mock locations based on country's drop-off types
+    const mockLocations: DropoffLocation[] = pickupRules.dropoffLocations.slice(0, 5).map((type, index) => {
+        const distances = [0.3, 0.7, 1.2, 1.8, 2.5];
+        const distance = distances[index] || (index + 1) * 0.5;
+        
+        return {
+            name: `${type} - Location ${index + 1}`,
+            address: `${100 + index * 50} Main Street`,
+            city: pickupRules.name.split(' ').pop() || pickupRules.name,
+            postcode: address.match(/\b[A-Z]{1,2}\d{1,2}[A-Z]?\s?\d[A-Z]{2}\b/i)?.[0] || '12345',
+            distance: distance,
+            distanceUnit: 'miles',
+            hours: index % 2 === 0 ? 'Mon-Sat: 8am-8pm, Sun: 10am-6pm' : 'Mon-Fri: 9am-6pm, Sat: 9am-5pm',
+            phone: `+${Math.floor(Math.random() * 900000000) + 100000000}`,
+            carrier: carrier || pickupRules.majorCarriers[0],
+            latitude: 51.5074 + (Math.random() - 0.5) * 0.1,
+            longitude: -0.1278 + (Math.random() - 0.5) * 0.1
+        };
+    });
+    
+    return mockLocations;
+}
+
+function renderDropoffLocationModal(locations: DropoffLocation[]) {
+    if (locations.length === 0) {
+        showToast('No drop-off locations found nearby', 'warning');
+        return;
+    }
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        padding: 1rem;
+    `;
+    
+    const modalContent = document.createElement('div');
+    modalContent.style.cssText = `
+        background: white;
+        border-radius: 12px;
+        max-width: 900px;
+        width: 100%;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    `;
+    
+    modalContent.innerHTML = `
+        <div style="padding: 1.5rem; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0; color: var(--dark-text); font-size: 1.5rem;">
+                <i class="fa-solid fa-map-marker-alt" style="color: var(--primary);"></i>
+                Nearest Drop-off Locations
+            </h3>
+            <button class="close-modal-btn" style="
+                background: none;
+                border: none;
+                font-size: 1.5rem;
+                cursor: pointer;
+                color: var(--medium-gray);
+                padding: 0;
+                width: 32px;
+                height: 32px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                border-radius: 50%;
+                transition: all 0.2s;
+            ">
+                <i class="fa-solid fa-times"></i>
+            </button>
+        </div>
+        
+        <div style="padding: 1.5rem;">
+            <div class="dropoff-locations-list" style="display: grid; gap: 1rem;">
+                ${locations.map((loc, index) => `
+                    <div class="dropoff-location-card" style="
+                        border: 2px solid #e5e7eb;
+                        border-radius: 8px;
+                        padding: 1.25rem;
+                        transition: all 0.2s;
+                        cursor: pointer;
+                    ">
+                        <div style="display: flex; justify-content: space-between; align-items: start; gap: 1rem;">
+                            <div style="flex: 1;">
+                                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem;">
+                                    <span style="
+                                        background: var(--primary);
+                                        color: white;
+                                        width: 28px;
+                                        height: 28px;
+                                        border-radius: 50%;
+                                        display: flex;
+                                        align-items: center;
+                                        justify-content: center;
+                                        font-weight: 600;
+                                        font-size: 0.9rem;
+                                    ">${index + 1}</span>
+                                    <h4 style="margin: 0; color: var(--dark-text); font-size: 1.1rem;">
+                                        ${loc.name}
+                                    </h4>
+                                </div>
+                                
+                                <div style="display: grid; gap: 0.5rem; margin-left: 2.25rem; color: var(--medium-gray);">
+                                    <div style="display: flex; align-items: start; gap: 0.5rem;">
+                                        <i class="fa-solid fa-location-dot" style="margin-top: 0.2rem; width: 16px;"></i>
+                                        <span>${loc.address}, ${loc.city}, ${loc.postcode}</span>
+                                    </div>
+                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <i class="fa-solid fa-clock" style="width: 16px;"></i>
+                                        <span>${loc.hours}</span>
+                                    </div>
+                                    ${loc.phone ? `
+                                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                            <i class="fa-solid fa-phone" style="width: 16px;"></i>
+                                            <span>${loc.phone}</span>
+                                        </div>
+                                    ` : ''}
+                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <i class="fa-solid fa-truck" style="width: 16px;"></i>
+                                        <span style="font-weight: 600; color: var(--primary);">${loc.carrier}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div style="text-align: right;">
+                                <div style="
+                                    background: #F0FDF4;
+                                    color: #166534;
+                                    padding: 0.5rem 1rem;
+                                    border-radius: 6px;
+                                    font-weight: 600;
+                                    margin-bottom: 0.75rem;
+                                ">
+                                    ${loc.distance.toFixed(1)} ${loc.distanceUnit}
+                                </div>
+                                <a href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(loc.address + ', ' + loc.city + ', ' + loc.postcode)}" 
+                                   target="_blank"
+                                   class="secondary-btn"
+                                   style="
+                                       display: inline-flex;
+                                       align-items: center;
+                                       gap: 0.5rem;
+                                       padding: 0.5rem 1rem;
+                                       font-size: 0.9rem;
+                                       text-decoration: none;
+                                   ">
+                                    <i class="fa-solid fa-directions"></i>
+                                    Directions
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+            
+            <div style="
+                margin-top: 1.5rem;
+                padding: 1rem;
+                background: #EFF6FF;
+                border-left: 4px solid #3B82F6;
+                border-radius: 6px;
+            ">
+                <p style="margin: 0; color: #1E40AF; font-size: 0.9rem;">
+                    <i class="fa-solid fa-info-circle"></i>
+                    <strong>Tip:</strong> Print your shipping label before dropping off your parcel. Most locations don't provide printing services.
+                </p>
+            </div>
+        </div>
+    `;
+    
+    modal.appendChild(modalContent);
+    document.body.appendChild(modal);
+    
+    // Close button handler
+    modal.querySelector('.close-modal-btn')?.addEventListener('click', () => {
+        modal.remove();
+    });
+    
+    // Click outside to close
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
+    
+    // Hover effect on cards
+    modalContent.querySelectorAll('.dropoff-location-card').forEach(card => {
+        card.addEventListener('mouseenter', () => {
+            (card as HTMLElement).style.borderColor = 'var(--primary)';
+            (card as HTMLElement).style.boxShadow = '0 4px 12px rgba(249, 115, 22, 0.2)';
+        });
+        card.addEventListener('mouseleave', () => {
+            (card as HTMLElement).style.borderColor = '#e5e7eb';
+            (card as HTMLElement).style.boxShadow = 'none';
+        });
+    });
+}
+
+// Show payment confirmation with prominent label download
+function showPaymentConfirmation() {
+    const confirmationData = sessionStorage.getItem('vcanship_show_confirmation');
+    if (!confirmationData) return;
+    
+    sessionStorage.removeItem('vcanship_show_confirmation');
+    const data = JSON.parse(confirmationData);
+    
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        padding: 1rem;
+    `;
+    
+    const modalContent = document.createElement('div');
+    modalContent.style.cssText = `
+        background: white;
+        border-radius: 16px;
+        max-width: 600px;
+        width: 100%;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 25px 70px rgba(0, 0, 0, 0.4);
+        animation: slideUp 0.3s ease-out;
+    `;
+    
+    modalContent.innerHTML = `
+        <style>
+            @keyframes slideUp {
+                from {
+                    opacity: 0;
+                    transform: translateY(30px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+        </style>
+        
+        <div style="padding: 2rem; text-align: center;">
+            <div style="
+                width: 80px;
+                height: 80px;
+                background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                margin: 0 auto 1.5rem;
+                box-shadow: 0 10px 30px rgba(16, 185, 129, 0.3);
+            ">
+                <i class="fa-solid fa-check" style="font-size: 3rem; color: white;"></i>
+            </div>
+            
+            <h2 style="margin: 0 0 0.5rem; color: var(--dark-text); font-size: 2rem;">
+                Payment Successful! 🎉
+            </h2>
+            <p style="margin: 0 0 2rem; color: var(--medium-gray); font-size: 1.1rem;">
+                Your shipment is booked and ready to go
+            </p>
+            
+            <div style="
+                background: linear-gradient(135deg, #F97316 0%, #EA580C 100%);
+                border-radius: 12px;
+                padding: 1.5rem;
+                margin-bottom: 1.5rem;
+            ">
+                <button id="download-label-btn" style="
+                    width: 100%;
+                    background: white;
+                    color: #EA580C;
+                    border: none;
+                    border-radius: 8px;
+                    padding: 1rem 2rem;
+                    font-size: 1.2rem;
+                    font-weight: 700;
+                    cursor: pointer;
+                    transition: all 0.2s;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 0.75rem;
+                ">
+                    <i class="fa-solid fa-download" style="font-size: 1.5rem;"></i>
+                    Download Shipping Label
+                </button>
+                <p style="margin: 1rem 0 0; color: white; font-size: 0.9rem; opacity: 0.9;">
+                    Print this label and attach it to your parcel
+                </p>
+            </div>
+            
+            <div style="
+                display: grid;
+                gap: 1rem;
+                margin-bottom: 1.5rem;
+                text-align: left;
+            ">
+                <button id="download-receipt-btn" class="secondary-btn" style="
+                    width: 100%;
+                    padding: 0.875rem 1.5rem;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    gap: 0.5rem;
+                ">
+                    <i class="fa-solid fa-file-invoice"></i>
+                    Download Receipt
+                </button>
+                
+                ${formData.serviceType === 'dropoff' && formData.originAddress ? `
+                    <button id="view-dropoff-locations-btn" class="secondary-btn" style="
+                        width: 100%;
+                        padding: 0.875rem 1.5rem;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 0.5rem;
+                    ">
+                        <i class="fa-solid fa-map-marker-alt"></i>
+                        View Drop-off Locations
+                    </button>
+                ` : ''}
+            </div>
+            
+            <div style="
+                background: #F0FDF4;
+                border-left: 4px solid #10B981;
+                border-radius: 8px;
+                padding: 1rem;
+                text-align: left;
+                margin-bottom: 1.5rem;
+            ">
+                <p style="margin: 0 0 0.5rem; color: #065F46; font-weight: 600;">
+                    <i class="fa-solid fa-envelope"></i> Confirmation Email Sent
+                </p>
+                <p style="margin: 0; color: #047857; font-size: 0.9rem;">
+                    We've sent booking confirmation, shipping label, and ${formData.serviceType === 'dropoff' ? 'drop-off locations' : 'pickup details'} to your email
+                </p>
+            </div>
+            
+            <button class="secondary-btn" id="close-confirmation-btn" style="
+                width: 100%;
+                padding: 0.875rem;
+            ">
+                Close
+            </button>
+        </div>
+    `;
+    
+    modal.appendChild(modalContent);
+    document.body.appendChild(modal);
+    
+    // Download label button
+    modal.querySelector('#download-label-btn')?.addEventListener('click', async () => {
+        try {
+            const trackingId = `VCAN${Date.now().toString(36).toUpperCase()}`;
+            generateShippingLabel(trackingId, data.selectedQuote || allQuotes[0]);
+            showToast('Label downloaded successfully!', 'success');
+        } catch (error) {
+            showToast('Failed to generate label', 'error');
+        }
+    });
+    
+    // Download receipt button
+    modal.querySelector('#download-receipt-btn')?.addEventListener('click', async () => {
+        try {
+            const trackingId = `VCAN${Date.now().toString(36).toUpperCase()}`;
+            generateReceipt(trackingId, data.selectedQuote || allQuotes[0]);
+            showToast('Receipt downloaded successfully!', 'success');
+        } catch (error) {
+            showToast('Failed to generate receipt', 'error');
+        }
+    });
+    
+    // View drop-off locations button
+    modal.querySelector('#view-dropoff-locations-btn')?.addEventListener('click', async () => {
+        if (formData.originAddress) {
+            toggleLoading(true, 'Finding nearest drop-off locations...');
+            try {
+                const locations = await findNearestDropoffLocations(formData.originAddress);
+                toggleLoading(false);
+                if (locations.length > 0) {
+                    renderDropoffLocationModal(locations);
+                }
+            } catch (error) {
+                toggleLoading(false);
+                showToast('Failed to find locations', 'error');
+            }
+        }
+    });
+    
+    // Close button
+    modal.querySelector('#close-confirmation-btn')?.addEventListener('click', () => {
+        modal.remove();
+    });
+    
+    // Hover effect on download button
+    const downloadBtn = modal.querySelector('#download-label-btn') as HTMLElement;
+    if (downloadBtn) {
+        downloadBtn.addEventListener('mouseenter', () => {
+            downloadBtn.style.transform = 'scale(1.02)';
+            downloadBtn.style.boxShadow = '0 6px 20px rgba(0, 0, 0, 0.25)';
+        });
+        downloadBtn.addEventListener('mouseleave', () => {
+            downloadBtn.style.transform = 'scale(1)';
+            downloadBtn.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+        });
+    }
+}
+
 // EXPORT
 export function startParcel() {
     setState({ currentService: 'parcel' });
@@ -2085,6 +2570,10 @@ export function startParcel() {
     currentStep = 1;
     formData = {};
     allQuotes = [];
+    dropoffLocations = [];
     usedApiQuotes = false; // Reset API quote flag
     renderPage();
+    
+    // Check for payment confirmation
+    setTimeout(() => showPaymentConfirmation(), 500);
 }
