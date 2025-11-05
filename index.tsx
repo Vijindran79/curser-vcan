@@ -691,11 +691,17 @@ async function initializeCoreApp() {
             DOMElements.closeTrackingModalBtn.addEventListener('click', () => {
                 DOMElements.trackingModal.classList.remove('active');
             });
-            DOMElements.trackingForm.addEventListener('submit', (e) => {
+            DOMElements.trackingForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                const trackingId = DOMElements.trackingIdInput.value;
-                showToast(t('toast.tracking_not_implemented').replace('{id}', trackingId), 'info');
+                const trackingId = DOMElements.trackingIdInput.value.trim().toUpperCase();
                 DOMElements.trackingModal.classList.remove('active');
+                
+                // Import tracking module dynamically
+                const { renderTrackingPage } = await import('./tracking');
+                renderTrackingPage(trackingId);
+                
+                // Update URL
+                window.location.hash = `tracking/${trackingId}`;
             });
         }
 

@@ -24,6 +24,7 @@ import { renderLandingPage, renderHelpPage, renderApiHubPage, renderPrivacyPage,
 import { renderDashboard } from './dashboard';
 import { renderAddressBook, renderAccountSettings } from './account';
 import { mountPromotionBanner, unmountPromotionBanner } from './promotions';
+import { renderTrackingPage } from './tracking';
 
 
 /**
@@ -69,6 +70,7 @@ function getStaticPageRenderer(page: string): (() => void) | null {
         case 'help': return renderHelpPage;
         case 'privacy': return renderPrivacyPage;
         case 'terms': return renderTermsPage;
+        case 'tracking': return () => renderTrackingPage();
         case 'subscription': 
             return async () => {
                 try {

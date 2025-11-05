@@ -894,3 +894,79 @@ export const createPaymentIntent = functionsV2.onRequest({
     invoker: 'public' // Allow all users to call this function
 }, createPaymentIntentApp);
 
+
+// ==========================================
+// EMAIL NOTIFICATIONS
+// ==========================================
+
+/**
+ * Send booking confirmation email
+ * This function sends an email to the customer after successful booking
+ */
+const sendBookingEmailApp = express();
+sendBookingEmailApp.use(cors({ origin: true }));
+sendBookingEmailApp.use(express.json());
+
+sendBookingEmailApp.post('/', async (req, res) => {
+    try {
+        const { 
+            recipientEmail, 
+            recipientName,
+            trackingId, 
+            service, 
+            origin, 
+            destination, 
+            carrier,
+            estimatedDelivery,
+            totalCost,
+            currency
+        } = req.body;
+
+        if (!recipientEmail || !trackingId) {
+            return res.status(400).json({ error: 'Missing required fields' });
+        }
+
+        // Store email notification in Firestore
+        // In production, integrate with SendGrid, Mailgun, or AWS SES
+        await getDb().collection('emailNotifications').add({
+            recipientEmail,
+            recipientName: recipientName || 'Valued Customer',
+            trackingId,
+            service: service || 'parcel',
+            origin: origin || '',
+            destination: destination || '',
+            carrier: carrier || '',
+            estimatedDelivery: estimatedDelivery || '',
+            totalCost: totalCost || 0,
+            currency: currency || 'USD',
+            emailType: 'booking_confirmation',
+            status: 'queued',
+            createdAt: admin.firestore.FieldValue.serverTimestamp(),
+            sentAt: null
+        });
+
+        // TODO: Integrate with email service provider
+        // For now, we'll return success
+        console.log(`Email notification queued for ${recipientEmail}, tracking: ${trackingId}`);
+
+        return res.status(200).json({ 
+            success: true,
+            message: 'Email notification queued successfully'
+        });
+
+    } catch (error: any) {
+        console.error('[sendBookingEmail] Error:', error);
+        return res.status(500).json({ 
+            error: 'internal', 
+            message: error.message || 'Failed to send email' 
+        });
+    }
+});
+
+export const sendBookingEmail = functionsV2.onRequest({ 
+    region: 'us-central1',
+    memory: '256MiB',
+    timeoutSeconds: 30,
+    invoker: 'public'
+}, sendBookingEmailApp);
+
