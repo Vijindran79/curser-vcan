@@ -644,6 +644,24 @@ async function initializeCoreApp() {
         // Initialize locale switcher (language/country/currency selector)
         await initializeLocaleSwitcher();
 
+        // 🌍 Initialize country detection and auto-configuration
+        try {
+            const { initializeCountryDetection } = await import('./country-detection');
+            await initializeCountryDetection();
+            console.log('✅ Country detection initialized');
+        } catch (error) {
+            console.warn('Country detection failed:', error);
+        }
+
+        // 📱 Initialize phone rotation suggestion popup
+        try {
+            const { initializeRotationSuggestion } = await import('./rotation-popup');
+            initializeRotationSuggestion();
+            console.log('✅ Rotation popup initialized');
+        } catch (error) {
+            console.warn('Rotation popup failed:', error);
+        }
+
         // Now that translations are ready, initialize the rest of the app.
         initializeStaticPages();
         initializeSidebar();

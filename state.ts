@@ -331,6 +331,14 @@ export const shipmentHistory = [
 
 // --- APP STATE ---
 
+export interface UserCountry {
+    code: string;
+    name: string;
+    currency: string;
+    language: string;
+    timezone: string;
+}
+
 export interface AppState {
     api: GoogleGenerativeAI | null;
     currentPage: Page;
@@ -341,6 +349,11 @@ export interface AppState {
     subscriptionTier: 'guest' | 'free' | 'pro';
     aiLookupsRemaining: number;
     currentCurrency: Currency;
+    
+    // Country Detection & Localization
+    userCountry?: UserCountry;
+    currencySymbol?: string;
+    currencyCode?: string;
 
     // Parcel Service
     parcelOrigin: Partial<Address> | null;
