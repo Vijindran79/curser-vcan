@@ -189,7 +189,17 @@ function renderFclPage() {
                             </div>
                         </div>
                         <div id="fcl-container-list" style="margin-top: 1.5rem;"></div>
-                        <button type="button" id="fcl-add-container-btn" class="secondary-btn">Add Container</button>
+                        <div style="display: flex; gap: 1rem; margin-top: 1rem; align-items: center;">
+                            <button type="button" id="fcl-add-container-btn" class="secondary-btn" style="flex: 1;">
+                                <i class="fa-solid fa-plus"></i> Add Container Manually
+                            </button>
+                            <button type="button" id="fcl-ai-suggest-container-btn" class="secondary-btn" style="flex: 1; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none;">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i> AI Suggest Optimal Container
+                            </button>
+                        </div>
+                        <p class="helper-text" style="margin-top: 0.5rem; text-align: center;">
+                            💡 AI analyzes your cargo description and suggests the most cost-effective container size
+                        </p>
                     </div>
 
                     <div class="form-actions">
@@ -489,6 +499,169 @@ function updateContainersFromUI() {
         });
     });
     setState({ fclDetails: { ...State.fclDetails, containers } as FclDetails });
+}
+
+async function suggestOptimalContainer() {
+    const cargoDesc = (document.getElementById('fcl-cargo-description') as HTMLTextAreaElement)?.value;
+    
+    if (!cargoDesc || cargoDesc.trim().length < 10) {
+        showToast('Please enter a detailed cargo description first (at least 10 characters)', 'warning');
+        return;
+    }
+    
+    if (!checkAndDecrementLookup()) return;
+    
+    toggleLoading(true, '🤖 AI analyzing your cargo...');
+    
+    try {
+        const prompt = `You are a shipping logistics expert. Based on this cargo description, suggest the optimal container type and quantity.
+
+Cargo Description: ${cargoDesc}
+
+Analyze the cargo and recommend:
+1. Container type (20GP, 40GP, 40HC, 45HC, 20RF, 40RH, 20OT, 40OT, 20FR, 40FR, 20OR, 40OR, 20TK, 20PL, 40PL, 20VH, 40VH, 20ISO, 40ISO)
+2. Quantity needed
+3. Estimated weight per container in tons
+4. Reasoning for your recommendation
+
+Consider:
+- Volume efficiency (don't oversize)
+- Weight distribution
+- Special requirements (temperature control, oversized items, liquids, ventilation)
+- Cost optimization
+
+Provide a practical recommendation.`;
+
+        const responseSchema = {
+            type: SchemaType.OBJECT,
+            properties: {
+                containerType: { type: SchemaType.STRING },
+                quantity: { type: SchemaType.NUMBER },
+                estimatedWeight: { type: SchemaType.NUMBER },
+                reasoning: { type: SchemaType.STRING },
+                utilizationPercentage: { type: SchemaType.NUMBER },
+                alternatives: {
+                    type: SchemaType.ARRAY,
+                    items: {
+                        type: SchemaType.OBJECT,
+                        properties: {
+                            containerType: { type: SchemaType.STRING },
+                            quantity: { type: SchemaType.NUMBER },
+                            costComparison: { type: SchemaType.STRING }
+                        }
+                    }
+                }
+            }
+        };
+
+        const model = State.api.getGenerativeModel({
+            model: "gemini-1.5-flash-8b",
+            generationConfig: {
+                responseMimeType: "application/json",
+                responseSchema: responseSchema
+            }
+        });
+
+        const result = await model.generateContent(prompt);
+        const suggestion = JSON.parse(result.response.text());
+        
+        // Show suggestion modal
+        const modal = document.createElement('div');
+        modal.className = 'modal active';
+        modal.innerHTML = `
+            <div class="modal-content" style="max-width: 600px;">
+                <h3><i class="fa-solid fa-robot"></i> AI Container Recommendation</h3>
+                
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1.5rem; border-radius: 12px; margin: 1.5rem 0;">
+                    <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+                        <div style="font-size: 3rem;">📦</div>
+                        <div>
+                            <div style="font-size: 1.5rem; font-weight: 700;">${suggestion.quantity}x ${suggestion.containerType}</div>
+                            <div style="opacity: 0.9; font-size: 0.9rem;">~${suggestion.estimatedWeight} tons per container</div>
+                        </div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.2); padding: 0.75rem; border-radius: 8px;">
+                        <strong>Utilization:</strong> ${suggestion.utilizationPercentage}% capacity
+                    </div>
+                </div>
+                
+                <div style="background: #F3F4F6; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem;">
+                    <h4 style="margin: 0 0 0.5rem 0;">💡 Why this recommendation?</h4>
+                    <p style="margin: 0; line-height: 1.6;">${suggestion.reasoning}</p>
+                </div>
+                
+                ${suggestion.alternatives && suggestion.alternatives.length > 0 ? `
+                    <div style="margin-bottom: 1.5rem;">
+                        <h4>Alternative Options:</h4>
+                        <div style="display: grid; gap: 0.75rem;">
+                            ${suggestion.alternatives.map((alt: any) => `
+                                <div style="padding: 0.75rem; border: 1px solid #E5E7EB; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+                                    <div>
+                                        <strong>${alt.quantity}x ${alt.containerType}</strong>
+                                        <p style="margin: 0.25rem 0 0 0; font-size: 0.875rem; color: #6B7280;">${alt.costComparison}</p>
+                                    </div>
+                                    <button class="secondary-btn use-alternative-btn" data-type="${alt.containerType}" data-quantity="${alt.quantity}" data-weight="${suggestion.estimatedWeight}">
+                                        Use This
+                                    </button>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                ` : ''}
+                
+                <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                    <button class="secondary-btn" id="fcl-ai-reject-btn" style="flex: 1;">No Thanks</button>
+                    <button class="main-submit-btn" id="fcl-ai-accept-btn" style="flex: 1;">
+                        <i class="fa-solid fa-check"></i> Use This Recommendation
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Handle accept
+        document.getElementById('fcl-ai-accept-btn')?.addEventListener('click', () => {
+            const containers: FclContainer[] = [{
+                type: suggestion.containerType,
+                quantity: suggestion.quantity,
+                weight: suggestion.estimatedWeight,
+                weightUnit: 'TON'
+            }];
+            setState({ fclDetails: { ...State.fclDetails, containers } as FclDetails });
+            renderContainerItems();
+            document.body.removeChild(modal);
+            showToast('Container recommendation applied!', 'success');
+        });
+        
+        // Handle reject
+        document.getElementById('fcl-ai-reject-btn')?.addEventListener('click', () => {
+            document.body.removeChild(modal);
+        });
+        
+        // Handle alternatives
+        modal.querySelectorAll('.use-alternative-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const target = e.target as HTMLElement;
+                const containers: FclContainer[] = [{
+                    type: target.getAttribute('data-type') || '20GP',
+                    quantity: parseInt(target.getAttribute('data-quantity') || '1'),
+                    weight: parseFloat(target.getAttribute('data-weight') || '0'),
+                    weightUnit: 'TON'
+                }];
+                setState({ fclDetails: { ...State.fclDetails, containers } as FclDetails });
+                renderContainerItems();
+                document.body.removeChild(modal);
+                showToast('Alternative container applied!', 'success');
+            });
+        });
+        
+    } catch (error) {
+        console.error('Container suggestion error:', error);
+        showToast('Could not generate suggestion. Please try again.', 'error');
+    } finally {
+        toggleLoading(false);
+    }
 }
 
 function initializeSignaturePad() {
@@ -909,6 +1082,26 @@ function attachFclEventListeners() {
             handleServiceTypeChange(serviceTypeBtn.dataset.type);
         }
         
+        // Handle main service card selection (Ocean Only vs Full Forwarding)
+        const mainServiceCard = target.closest<HTMLElement>('.main-service-card');
+        if (mainServiceCard) {
+            document.querySelectorAll('.main-service-card').forEach(card => 
+                card.classList.remove('active')
+            );
+            mainServiceCard.classList.add('active');
+            const service = mainServiceCard.getAttribute('data-service');
+            
+            // Store selected service in state
+            if (State.fclDetails) {
+                setState({
+                    fclDetails: {
+                        ...State.fclDetails,
+                        mainService: service === 'ocean-only' ? 'ocean-only' : 'full-forwarding'
+                    }
+                });
+            }
+        }
+        
         if (target.closest('.fcl-remove-container-btn')) {
             const index = parseInt(target.closest<HTMLElement>('.card')?.dataset.index || '-1');
             if (index > -1 && State.fclDetails?.containers) {
@@ -970,6 +1163,7 @@ function attachFclEventListeners() {
     });
 
     document.getElementById('fcl-add-container-btn')?.addEventListener('click', addContainerItem);
+    document.getElementById('fcl-ai-suggest-container-btn')?.addEventListener('click', suggestOptimalContainer);
 
     // Documentation handling options
     const docHandlingRadios = document.querySelectorAll('input[name="fcl-doc-handling"]');

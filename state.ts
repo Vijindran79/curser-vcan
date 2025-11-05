@@ -103,6 +103,7 @@ export interface FclContainer {
     weightUnit: 'TON' | 'KG' | 'LBS';
 }
 export interface FclDetails {
+    mainService?: 'ocean-only' | 'full-forwarding'; // Main service selection
     serviceType: FclServiceType;
     pickupType: 'address' | 'location';
     deliveryType: 'address' | 'location';
