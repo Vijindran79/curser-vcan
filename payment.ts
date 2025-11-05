@@ -338,6 +338,8 @@ async function mountPaymentForm() {
                                         <label>Card Details</label>
                                         <div id="stripe-card-element" class="stripe-element-container"></div>
                                     </div>
+                                    <div id="payment-compliance-summary" style="margin-bottom: 1rem;"></div>
+                                    
                                     <button type="submit" id="payment-submit-btn" class="main-submit-btn payment-submit-btn">
                                         <i class="fa-solid fa-lock"></i>
                                         Pay ${State.currentCurrency.symbol}${totalAmount.toFixed(2)}
@@ -497,6 +499,25 @@ async function mountPaymentForm() {
             
             // Re-render the order summary since we just created the HTML
             renderOrderSummary();
+            
+            // Show compliance summary on payment page
+            if (State.paymentContext) {
+                const originAddr = State.paymentContext.origin;
+                const destAddr = State.paymentContext.destination;
+                const origin = typeof originAddr === 'string' ? originAddr : originAddr?.country || '';
+                const destination = typeof destAddr === 'string' ? destAddr : destAddr?.country || '';
+                
+                if (origin && destination) {
+                    import('./compliance-checklist').then(({ showInlineComplianceSummary }) => {
+                        showInlineComplianceSummary(
+                            'payment-compliance-summary',
+                            origin,
+                            destination,
+                            'Shipment cargo'
+                        );
+                    });
+                }
+            }
             
             // Verify the container element was created successfully
             const verifyContainer = document.getElementById('stripe-card-element');
