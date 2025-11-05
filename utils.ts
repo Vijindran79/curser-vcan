@@ -151,28 +151,28 @@ export function makeDraggable(element: HTMLElement, storageKey: string) {
 export function getLogisticsProviderLogo(providerName: string): string | null {
     const providerLower = providerName.toLowerCase().trim();
     
-    // Using logos.dev CDN - a reliable source for company logos
+    // Using reliable CDN sources for company logos (logos-world.net is down)
     const logoMap: { [key: string]: string } = {
-        'dhl': 'https://logos-world.net/wp-content/uploads/2020/04/DHL-Logo.png',
-        'fedex': 'https://logos-world.net/wp-content/uploads/2020/05/FedEx-Logo.png',
-        'ups': 'https://logos-world.net/wp-content/uploads/2021/03/UPS-Logo.png',
-        'tnt': 'https://logos-world.net/wp-content/uploads/2020/11/TNT-Logo.png',
-        'aramex': 'https://logos-world.net/wp-content/uploads/2020/08/Aramex-Logo.png',
-        'maersk': 'https://logos-world.net/wp-content/uploads/2020/08/Maersk-Logo.png',
-        'dpd': 'https://logos-world.net/wp-content/uploads/2021/02/DPD-Logo.png',
-        'usps': 'https://logos-world.net/wp-content/uploads/2020/06/USPS-Logo.png',
-        'evri': 'https://logos-world.net/wp-content/uploads/2023/02/Evri-Logo.png',
-        'cma cgm': 'https://logos-world.net/wp-content/uploads/2021/08/CMA-CGM-Logo.png',
-        'hapag': 'https://logos-world.net/wp-content/uploads/2021/09/Hapag-Lloyd-Logo.png',
-        'hapag-lloyd': 'https://logos-world.net/wp-content/uploads/2021/09/Hapag-Lloyd-Logo.png',
-        'emirates': 'https://logos-world.net/wp-content/uploads/2020/08/Emirates-Logo.png',
-        'lufthansa': 'https://logos-world.net/wp-content/uploads/2020/05/Lufthansa-Logo.png',
-        'cathay': 'https://logos-world.net/wp-content/uploads/2021/03/Cathay-Pacific-Logo.png',
-        'cathay pacific': 'https://logos-world.net/wp-content/uploads/2021/03/Cathay-Pacific-Logo.png',
-        'atlas': 'https://logos-world.net/wp-content/uploads/2021/08/Atlas-Air-Logo.png',
-        'msc': 'https://logos-world.net/wp-content/uploads/2021/08/MSC-Logo.png',
-        'evergreen': 'https://logos-world.net/wp-content/uploads/2021/09/Evergreen-Line-Logo.png',
-        'one': 'https://logos-world.net/wp-content/uploads/2021/09/ONE-Logo.png'
+        'dhl': 'https://cdn.brandfetch.io/idXHzdEwBt/w/400/h/400/theme/dark/logo.png?t=1729590579258',
+        'fedex': 'https://cdn.brandfetch.io/idjYkIwM7Z/w/400/h/400/theme/dark/logo.png?t=1729590467758',
+        'ups': 'https://cdn.brandfetch.io/idCd1mUn0_/w/400/h/400/theme/dark/logo.png?t=1729590685863',
+        'tnt': 'https://cdn.brandfetch.io/idSUrLOWxR/w/400/h/400/theme/dark/logo.png?t=1729590643583',
+        'aramex': 'https://cdn.brandfetch.io/idaiGam3xZ/w/400/h/400/theme/dark/logo.png?t=1729590097558',
+        'maersk': 'https://cdn.brandfetch.io/id1LQGJ5c6/w/400/h/400/theme/dark/logo.png?t=1729589866449',
+        'dpd': 'https://cdn.brandfetch.io/idTdiFzVnI/w/400/h/400/theme/dark/logo.png?t=1729590384929',
+        'usps': 'https://cdn.brandfetch.io/idkFLkc-Gx/w/400/h/400/theme/dark/logo.png?t=1729590694669',
+        'evri': 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Evri_logo.svg/320px-Evri_logo.svg.png',
+        'cma cgm': 'https://cdn.brandfetch.io/idXvzB9Gl4/w/400/h/400/theme/dark/logo.png?t=1729589541074',
+        'hapag': 'https://cdn.brandfetch.io/idCHd2SqLE/w/400/h/400/theme/dark/logo.png?t=1729589704917',
+        'hapag-lloyd': 'https://cdn.brandfetch.io/idCHd2SqLE/w/400/h/400/theme/dark/logo.png?t=1729589704917',
+        'emirates': 'https://cdn.brandfetch.io/idY-nIS0xH/w/400/h/400/theme/dark/logo.png?t=1729590437011',
+        'lufthansa': 'https://cdn.brandfetch.io/idhVOwbILQ/w/400/h/400/theme/dark/logo.png?t=1729589843473',
+        'cathay': 'https://cdn.brandfetch.io/idEUfXJlq4/w/400/h/400/theme/dark/logo.png?t=1729589504091',
+        'cathay pacific': 'https://cdn.brandfetch.io/idEUfXJlq4/w/400/h/400/theme/dark/logo.png?t=1729589504091',
+        'atlas': 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/Atlas_Air_Logo.svg/320px-Atlas_Air_Logo.svg.png',
+        'msc': 'https://cdn.brandfetch.io/idkwrAP9_G/w/400/h/400/theme/dark/logo.png?t=1729589898226',
+        'evergreen': 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/Evergreen_Marine_logo.svg/320px-Evergreen_Marine_logo.svg.png',
+        'one': 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Ocean_Network_Express_logo.svg/320px-Ocean_Network_Express_logo.svg.png'
     };
     
     // Try exact match first
@@ -194,19 +194,19 @@ export function getEcommercePlatformLogo(platformName: string): string | null {
     const platformLower = platformName.toLowerCase().trim();
     
     const logoMap: { [key: string]: string } = {
-        'amazon': 'https://logos-world.net/wp-content/uploads/2020/04/Amazon-Logo.png',
-        'ebay': 'https://logos-world.net/wp-content/uploads/2020/06/eBay-Logo.png',
-        'shopify': 'https://logos-world.net/wp-content/uploads/2021/08/Shopify-Logo.png',
-        'walmart': 'https://logos-world.net/wp-content/uploads/2020/06/Walmart-Logo.png',
-        'etsy': 'https://logos-world.net/wp-content/uploads/2021/02/Etsy-Logo.png',
-        'instagram': 'https://logos-world.net/wp-content/uploads/2017/04/Instagram-Logo.png',
-        'facebook marketplace': 'https://logos-world.net/wp-content/uploads/2021/04/Facebook-Logo.png',
-        'facebook': 'https://logos-world.net/wp-content/uploads/2021/04/Facebook-Logo.png',
-        'google shopping': 'https://logos-world.net/wp-content/uploads/2015/12/Google-Logo.png',
-        'google': 'https://logos-world.net/wp-content/uploads/2015/12/Google-Logo.png',
-        'tiktok shop': 'https://logos-world.net/wp-content/uploads/2021/07/TikTok-Logo.png',
-        'tiktok': 'https://logos-world.net/wp-content/uploads/2021/07/TikTok-Logo.png',
-        'alibaba': 'https://logos-world.net/wp-content/uploads/2020/04/Alibaba-Logo.png'
+        'amazon': 'https://cdn.brandfetch.io/idSUrLOWxR/w/400/h/400/theme/dark/logo.png?t=1729590099273',
+        'ebay': 'https://cdn.brandfetch.io/idI4pLjGQl/w/400/h/400/theme/dark/logo.png?t=1729590403859',
+        'shopify': 'https://cdn.brandfetch.io/idAnDTFapY/w/400/h/400/theme/dark/logo.png?t=1729590604935',
+        'walmart': 'https://cdn.brandfetch.io/idc91SAlpX/w/400/h/400/theme/dark/logo.png?t=1729590718892',
+        'etsy': 'https://cdn.brandfetch.io/idE9H6TQER/w/400/h/400/theme/dark/logo.png?t=1729590447677',
+        'instagram': 'https://cdn.brandfetch.io/idxW4r6KEd/w/400/h/400/theme/dark/logo.png?t=1729589755916',
+        'facebook marketplace': 'https://cdn.brandfetch.io/ido9pDgh7X/w/400/h/400/theme/dark/logo.png?t=1729589461090',
+        'facebook': 'https://cdn.brandfetch.io/ido9pDgh7X/w/400/h/400/theme/dark/logo.png?t=1729589461090',
+        'google shopping': 'https://cdn.brandfetch.io/idIq_kF0rb/w/400/h/400/theme/dark/logo.png?t=1729589679830',
+        'google': 'https://cdn.brandfetch.io/idIq_kF0rb/w/400/h/400/theme/dark/logo.png?t=1729589679830',
+        'tiktok shop': 'https://cdn.brandfetch.io/idt7nXGpJY/w/400/h/400/theme/dark/logo.png?t=1729590645754',
+        'tiktok': 'https://cdn.brandfetch.io/idt7nXGpJY/w/400/h/400/theme/dark/logo.png?t=1729590645754',
+        'alibaba': 'https://cdn.brandfetch.io/idctOXLKWs/w/400/h/400/theme/dark/logo.png?t=1729590060843'
     };
     
     // Try exact match first
