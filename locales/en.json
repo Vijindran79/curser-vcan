@@ -421,6 +421,30 @@
     },
     "faqs": []
   },
+  "settings": {
+    "title": "Settings & Menu",
+    "subtitle": "Manage your profile and communication preferences.",
+    "profile_title": "Profile Information",
+    "name_label": "Full Name",
+    "email_label": "Email Address",
+    "password_title": "Change Password",
+    "current_password_label": "Current Password",
+    "new_password_label": "New Password",
+    "save": "Save Changes",
+    "language_currency": "Language & Currency",
+    "appearance": "Appearance",
+    "theme": "Theme",
+    "account": "Account"
+  },
+  "contact": {
+    "title": "Get Help Now",
+    "subtitle": "Our team is here to help 24/7",
+    "whatsapp": "WhatsApp",
+    "call": "Call Us",
+    "email": "Email",
+    "hours": "Business Hours",
+    "hours_detail": "24/7 Support Available"
+  },
   "account": {
     "address_book": {
       "title": "Address Book",
