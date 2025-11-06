@@ -28,13 +28,13 @@ let stripe: any = null;
 const SUBSCRIPTION_PRICES = {
     monthly: {
         amount: 999, // $9.99 in cents
-        priceId: process.env.STRIPE_PRICE_MONTHLY || 'price_monthly_pro', // TODO: Replace with actual Price ID from Stripe
+        priceId: 'price_1SQGZWPyJngwy6BVs5l7MyOM', // Pro Subscription - Monthly (LIVE)
         label: '$9.99/month',
         savings: null
     },
     yearly: {
         amount: 9900, // $99.00 in cents (17% discount)
-        priceId: process.env.STRIPE_PRICE_YEARLY || 'price_yearly_pro', // TODO: Replace with actual Price ID from Stripe
+        priceId: 'price_1SQGdnPyJngwy6BVuvDoVkUC', // Pro Subscription - Yearly (LIVE)
         label: '$99/year',
         savings: '$20.88 (17% off)'
     }
