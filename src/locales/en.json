@@ -1,0 +1,142 @@
+{
+  "language": "English",
+  "nav": {
+    "home": "Home",
+    "services": "Services",
+    "about": "About",
+    "contact": "Contact",
+    "login": "Login",
+    "register": "Register",
+    "dashboard": "Dashboard"
+  },
+  "home": {
+    "title": "Trade with Confidence. Ship without Surprises.",
+    "subtitle": "Your trusted logistics partner for global shipping solutions",
+    "cta": "Get Started",
+    "learnMore": "Learn More"
+  },
+  "services": {
+    "title": "Our Services",
+    "airfreight": "Air Freight",
+    "seafreight": "Sea Freight",
+    "landtransport": "Land Transport",
+    "warehousing": "Warehousing",
+    "customs": "Customs Clearance",
+    "insurance": "Shipping Insurance"
+  },
+  "about": {
+    "title": "About Us",
+    "description": "We are a leading logistics company with years of experience in global shipping and supply chain management."
+  },
+  "contact": {
+    "title": "Contact Us",
+    "name": "Name",
+    "email": "Email",
+    "message": "Message",
+    "send": "Send Message"
+  },
+  "auth": {
+    "login": "Login",
+    "register": "Register",
+    "logout": "Logout",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm Password",
+    "forgotPassword": "Forgot Password?",
+    "alreadyHaveAccount": "Already have an account?",
+    "dontHaveAccount": "Don't have an account?",
+    "signIn": "Sign In",
+    "signUp": "Sign Up"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "welcome": "Welcome back!",
+    "shipments": "Shipments",
+    "tracking": "Tracking",
+    "profile": "Profile",
+    "settings": "Settings"
+  },
+  "tracking": {
+    "title": "Track Your Shipment",
+    "trackingNumber": "Tracking Number",
+    "track": "Track",
+    "status": {
+      "pending": "Pending",
+      "inTransit": "In Transit",
+      "delivered": "Delivered",
+      "delayed": "Delayed"
+    }
+  },
+  "errors": {
+    "404": "Page Not Found",
+    "500": "Server Error",
+    "network": "Network Error",
+    "unauthorized": "Unauthorized",
+    "forbidden": "Forbidden"
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "edit": "Edit",
+    "delete": "Delete",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "search": "Search",
+    "filter": "Filter",
+    "sort": "Sort",
+    "refresh": "Refresh",
+    "download": "Download",
+    "upload": "Upload",
+    "view": "View",
+    "select": "Select",
+    "selectAll": "Select All",
+    "clear": "Clear",
+    "reset": "Reset",
+    "submit": "Submit",
+    "apply": "Apply",
+    "yes": "Yes",
+    "no": "No",
+    "ok": "OK",
+    "help": "Help",
+    "info": "Information",
+    "warning": "Warning"
+  },
+  "subscription": {
+    "title": "Choose Your Plan",
+    "basic": "Basic",
+    "premium": "Premium",
+    "enterprise": "Enterprise",
+    "monthly": "Monthly",
+    "yearly": "Yearly",
+    "features": {
+      "tracking": "Real-time Tracking",
+      "support": "24/7 Support",
+      "insurance": "Shipping Insurance",
+      "analytics": "Advanced Analytics",
+      "api": "API Access",
+      "custom": "Custom Solutions"
+    },
+    "selectPlan": "Select Plan",
+    "currentPlan": "Current Plan",
+    "upgrade": "Upgrade",
+    "downgrade": "Downgrade",
+    "cancel": "Cancel Subscription"
+  },
+  "secureTrade": {
+    "title": "Trade with Confidence. Ship without Surprises.",
+    "subtitle": "Our secure platform ensures your shipments are protected every step of the way.",
+    "features": {
+      "insurance": "Comprehensive Insurance Coverage",
+      "tracking": "Real-time Tracking and Monitoring",
+      "support": "24/7 Customer Support",
+      "security": "Advanced Security Measures"
+    },
+    "cta": "Get Started Today"
+  }
+}

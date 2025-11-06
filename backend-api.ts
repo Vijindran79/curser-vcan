@@ -58,7 +58,7 @@ export async function fetchShippoQuotes(params: {
                 const data: any = result.data;
                 
                 if (data && data.success && data.quotes && Array.isArray(data.quotes) && data.quotes.length > 0) {
-                    // Transform Shippo response to our Quote format
+                    // Transform API response to our Quote format
                     return data.quotes.map((q: any) => ({
                         carrierName: q.carrier || q.service_name || 'Unknown Carrier',
                         carrierType: q.service_type || 'Express',
@@ -66,7 +66,7 @@ export async function fetchShippoQuotes(params: {
                         estimatedTransitTime: q.estimated_days 
                             ? `${q.estimated_days} business days` 
                             : q.estimated_delivery || '5-7 days',
-                        serviceProvider: 'Shippo',
+                        serviceProvider: 'Live Carrier Rates',
                         isSpecialOffer: false,
                         chargeableWeight: params.weight,
                         chargeableWeightUnit: 'kg',

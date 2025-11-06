@@ -1,6 +1,10 @@
 // Firebase Functions for Vcanship Backend API Integration
 // This file handles all backend API calls to Shippo and Sea Rates APIs
 
+// Load environment variables from .env file
+import * as dotenv from 'dotenv';
+dotenv.config();
+
 import * as functions from 'firebase-functions/v1';
 import * as functionsV2 from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';

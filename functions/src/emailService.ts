@@ -21,14 +21,7 @@ const SES_CONFIG = {
 // Create reusable transporter
 const transporter = nodemailer.createTransport(SES_CONFIG);
 
-// Verify connection on startup
-transporter.verify((error, success) => {
-    if (error) {
-        console.error('❌ AWS SES connection error:', error);
-    } else {
-        console.log('✅ AWS SES is ready to send emails');
-    }
-});
+
 
 /**
  * Send Welcome Email

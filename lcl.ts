@@ -225,7 +225,7 @@ async function handleLclFormSubmit(e: Event) {
             chargeableWeightUnit: 'CBM',
             weightBasis: 'Volume',
             isSpecialOffer: false,
-            serviceProvider: 'Sea Rates API'
+            serviceProvider: 'Live Carrier Rates'
         }));
         
         skeletonLoader.hideSkeletonLoader();

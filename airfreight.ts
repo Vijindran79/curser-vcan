@@ -305,12 +305,12 @@ async function handleGetQuote() {
                 chargeableWeightUnit: "KG",
                 weightBasis: "Chargeable Weight",
                 isSpecialOffer: false,
-                serviceProvider: 'Sea Rates API'
+                serviceProvider: 'Live Carrier Rates'
             }));
             
             skeletonLoader.hideSkeletonLoader();
             setState({ airfreightComplianceDocs: [] });
-            renderQuoteAndComplianceStep({ status: 'verified', summary: 'Rates from Sea Rates API', requirements: [] });
+            renderQuoteAndComplianceStep({ status: 'verified', summary: 'Live carrier rates verified', requirements: [] });
             goToAirfreightStep(3);
             
             // Show email form

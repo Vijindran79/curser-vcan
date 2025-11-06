@@ -11,7 +11,7 @@ import { startAirfreight } from './airfreight';
 import { startRailway } from './railway';
 import { startInland } from './inland';
 import { startBulk } from './bulk';
-import { startWarehouse } from './warehouse';
+// import { startWarehouse } from './warehouse'; // Temporarily removed - API integration pending
 // FIX: Enabled import for startEcom.
 import { startEcom } from './ecommerce';
 import { startSchedules } from './schedules';
@@ -37,7 +37,7 @@ function getServiceModule(service: string): (() => void) | null {
         case 'fcl': return startFcl;
         case 'lcl': return startLcl;
         case 'airfreight': return startAirfreight;
-        case 'warehouse': return startWarehouse;
+        // case 'warehouse': return startWarehouse; // Temporarily removed - API integration pending
         case 'ecommerce': return startEcom;
         case 'schedules': return startSchedules;
         case 'register': return startRegister; // Trade Finance

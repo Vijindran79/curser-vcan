@@ -231,6 +231,19 @@
       "emotional": "Ship with Confidence|Trusted Freight Forwarder|Reliable Logistics Partner|Secure Global Shipping|Peace of Mind Shipping|Dependable Freight Services|Safe Cargo Handling|Guaranteed Delivery|Professional Shipping|Expert Logistics"
     }
   },
+  "secure_trade": {
+    "title": "Trade with Confidence. Ship without Surprises.",
+    "subtitle": "Secure your international trade with our comprehensive protection services.",
+    "step1_title": "Verify Your Partner",
+    "step1_desc": "We verify the credibility and track record of your trading partner.",
+    "step2_title": "Protect Your Payment",
+    "step2_desc": "Escrow services ensure payment is only released when conditions are met.",
+    "step3_title": "Document Everything",
+    "step3_desc": "Proper documentation prevents customs delays and disputes.",
+    "step4_title": "Track Your Shipment",
+    "step4_desc": "Real-time tracking from pickup to final delivery.",
+    "cta": "Get Started with Secure Trade"
+  },
   "parcel": {
     "title": "Parcel Shipping",
     "subtitle": "Fast, reliable delivery for packages up to 30kg",
@@ -419,7 +432,98 @@
       "booking": "Booking",
       "account": "Account"
     },
-    "faqs": []
+    "faqs": [
+      {
+        "question": "What shipping services do you offer?",
+        "answer": "We offer comprehensive logistics solutions including Parcel shipping, Baggage shipping, FCL (Full Container Load) ocean freight, LCL (Less than Container Load) freight, Air freight, Railway freight, Inland trucking, and Bulk cargo services.",
+        "category": "General"
+      },
+      {
+        "question": "How do I track my shipment?",
+        "answer": "Click the 'Track' button in the header menu, enter your tracking number or booking ID, and you'll get real-time updates on your shipment's location and status.",
+        "category": "General"
+      },
+      {
+        "question": "What is the difference between FCL and LCL?",
+        "answer": "FCL (Full Container Load) means you rent an entire shipping container for your cargo - ideal for large shipments. LCL (Less than Container Load) means your cargo shares container space with other shippers' goods - perfect for smaller shipments that don't need a full container.",
+        "category": "Shipping"
+      },
+      {
+        "question": "How do I get a shipping quote?",
+        "answer": "Select the service you need (Parcel, FCL, LCL, Air freight, etc.) from the Services menu, enter your shipment details including origin, destination, weight, and dimensions, then click 'Get Quotes' to see available options and pricing.",
+        "category": "Booking"
+      },
+      {
+        "question": "What payment methods do you accept?",
+        "answer": "We accept all major credit cards (Visa, Mastercard, American Express), debit cards, PayPal, bank transfers, and for business accounts, we offer credit terms upon approval.",
+        "category": "General"
+      },
+      {
+        "question": "How long does ocean freight shipping take?",
+        "answer": "Transit times vary by route. Typical times: Asia to North America (15-30 days), Europe to North America (10-20 days), Asia to Europe (20-35 days). Exact times depend on the specific ports and carrier schedules.",
+        "category": "Shipping"
+      },
+      {
+        "question": "Can I ship hazardous materials?",
+        "answer": "Yes, we can handle hazardous materials (DG cargo) that are properly classified, packaged, and documented. You must provide the UN number, proper shipping name, and MSDS (Material Safety Data Sheet). Additional fees and restrictions apply.",
+        "category": "Shipping"
+      },
+      {
+        "question": "What documents do I need for international shipping?",
+        "answer": "Typically you need: Commercial Invoice, Packing List, Bill of Lading, and possibly Certificate of Origin. Depending on cargo type, you may also need import licenses, phytosanitary certificates, or other compliance documents.",
+        "category": "Booking"
+      },
+      {
+        "question": "How do I cancel or modify a booking?",
+        "answer": "Log into your account, go to 'My Bookings', select the booking you want to change, and click 'Modify' or 'Cancel'. Note that cancellation policies vary by service and carrier - some may charge cancellation fees.",
+        "category": "Booking"
+      },
+      {
+        "question": "Do you offer insurance for shipments?",
+        "answer": "Yes, we offer comprehensive cargo insurance to protect your goods during transit. Insurance coverage is optional and costs approximately 0.3-1% of cargo value depending on the type of goods and destination.",
+        "category": "Shipping"
+      },
+      {
+        "question": "What are customs duties and who pays them?",
+        "answer": "Customs duties are taxes imposed by the destination country on imported goods. These are paid by the importer (consignee) and are based on the cargo value, type, and country of origin. We can provide estimates but exact amounts are determined by customs authorities.",
+        "category": "Shipping"
+      },
+      {
+        "question": "How do I create an account?",
+        "answer": "Click 'Login / Sign Up' in the header, then click 'Create Account'. You can sign up using your email and password, or use Google/Facebook/Apple for quick registration. Email verification is required to activate your account.",
+        "category": "Account"
+      },
+      {
+        "question": "Can I save addresses for future bookings?",
+        "answer": "Yes! Once logged in, go to Account Settings > Address Book. You can save multiple pickup and delivery addresses with labels (e.g., 'Office', 'Warehouse') for faster booking in the future.",
+        "category": "Account"
+      },
+      {
+        "question": "What is your refund policy?",
+        "answer": "Refunds are processed based on the carrier's terms and when the shipment was cancelled. Full refunds are typically available if cancelled before pickup. After pickup, refunds may be subject to carrier cancellation fees. Processing takes 5-10 business days.",
+        "category": "Booking"
+      },
+      {
+        "question": "Do you offer pickup services?",
+        "answer": "Yes, we offer pickup services for most shipment types. Availability and pricing vary by location and carrier. Some carriers offer free scheduled pickup (like USPS Priority Mail), while others charge fees (typically $4-5 for on-demand pickup).",
+        "category": "Shipping"
+      },
+      {
+        "question": "What are prohibited items?",
+        "answer": "Commonly prohibited items include weapons, explosives, illegal drugs, counterfeit goods, and perishable food items (for most services). Restricted items that require special permits include alcohol, tobacco, lithium batteries, and certain chemicals. Check our full prohibited items list in the Document Center.",
+        "category": "Shipping"
+      },
+      {
+        "question": "How is air freight pricing calculated?",
+        "answer": "Air freight is charged based on 'chargeable weight' - whichever is greater between actual weight and volumetric weight. Volumetric weight = (Length × Width × Height in cm) ÷ 6000. Rates also depend on route, service level (standard/priority), and cargo type.",
+        "category": "Shipping"
+      },
+      {
+        "question": "Can I get a Pro subscription?",
+        "answer": "Yes! Upgrade to Pro for $9.99/month or $99/year to unlock unlimited FCL container quotes, live rates from major carriers, instant quote comparisons, priority customer support, and advanced booking features. Visit the Subscription page to upgrade.",
+        "category": "Account"
+      }
+    ]
   },
   "settings": {
     "title": "Settings & Menu",

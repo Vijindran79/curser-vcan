@@ -711,7 +711,7 @@ async function mountPaymentForm() {
         cardElementContainer.innerHTML = '';
         
         // Create and mount the Stripe Elements
-        elements = stripe.elements({ clientSecret: clientSecret });
+        elements = stripe.elements({ clientSecret: clientSecret, locale: 'auto' });
         cardElement = elements.create('card', {
              style: {
                 base: {

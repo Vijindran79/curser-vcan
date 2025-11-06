@@ -438,7 +438,13 @@ export async function applyCountryConfiguration(detection: CountryDetectionResul
         }
     }));
 
-    // Apply currency symbol
+    // Update main currency state object (critical for UI synchronization)
+    State.currentCurrency = {
+        code: config.currency,
+        symbol: getCurrencySymbol(config.currency)
+    };
+    
+    // Apply currency symbol (legacy support)
     State.currencySymbol = getCurrencySymbol(config.currency);
     State.currencyCode = config.currency;
     

@@ -567,9 +567,9 @@ async function initializeCoreApp() {
         
         // Initialize service worker after everything else (non-blocking)
         // Don't await - let the app load first
-        initializeServiceWorker().catch(() => {
-            // Fail silently - service worker is not critical
-        });
+        // initializeServiceWorker().catch(() => {
+        //     // Fail silently - service worker is not critical
+        // });
         
         // CRITICAL FIX: Await the initialization of i18n to ensure translations are loaded
         // before any other UI component tries to access them. This prevents race conditions.
@@ -887,3 +887,80 @@ function initializeFloatingFabEnhancements() {
     // initializeFloatingFabEnhancements(); // Disabled - element doesn't exist
   }
 })();
+
+// --- F12 Console Communication ---
+// Create a global object to communicate with the browser console (F12)
+const VcanshipDebug = {
+    // Get current app state
+    getState: () => {
+        return {
+            currentPage: State.currentPage,
+            isLoggedIn: State.isLoggedIn,
+            currentUser: State.currentUser,
+            theme: document.documentElement.getAttribute('data-theme'),
+            language: localStorage.getItem('vcanship_language'),
+            version: '1.0.0'
+        };
+    },
+    
+    // Get Firebase status
+    getFirebaseStatus: () => {
+        const { getAuth, getFunctions } = require('./firebase');
+        return {
+            auth: getAuth() ? 'Available' : 'Not available',
+            functions: getFunctions() ? 'Available' : 'Not available',
+            config: 'Loaded'
+        };
+    },
+    
+    // Get i18n status
+    getI18nStatus: () => {
+        return {
+            currentLanguage: localStorage.getItem('vcanship_language') || 'en',
+            translationsLoaded: true // Assuming loaded if we're here
+        };
+    },
+    
+    // Get diagnostic logs
+    getDiagnosticLogs: () => {
+        return {
+            auth: localStorage.getItem('vcanship_auth_debug') || 'No auth logs',
+            chat: localStorage.getItem('vcanship_chat_debug') || 'No chat logs',
+            landing: localStorage.getItem('vcanship_landing_debug') || 'No landing logs',
+            fab: localStorage.getItem('vcanship_fab_debug') || 'No FAB logs'
+        };
+    },
+    
+    // Clear diagnostic logs
+    clearDiagnosticLogs: () => {
+        localStorage.removeItem('vcanship_auth_debug');
+        localStorage.removeItem('vcanship_chat_debug');
+        localStorage.removeItem('vcanship_landing_debug');
+        localStorage.removeItem('vcanship_fab_debug');
+        console.log('[F12] Diagnostic logs cleared');
+    },
+    
+    // Run full diagnostic
+    runDiagnostic: () => {
+        console.group('🔍 Vcanship Full Diagnostic Report');
+        console.log('📊 App State:', VcanshipDebug.getState());
+        console.log('🔥 Firebase Status:', VcanshipDebug.getFirebaseStatus());
+        console.log('🌐 i18n Status:', VcanshipDebug.getI18nStatus());
+        console.log('📝 Diagnostic Logs:', VcanshipDebug.getDiagnosticLogs());
+        console.groupEnd();
+    }
+};
+
+// Expose to global scope for F12 access
+(window as any).VcanshipDebug = VcanshipDebug;
+
+// Log initialization message
+console.log('%c🚀 Vcanship Debug Console Ready!', 'color: #ff6b35; font-size: 16px; font-weight: bold;');
+console.log('%cType VcanshipDebug.runDiagnostic() in the console to run a full diagnostic', 'color: #666; font-style: italic;');
+console.log('%cAvailable commands:', 'color: #666; font-weight: bold;');
+console.log('  • VcanshipDebug.getState() - Get current app state');
+console.log('  • VcanshipDebug.getFirebaseStatus() - Get Firebase status');
+console.log('  • VcanshipDebug.getI18nStatus() - Get i18n status');
+console.log('  • VcanshipDebug.getDiagnosticLogs() - Get diagnostic logs');
+console.log('  • VcanshipDebug.clearDiagnosticLogs() - Clear diagnostic logs');
+console.log('  • VcanshipDebug.runDiagnostic() - Run full diagnostic');
