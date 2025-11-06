@@ -517,6 +517,7 @@ self.addEventListener('notificationclick', (event) => {
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
+    return; // Prevent "message channel closed" error
   }
   
   if (event.data && event.data.type === 'CACHE_SEO_PAGE') {
@@ -524,6 +525,7 @@ self.addEventListener('message', (event) => {
     caches.open(DYNAMIC_CACHE_NAME).then((cache) => {
       cache.add(url);
     });
+    return; // Prevent "message channel closed" error
   }
 });
 

@@ -15,6 +15,7 @@ import { showHSCodeSearchModal } from './hs-code-intelligence';
 // TYPES
 interface ParcelFormData {
     serviceType: 'pickup' | 'dropoff';
+    pickupType: 'pickup' | 'dropoff';  // Added for backward compatibility
     originAddress: string;
     destinationAddress: string;
     parcelType: string;
@@ -29,12 +30,15 @@ interface ParcelFormData {
     savedAddressId?: string;
     // Insurance options
     insurance: 'none' | 'standard' | 'full';
+    insuranceLevel: 'none' | 'standard' | 'premium';  // Updated insurance type
     insuranceValue?: number;
     // Delivery options
     signatureRequired: boolean;
     leaveInSafePlace: boolean;
     safePlaceDescription?: string;
     specialInstructions?: string;
+    // Quote related
+    selectedQuote?: Quote;
 }
 
 let currentStep = 1;
@@ -108,7 +112,7 @@ function renderStep1(): string {
                     <h4>Home Pickup</h4>
                     <p>We collect from your door</p>
                     ${pickupAvailable ? 
-                        `<span class="badge">${pickupRules?.pickupFee === 0 ? 'Free pickup' : `$${pickupRules?.pickupFee || 0} fee`}</span>` : 
+                        `<span class="badge">${pickupRules ? (pickupRules.pickupFee === 0 ? 'Free pickup' : `$${pickupRules.pickupFee} fee`) : 'Fee applies'}</span>` : 
                         '<span class="badge" style="background: #EF4444;">Not available</span>'
                     }
                 </button>
@@ -1141,9 +1145,15 @@ async function fetchQuotes() {
             ]) as Quote[];
             
             const extraCost = formData.sendDay === 'saturday' ? 5 : formData.sendDay === 'sunday' ? 8 : 0;
+            
+            // Add home pickup fee if service type is 'pickup'
+            const originCountry = detectCountry(formData.originAddress || '');
+            const pickupRules = originCountry ? COUNTRY_PICKUP_RULES[originCountry] : null;
+            const pickupFee = (formData.serviceType === 'pickup' && pickupRules) ? (pickupRules.pickupFee || 0) : 0;
+            
             allQuotes = realQuotes.map(q => ({
                 ...q,
-                totalCost: q.totalCost + extraCost
+                totalCost: q.totalCost + extraCost + pickupFee
             })).sort((a: Quote, b: Quote) => a.totalCost - b.totalCost);
             
             // Mark that we successfully used API quotes
@@ -1161,6 +1171,11 @@ async function fetchQuotes() {
         
         // AI Fallback for quotes
         const extraCost = formData.sendDay === 'saturday' ? 5 : formData.sendDay === 'sunday' ? 8 : 0;
+        
+        // Add home pickup fee if service type is 'pickup'
+        const originCountry = detectCountry(formData.originAddress || '');
+        const pickupRules = originCountry ? COUNTRY_PICKUP_RULES[originCountry] : null;
+        const pickupFee = (formData.serviceType === 'pickup' && pickupRules) ? (pickupRules.pickupFee || 0) : 0;
         
         // Enhanced prompt for more accurate quote generation
         const parcelWeight = formData.weight || 1;
@@ -1266,7 +1281,7 @@ Important: These are ESTIMATES for customer reference. Actual rates may vary bas
             .map((q: any): Quote => ({
                 carrierName: q.carrierName || 'Unknown Carrier',
                 carrierType: q.carrierType || 'Standard Service',
-                totalCost: parseFloat(q.totalCost) || 0,
+                totalCost: (parseFloat(q.totalCost) || 0) + pickupFee,
                 estimatedTransitTime: q.estimatedTransitTime || '5-7 days',
                 serviceProvider: q.serviceProvider || 'Vcanship',
                 isSpecialOffer: q.isSpecialOffer || false,
@@ -1278,7 +1293,7 @@ Important: These are ESTIMATES for customer reference. Actual rates may vary bas
                     baseShippingCost: parseFloat(q.totalCost) || 0,
                     fuelSurcharge: 0,
                     estimatedCustomsAndTaxes: 0,
-                    optionalInsuranceCost: 0,
+                    optionalInsuranceCost: pickupFee,
                     ourServiceFee: 0
                 }
             }))
@@ -1297,7 +1312,7 @@ Important: These are ESTIMATES for customer reference. Actual rates may vary bas
             const fallbackQuotes: Quote[] = fallbackCarriers.map((carrier, idx) => ({
                 carrierName: carrier.name,
                 carrierType: carrier.type,
-                totalCost: (basePrice * carrier.multiplier) + extraCost,
+                totalCost: (basePrice * carrier.multiplier) + extraCost + pickupFee,
                 estimatedTransitTime: carrier.type === 'Express' ? '2-3 days' : carrier.type === 'Standard' ? '5-7 days' : '10-12 days',
                 serviceProvider: 'Vcanship',
                 isSpecialOffer: idx === 2,
@@ -1309,7 +1324,7 @@ Important: These are ESTIMATES for customer reference. Actual rates may vary bas
                     baseShippingCost: (basePrice * carrier.multiplier) + extraCost,
                     fuelSurcharge: 0,
                     estimatedCustomsAndTaxes: 0,
-                    optionalInsuranceCost: 0,
+                    optionalInsuranceCost: pickupFee,
                     ourServiceFee: 0
                 }
             }));

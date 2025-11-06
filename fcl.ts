@@ -19,8 +19,7 @@ import { blobToBase64 } from './utils';
 import { 
     createEnhancedAddressInput, 
     attachEnhancedAddressListeners, 
-    ParsedAddress,
-    cleanupAutocomplete 
+    ParsedAddress
 } from './address-autocomplete';
 import { 
     calculatePortFees, 
@@ -88,12 +87,12 @@ function renderFclPage() {
             <div style="flex: 1;">
                 <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
                     <span style="font-size: 24px;">⭐</span>
-                    <h3 style="margin: 0; font-size: 18px; font-weight: 600;">Get Unlimited Real-Time Rates for $9.99/month</h3>
+                    <h3 style="margin: 0; font-size: 18px; font-weight: 600;">Unlock Premium Ocean Freight Rates</h3>
                 </div>
-                <p style="margin: 0; opacity: 0.95; font-size: 14px;">Upgrade to Pro for unlimited real-time quotes from Maersk, MSC, CMA CGM & more major carriers. Save up to 30% vs. traditional brokers!</p>
+                <p style="margin: 0; opacity: 0.95; font-size: 14px;">Upgrade to Pro for instant access to live container shipping rates from Maersk, MSC, CMA CGM & more. Save up to 30% vs. traditional freight forwarders!</p>
             </div>
             <button onclick="mountService('subscription')" style="background: white; color: #667eea; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; cursor: pointer; white-space: nowrap; font-size: 14px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                Upgrade Now →
+                Upgrade to Pro →
             </button>
         </div>
         ` : ''}
@@ -964,7 +963,7 @@ async function handleFclFormSubmit(e: Event) {
                     skeletonLoader.hideSkeletonLoader();
                     currentFclQuotes = realQuotes;
                     setState({ fclComplianceDocs: [] }); // Compliance docs from real API
-                    renderFclResultsStep({ status: 'verified', summary: 'Rates from Sea Rates API' });
+                    renderFclResultsStep({ status: 'verified', summary: 'Live carrier rates verified' });
                     goToFclStep(2);
                     toggleLoading(false);
                     return;
@@ -972,7 +971,7 @@ async function handleFclFormSubmit(e: Event) {
                     throw new Error('No quotes returned from API');
                 }
             } catch (apiError: any) {
-                console.warn('Sea Rates API timeout or failed, using instant AI estimates:', apiError);
+                console.warn('Real-time rates unavailable, using instant AI estimates:', apiError);
                 showToast('⚡ Using instant AI estimates (API timed out)', 'info', 3000);
                 // Fall back to AI estimates if API times out or fails
             }
@@ -1697,8 +1696,7 @@ function initializeInsuranceHandlers() {
  * Initialize address autocomplete for pickup and delivery
  */
 function initializeAddressAutocomplete() {
-    // Cleanup any existing autocomplete instances
-    cleanupAutocomplete();
+
 
     // Initialize pickup address autocomplete
     const pickupContainer = document.getElementById('fcl-pickup-address-autocomplete');

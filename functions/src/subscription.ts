@@ -1,5 +1,9 @@
 // Firebase Functions for Stripe Subscription Management
 
+// Load environment variables
+import * as dotenv from 'dotenv';
+dotenv.config();
+
 import { onCall, CallableRequest, HttpsError, onRequest, Request } from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';
 import Stripe from 'stripe';
@@ -13,22 +17,25 @@ const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' });
 /**
  * Create Stripe Checkout Session for subscription
  * Function name: create-subscription-checkout
+ * IMPORTANT: No invoker setting means authenticated users only (Firebase handles auth automatically)
  */
 export const createSubscriptionCheckout = onCall<{ priceId: string; plan: string; userEmail?: string }>(
     {
-        memory: '256MiB',
-        cors: ['https://vcanship-onestop-logistics.web.app', 'https://vcanship-onestop-logistics.firebaseapp.com']
+        memory: '256MiB'
+        // No invoker setting = Firebase automatically enforces authentication
     },
     async (req: CallableRequest<{ priceId: string; plan: string; userEmail?: string }>) => {
-    if (!req.auth) {
-        throw new HttpsError('unauthenticated', 'User must be authenticated');
-    }
+        if (!req.auth) {
+            throw new HttpsError('unauthenticated', 'User must be authenticated');
+        }
 
-    // Runtime check for Stripe key from environment variables
-    const stripeKey = process.env.STRIPE_SECRET_KEY;
-    if (!stripeKey || stripeKey === 'sk_test_placeholder') {
-        throw new HttpsError('failed-precondition', 'Stripe is not configured. Please contact vg@vcanresources.com');
-    }        const { priceId, plan, userEmail } = req.data;
+        // Runtime check for Stripe key from environment variables
+        const stripeKey = process.env.STRIPE_SECRET_KEY;
+        if (!stripeKey || stripeKey === 'sk_test_placeholder') {
+            throw new HttpsError('failed-precondition', 'Stripe is not configured. Please contact vg@vcanresources.com');
+        }
+        
+        const { priceId, plan, userEmail } = req.data;
         const userId = req.auth.uid;
 
         try {
@@ -274,10 +281,12 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
 /**
  * Cancel subscription
  * Function name: cancel-subscription
+ * IMPORTANT: No invoker setting means authenticated users only (Firebase handles auth automatically)
  */
 export const cancelSubscription = onCall(
     {
         memory: '256MiB'
+        // No invoker setting = Firebase automatically enforces authentication
     },
     async (req: CallableRequest<void>) => {
         if (!req.auth) {

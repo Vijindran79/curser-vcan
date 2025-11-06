@@ -1,42 +1,60 @@
 // ⚠️  READ-ONLY — DO NOT EDIT — SERVICE LOCKED ⚠️
 import { State, type Quote } from './state';
-import { getLogisticsProviderLogo } from './utils';
+import { getLogoUrl } from './logoMap';
 
 /**
- * Get carrier logo or fallback icon
+ * Get carrier logo or fallback icon using the new comprehensive logo system
  */
 function getCarrierIcon(carrierName: string): string {
-    const logoUrl = getLogisticsProviderLogo(carrierName);
+    const logoUrl = getLogoUrl(carrierName);
     
-    if (logoUrl) {
-        return `<img src="${logoUrl}" alt="${carrierName}" class="carrier-logo" onerror="this.style.display='none'; this.parentElement.innerHTML='<i class=\\'fa-solid fa-box-open\\'></i>';">`;
+    if (logoUrl && logoUrl !== '/logos/default/default-box.svg') {
+        return `<img src="${logoUrl}" alt="${carrierName} logo" class="carrier-logo inline-block object-contain" loading="lazy" onerror="this.outerHTML='<i class=\\'fa-solid fa-box-open\\'></i>';">`;
     }
     
-    // Fallback to Font Awesome icon if logo not found
+    // Enhanced fallback to Font Awesome icon for major carriers
     const carrierLower = carrierName.toLowerCase();
     const iconMap: { [key: string]: string } = {
-        'dhl': '<i class="fa-solid fa-box"></i>',
-        'fedex': '<i class="fa-solid fa-truck-fast"></i>',
-        'ups': '<i class="fa-solid fa-truck"></i>',
-        'dpd': '<i class="fa-solid fa-truck-ramp-box"></i>',
-        'usps': '<i class="fa-solid fa-envelope"></i>',
-        'evri': '<i class="fa-solid fa-parcel"></i>',
-        'maersk': '<i class="fa-solid fa-ship"></i>',
-        'cma cgm': '<i class="fa-solid fa-ship"></i>',
-        'hapag': '<i class="fa-solid fa-ship"></i>',
-        'emirates': '<i class="fa-solid fa-plane"></i>',
-        'lufthansa': '<i class="fa-solid fa-plane"></i>',
-        'cathay': '<i class="fa-solid fa-plane"></i>',
-        'atlas': '<i class="fa-solid fa-plane"></i>'
+        'dhl': '<i class="fa-solid fa-box" style="color: #D40511;"></i>',
+        'fedex': '<i class="fa-solid fa-truck-fast" style="color: #4D148C;"></i>',
+        'ups': '<i class="fa-solid fa-truck" style="color: #8B4513;"></i>',
+        'dpd': '<i class="fa-solid fa-truck-ramp-box" style="color: #FF6B35;"></i>',
+        'usps': '<i class="fa-solid fa-envelope" style="color: #0066CC;"></i>',
+        'evri': '<i class="fa-solid fa-parcel" style="color: #FF6B35;"></i>',
+        'maersk': '<i class="fa-solid fa-ship" style="color: #0066CC;"></i>',
+        'cma cgm': '<i class="fa-solid fa-ship" style="color: #E31E24;"></i>',
+        'hapag': '<i class="fa-solid fa-ship" style="color: #FF6600;"></i>',
+        'msc': '<i class="fa-solid fa-ship" style="color: #003f7f;"></i>',
+        'evergreen': '<i class="fa-solid fa-ship" style="color: #0066CC;"></i>',
+        'one': '<i class="fa-solid fa-ship" style="color: #003f7f;"></i>',
+        'cosco': '<i class="fa-solid fa-ship" style="color: #003f7f;"></i>',
+        'pil': '<i class="fa-solid fa-ship" style="color: #003f7f;"></i>',
+        'emirates': '<i class="fa-solid fa-plane" style="color: #D71920;"></i>',
+        'singapore airlines': '<i class="fa-solid fa-plane" style="color: #003f7f;"></i>',
+        'lufthansa': '<i class="fa-solid fa-plane" style="color: #FFCC00;"></i>',
+        'qatar': '<i class="fa-solid fa-plane" style="color: #8A1538;"></i>',
+        'amazon': '<i class="fa-solid fa-store" style="color: #FF9900;"></i>',
+        'ebay': '<i class="fa-solid fa-store" style="color: #E53238;"></i>',
+        'shopify': '<i class="fa-solid fa-store" style="color: #96BF47;"></i>',
+        'default': '<i class="fa-solid fa-box-open" style="color: #6B7280;"></i>'
     };
     
+    // Check for exact matches first
+    for (const [key, icon] of Object.entries(iconMap)) {
+        if (carrierLower === key) {
+            return icon;
+        }
+    }
+    
+    // Check for partial matches
     for (const [key, icon] of Object.entries(iconMap)) {
         if (carrierLower.includes(key)) {
             return icon;
         }
     }
     
-    return `<i class="fa-solid fa-box-open"></i>`;
+    // Ultimate fallback
+    return `<i class="fa-solid fa-box-open" style="color: #6B7280;"></i>`;
 }
 
 /**

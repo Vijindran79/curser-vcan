@@ -3,7 +3,7 @@ import { GoogleGenerativeAI, Chat } from "@google/generative-ai";
 
 // --- TYPE DEFINITIONS ---
 
-export type Service = 'parcel' | 'baggage' | 'fcl' | 'lcl' | 'airfreight' | 'warehouse' | 'ecommerce' | 'schedules' | 'register' | 'service-provider-register' | 'railway' | 'inland' | 'bulk';
+export type Service = 'parcel' | 'baggage' | 'fcl' | 'lcl' | 'airfreight' | 'ecommerce' | 'schedules' | 'register' | 'service-provider-register' | 'railway' | 'inland' | 'bulk';
 export type Page = Service | 'landing' | 'dashboard' | 'address-book' | 'settings' | 'help' | 'api-hub' | 'privacy' | 'terms' | 'results' | 'payment' | 'confirmation' | 'subscription' | 'tracking';
 
 export interface Currency {
@@ -236,29 +236,6 @@ export interface InlandDetails {
     bookingId?: string;
 }
 
-// Warehouse Types
-export interface Facility {
-    id: string;
-    name: string;
-    country: string;
-    types: string[];
-    lat: number;
-    lon: number;
-    availability: number;
-    price: number;
-}
-export type WarehouseServiceLevel = 'standard' | 'value-added';
-export interface WarehouseDetails {
-    selectedFacility: Facility | null;
-    cargoDescription: string;
-    palletCount: number;
-    requiresTempControl: boolean;
-    tempMin?: number;
-    isHazardous: boolean;
-    unNumber: string | null;
-    serviceLevel?: WarehouseServiceLevel;
-}
-
 // Airfreight Types
 export type AirfreightServiceLevel = 'standard' | 'priority' | 'charter';
 export interface AirfreightCargoPiece {
@@ -442,12 +419,6 @@ export interface AppState {
     inlandDetails: InlandDetails | null;
     availableTrucks: Truck[];
     inlandSignatureDataUrl: string | null;
-
-    // Warehouse Service
-    currentWarehouseStep: number;
-    warehouseDetails: WarehouseDetails | null;
-    warehouseComplianceDocs: ComplianceDoc[];
-    warehouseBookingId: string | null;
     
     // Trade Finance
     currentTradeFinanceStep: number;
@@ -565,11 +536,6 @@ export let State: AppState = {
     inlandDetails: null,
     availableTrucks: [],
     inlandSignatureDataUrl: null,
-    
-    currentWarehouseStep: 1,
-    warehouseDetails: null,
-    warehouseComplianceDocs: [],
-    warehouseBookingId: null,
     
     currentTradeFinanceStep: 1,
     tradeFinanceProduct: null,
@@ -704,16 +670,6 @@ export function resetInlandState() {
         inlandSignatureDataUrl: null,
     });
 }
-
-export function resetWarehouseState() {
-    setState({
-        currentWarehouseStep: 1,
-        warehouseDetails: null,
-        warehouseComplianceDocs: [],
-        warehouseBookingId: null,
-    });
-}
-
 
 export function resetTradeFinanceState() {
     setState({

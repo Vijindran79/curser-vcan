@@ -1,0 +1,72 @@
+ubscription-bypass-html.html</path>
+<content"><!-- Pure HTML Version for Non-React Contexts -->
+<div class="subscription-container" style="padding:2rem;text-align:center;max-width:800px;margin:0 auto;">
+  <h2 style="margin-bottom:1rem;color:#333;">Choose Your Plan</h2>
+  
+  <div class="pricing-cards" style="display:flex;gap:1.5rem;justify-content:center;margin-top:2rem;flex-wrap:wrap;">
+    <!-- Monthly -->
+    <div class="card" style="border:1px solid #ddd;border-radius:8px;padding:1.5rem;width:260px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+      <h3 style="margin:0 0 1rem 0;color:#333;">Monthly Pro</h3>
+      <div class="price" style="font-size:1.5rem;font-weight:bold;color:#5469d4;">$9.99/month</div>
+      <div style="color:#666;font-size:0.9rem;margin:0.5rem 0 1rem 0;text-align:left;">
+        ✓ Unlimited quotes<br/>
+        ✓ Real-time rates<br/>
+        ✓ Priority support
+      </div>
+      <button 
+        onclick="window.open('https://buy.stripe.com/6oU8wR9uDb0gayL6gv7Vm00','_blank')"
+        class="subscribe-btn"
+        style="padding:0.75rem 1.5rem;background:#5469d4;color:#fff;border:none;border-radius:4px;cursor:pointer;width:100%;font-weight:600;">
+        Subscribe Monthly
+      </button>
+    </div>
+
+    <!-- Yearly -->
+    <div class="card" style="border:2px solid #5469d4;border-radius:8px;padding:1.5rem;width:260px;box-shadow:0 4px 8px rgba(84,105,212,0.2);position:relative;">
+      <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:#5469d4;color:white;padding:0.25rem 0.75rem;border-radius:12px;font-size:0.8rem;font-weight:bold;">
+        BEST VALUE
+      </div>
+      <h3 style="margin:0 0 1rem 0;color:#333;">Yearly Pro</h3>
+      <div class="price" style="font-size:1.5rem;font-weight:bold;color:#5469d4;">$99/year</div>
+      <div class="savings" style="color:#28a745;font-size:0.9rem;font-weight:bold;margin-bottom:1rem;">Save 17% (2 months free)</div>
+      <div style="color:#666;font-size:0.9rem;margin:0.5rem 0 1rem 0;text-align:left;">
+        ✓ Everything in Monthly<br/>
+        ✓ Priority booking<br/>
+        ✓ Dedicated support
+      </div>
+      <button 
+        onclick="window.open('https://buy.stripe.com/3cI4g8fgX36kdKXgV97Vm01','_blank')"
+        class="subscribe-btn"
+        style="padding:0.75rem 1.5rem;background:#5469d4;color:#fff;border:none;border-radius:4px;cursor:pointer;width:100%;font-weight:600;">
+        Subscribe Yearly
+      </button>
+    </div>
+  </div>
+
+  <div style="margin-top:2rem;font-size:0.9rem;color:#666;max-width:600px;margin:2rem auto 0;">
+    <strong>Free tier:</strong> basic quotes, limited monthly usage. 
+    <strong>Pro tier:</strong> unlimited real-time rates, priority support, and instant booking.
+  </div>
+
+  <div style="margin-top:1rem;font-size:0.8rem;color:#999;">
+    Secure payments powered by Stripe • Cancel anytime
+  </div>
+</div>
+
+<style>
+.subscribe-btn:hover { 
+  opacity: 0.9; 
+  transform: scale(1.02); 
+  transition: all 0.2s ease; 
+}
+@media (max-width: 768px) {
+  .pricing-cards {
+    flex-direction: column;
+    align-items: center;
+  }
+  .card {
+    max-width: 300px;
+    width: 100%;
+  }
+}
+</style>

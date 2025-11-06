@@ -2,7 +2,7 @@
 import { DOMElements } from './dom';
 import { setState } from './state';
 import { switchPage, showToast } from './ui';
-import { getLogisticsProviderLogo } from './utils';
+import { getLogoUrl } from './logoMap';
 
 // Type Definitions for a schedule entry
 type Location = {
@@ -90,7 +90,7 @@ function renderSchedulesPage() {
  */
 // Get carrier logo or fallback icon
 function getCarrierIcon(carrierName: string, mode?: 'SEA' | 'AIR' | 'RAIL'): string {
-    const logoUrl = getLogisticsProviderLogo(carrierName);
+    const logoUrl = getLogoUrl(carrierName);
     
     // Determine mode-based icon
     let fallbackIcon = 'fa-box-open';

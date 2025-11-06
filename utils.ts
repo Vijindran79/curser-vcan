@@ -151,28 +151,29 @@ export function makeDraggable(element: HTMLElement, storageKey: string) {
 export function getLogisticsProviderLogo(providerName: string): string | null {
     const providerLower = providerName.toLowerCase().trim();
     
-    // Using reliable CDN sources - logo.clearbit.com and Wikipedia
+    // Using Font Awesome icon as fallback - external APIs unreliable
+    // Return null to use carrier name with icon instead
     const logoMap: { [key: string]: string } = {
-        'dhl': 'https://logo.clearbit.com/dhl.com',
-        'fedex': 'https://logo.clearbit.com/fedex.com',
-        'ups': 'https://logo.clearbit.com/ups.com',
-        'tnt': 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/ee/TNT_Express_Logo.svg/320px-TNT_Express_Logo.svg.png',
-        'aramex': 'https://logo.clearbit.com/aramex.com',
-        'maersk': 'https://logo.clearbit.com/maersk.com',
-        'dpd': 'https://logo.clearbit.com/dpd.com',
-        'usps': 'https://logo.clearbit.com/usps.com',
-        'evri': 'https://upload.wikimedia.org/wikipedia/commons/thumb/f/fa/Evri_logo.svg/320px-Evri_logo.svg.png',
-        'cma cgm': 'https://logo.clearbit.com/cma-cgm.com',
-        'hapag': 'https://logo.clearbit.com/hapag-lloyd.com',
-        'hapag-lloyd': 'https://logo.clearbit.com/hapag-lloyd.com',
-        'emirates': 'https://logo.clearbit.com/emirates.com',
-        'lufthansa': 'https://logo.clearbit.com/lufthansa.com',
-        'cathay': 'https://logo.clearbit.com/cathaypacific.com',
-        'cathay pacific': 'https://logo.clearbit.com/cathaypacific.com',
-        'atlas': 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/Atlas_Air_Logo.svg/320px-Atlas_Air_Logo.svg.png',
-        'msc': 'https://logo.clearbit.com/msc.com',
-        'evergreen': 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/Evergreen_Marine_logo.svg/320px-Evergreen_Marine_logo.svg.png',
-        'one': 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Ocean_Network_Express_logo.svg/320px-Ocean_Network_Express_logo.svg.png'
+        'dhl': '',
+        'fedex': '',
+        'ups': '',
+        'tnt': '',
+        'aramex': '',
+        'maersk': '',
+        'dpd': '',
+        'usps': '',
+        'evri': '',
+        'cma cgm': '',
+        'hapag': '',
+        'hapag-lloyd': '',
+        'emirates': '',
+        'lufthansa': '',
+        'cathay': '',
+        'cathay pacific': '',
+        'atlas': '',
+        'msc': '',
+        'evergreen': '',
+        'one': ''
     };
     
     // Try exact match first

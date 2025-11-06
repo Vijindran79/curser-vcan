@@ -48,7 +48,8 @@ export const firebaseConfig = {
   projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "vcanship-onestop-logistics",
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "vcanship-onestop-logistics.firebasestorage.app",
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "685756131515",
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:685756131515:web:55eb447560c628f12da19e"
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:685756131515:web:55eb447560c628f12da19e",
+  measurementId: "G-XXXXXXXXXX" // Google Analytics Measurement ID - will be auto-configured
 };
 
 console.log('[FIREBASE DEBUG] Firebase config loaded from environment');
@@ -80,6 +81,17 @@ function initializeFirebaseIfReady(): any {
                 console.log('[FIREBASE DEBUG] Initializing new Firebase app');
                 const app = firebase.initializeApp(firebaseConfig);
                 console.log('[FIREBASE DEBUG] Firebase initialized successfully with project:', firebaseConfig.projectId);
+                
+                // ✅ Initialize Google Analytics
+                if (firebase.analytics && typeof firebase.analytics === 'function') {
+                    try {
+                        const analytics = firebase.analytics();
+                        console.log('[FIREBASE DEBUG] ✅ Google Analytics initialized successfully');
+                    } catch (analyticsError) {
+                        console.warn('[FIREBASE DEBUG] Analytics initialization failed:', analyticsError);
+                    }
+                }
+                
                 return firebase;
             } else {
                 // Return existing app

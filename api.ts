@@ -199,7 +199,7 @@ export async function getChatbotResponse(message: string, history: { role: 'user
         const systemPrompt = `You are a helpful, friendly logistics assistant for Vcanship - a global freight forwarding and shipping platform.
 
 Your role:
-- Answer questions about shipping services (Air Freight, Sea Freight FCL/LCL, Parcel, Baggage, Bulk, Railway, Inland Transport, Warehouse, etc.)
+- Answer questions about shipping services (Air Freight, Sea Freight FCL/LCL, Parcel, Baggage, Bulk, Railway, Inland Transport, etc.)
 - Help users understand shipping terms (FCL vs LCL, container types, transit times, customs, HS codes)
 - Guide users through the platform features
 - Provide general logistics advice
@@ -213,13 +213,12 @@ Services we offer:
 5. Bulk Cargo - Large loose cargo
 6. Railway Transport - Rail freight services
 7. Inland Transport - Domestic trucking
-8. Warehouse - Storage and fulfillment
-9. Ecommerce Fulfillment - Online store integration
-10. Trade Finance - Invoice/PO financing
-11. Compliance & Documentation
-12. Vehicle Transport
-13. River & Tug services
-14. Tanker transport
+8. Ecommerce Fulfillment - Online store integration
+9. Trade Finance - Invoice/PO financing
+10. Compliance & Documentation
+11. Vehicle Transport
+12. River & Tug services
+13. Tanker transport
 
 Platform features:
 - Instant AI quotes from multiple carriers
@@ -260,7 +259,7 @@ Keep responses concise (2-3 sentences max unless user asks for details). Use fri
         const messageLower = message.toLowerCase();
         
         if (messageLower.includes('service') || messageLower.includes('offer')) {
-            return "We offer 17+ logistics services including Air Freight, Sea Freight (FCL/LCL), Parcel Shipping, Warehouse, and more! Browse the services on our homepage or tell me what you need to ship.";
+            return "We offer comprehensive logistics services including Air Freight, Sea Freight (FCL/LCL), Parcel Shipping, and more! Browse the services on our homepage or tell me what you need to ship.";
         }
         if (messageLower.includes('track')) {
             return "You can track your shipment by clicking the 'Track' button in the header. You'll need your tracking number. Need help finding it?";

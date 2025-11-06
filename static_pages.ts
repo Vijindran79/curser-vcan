@@ -47,6 +47,7 @@ import { State, setState, Address } from './state';
 import { t } from './i18n';
 import { mountService } from './router';
 import { showToast } from './ui';
+import { getLogoUrl } from './logoMap';
 
 // Module-level store for editor instances to manage their lifecycle
 let editors: Map<string, monaco.editor.IStandaloneCodeEditor> = new Map();
@@ -70,6 +71,7 @@ export function renderLandingPage() {
 
     console.log('[LANDING DEBUG] Setting landing page innerHTML');
     page.innerHTML = `
+      
       <section class="landing-hero-v2">
         <h1 class="hero-title-v2" data-i18n="landing.hero_title">Global Shipping, Intelligently Simplified</h1>
         <p class="hero-subtitle-v2" data-i18n="landing.hero_subtitle">Vcanship's AI-driven platform relentlessly finds the cheapest global shipping rates for parcels and freight.</p>
@@ -512,8 +514,8 @@ else:
             </div>
              <div class="use-case-card">
                 <i class="fa-solid fa-boxes-stacked"></i>
-                <h4>Warehouse Management</h4>
-                <p>Integrate with your WMS to book freight and print labels automatically.</p>
+                <h4>Inventory Management</h4>
+                <p>Integrate with your WMS to book freight and streamline logistics operations.</p>
             </div>
         </div>
     `;
@@ -617,24 +619,8 @@ export function initializeStaticPages() {
         ];
 
         const getTickerCarrierLogo = (carrierName: string) => {
-            // Carrier logo map with Clearbit Logo API (reliable, fast, free)
-            const logoMap: { [key: string]: string } = {
-                'Maersk': 'https://logo.clearbit.com/maersk.com',
-                'CMA CGM': 'https://logo.clearbit.com/cma-cgm.com',
-                'Hapag-Lloyd': 'https://logo.clearbit.com/hapag-lloyd.com',
-                'ONE': 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Ocean_Network_Express_logo.svg/320px-Ocean_Network_Express_logo.svg.png',
-                'Evergreen': 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/56/Evergreen_Marine_logo.svg/320px-Evergreen_Marine_logo.svg.png',
-                'Lufthansa Cargo': 'https://logo.clearbit.com/lufthansa.com',
-                'Emirates SkyCargo': 'https://logo.clearbit.com/emirates.com',
-                'Cathay Cargo': 'https://logo.clearbit.com/cathaypacific.com',
-                'Atlas Air': 'https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/Atlas_Air_Logo.svg/320px-Atlas_Air_Logo.svg.png',
-                'DHL': 'https://logo.clearbit.com/dhl.com',
-                'FedEx': 'https://logo.clearbit.com/fedex.com',
-                'UPS': 'https://logo.clearbit.com/ups.com',
-                'DPD': 'https://logo.clearbit.com/dpd.com'
-            };
-            
-            return logoMap[carrierName] || '';
+            // Use the new comprehensive logo system
+            return getLogoUrl(carrierName);
         };
         
         const tickerItems = [
@@ -662,7 +648,7 @@ export function initializeStaticPages() {
         // Add carrier logos with fallback to text
         tickerCarriers.forEach((carrier, index) => {
             const logoUrl = getTickerCarrierLogo(carrier);
-            if (logoUrl) {
+            if (logoUrl && !logoUrl.includes('default-box.svg')) {
                 tickerHtml += `<img src="${logoUrl}" alt="${carrier}" class="carrier-logo-ticker" onerror="this.outerHTML='<span class=\\'ticker-text\\'>${carrier}</span>';">`;
             } else {
                 tickerHtml += `<span class="ticker-text">${carrier}</span>`;
