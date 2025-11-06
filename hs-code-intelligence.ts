@@ -11,7 +11,7 @@ import { State } from './state';
 import { showToast, toggleLoading } from './ui';
 
 // Initialize Gemini AI
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || 'AIzaSyBJeXA3tUH9fSojFmqYz4ow2yPYTsKYWbI';
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || 'REPLACE_WITH_NEW_GEMINI_KEY';
 const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
 
 export interface HSCodeResult {

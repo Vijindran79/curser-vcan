@@ -23,21 +23,39 @@ declare global {
   }
 }
 
+// Vite environment variables type declaration
+interface ImportMetaEnv {
+  readonly VITE_FIREBASE_API_KEY: string;
+  readonly VITE_FIREBASE_AUTH_DOMAIN: string;
+  readonly VITE_FIREBASE_PROJECT_ID: string;
+  readonly VITE_FIREBASE_STORAGE_BUCKET: string;
+  readonly VITE_FIREBASE_MESSAGING_SENDER_ID: string;
+  readonly VITE_FIREBASE_APP_ID: string;
+  readonly VITE_GEOAPIFY_API_KEY: string;
+  readonly VITE_NVIDIA_API_KEY: string;
+  readonly VITE_GEMINI_API_KEY: string;
+  readonly VITE_STRIPE_PUBLISHABLE_KEY: string;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}
+
 // Production Firebase configuration
 export const firebaseConfig = {
-  apiKey: "AIzaSyBSOfOv9zXBZNI_b0ZAUHmbP0cU8h5Xp_c",
-  authDomain: "vcanship-onestop-logistics.firebaseapp.com",
-  projectId: "vcanship-onestop-logistics",
-  storageBucket: "vcanship-onestop-logistics.firebasestorage.app",
-  messagingSenderId: "685756131515",
-  appId: "1:685756131515:web:55eb447560c628f12da19e"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "REPLACE_WITH_NEW_KEY",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "vcanship-onestop-logistics.firebaseapp.com",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "vcanship-onestop-logistics",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "vcanship-onestop-logistics.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "685756131515",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:685756131515:web:55eb447560c628f12da19e"
 };
 
-console.log('[FIREBASE DEBUG] Firebase config:', firebaseConfig);
+console.log('[FIREBASE DEBUG] Firebase config loaded from environment');
 
 // Geoapify API key for geolocation and map services
-export const GEOAPIFY_API_KEY = "b0b098c3980140a9a8f6895c34f1bb29";
-export const NVIDIA_API_KEY = "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";
+export const GEOAPIFY_API_KEY = import.meta.env.VITE_GEOAPIFY_API_KEY || "REPLACE_WITH_NEW_KEY";
+export const NVIDIA_API_KEY = import.meta.env.VITE_NVIDIA_API_KEY || "REPLACE_WITH_NEW_KEY";
 
 // Wait for Firebase to be available on window object
 // Firebase scripts are loaded via importmap and may not be immediately available
@@ -194,8 +212,32 @@ export function getFunctions() {
 // These will be null if Firebase isn't loaded yet, but will work once it is
 export const auth = firebase?.auth?.() || null;
 export const db = firebase?.firestore?.() || null;
-// Fix: Don't pass region - functions() takes no args or app instance
-export const functions = firebase?.functions?.() || null;
+
+// Initialize functions with us-central1 region for callable functions (v2)
+// CRITICAL: Firebase compat library REQUIRES the app instance to get functions
+let functionsInstance: any = null;
+if (firebase?.functions) {
+    try {
+        // Get the default Firebase app first
+        const app = firebase.app();
+        console.log('[FIREBASE] App instance:', app ? 'Available' : 'Null');
+        
+        // Get functions instance from the app (compat library method)
+        functionsInstance = app.functions('us-central1');
+        console.log('[FIREBASE] Functions instance created for region us-central1');
+        
+        // Verify httpsCallable is available
+        if (functionsInstance && typeof functionsInstance.httpsCallable === 'function') {
+            console.log('[FIREBASE] httpsCallable method is available');
+        } else {
+            console.error('[FIREBASE] httpsCallable method NOT available!');
+        }
+    } catch (error) {
+        console.error('[FIREBASE] Error initializing functions:', error);
+    }
+}
+export const functions = functionsInstance;
+
 export const storage = firebase?.storage?.() || null;
 export const GoogleAuthProvider = firebase?.auth?.GoogleAuthProvider || null;
 export const AppleAuthProvider = firebase?.auth?.OAuthProvider || null;
