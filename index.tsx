@@ -541,66 +541,21 @@ async function initializeApp() {
 
 // --- Service Worker Management ---
 async function initializeServiceWorker() {
+    // UNREGISTER all service workers - they're causing slow loading
     if ('serviceWorker' in navigator) {
         try {
-            // Register service worker first (don't unregister immediately to avoid breaking things)
-            const registration = await navigator.serviceWorker.register('/sw.js', {
-                updateViaCache: 'none' // Always fetch fresh service worker
-            });
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            for (const registration of registrations) {
+                await registration.unregister();
+                console.log('[SW] Unregistered service worker');
+            }
             
-            console.log('[SW] Service worker registered:', registration);
-            
-            // Only clear old caches and unregister old workers after app is initialized
-            // This prevents interrupting the initial page load
-            setTimeout(async () => {
-                try {
-                    // Unregister old service workers (keep current one)
-                    const allRegistrations = await navigator.serviceWorker.getRegistrations();
-                    for (const reg of allRegistrations) {
-                        if (reg !== registration && reg.active) {
-                            await reg.unregister();
-                            console.log('[SW] Unregistered old service worker');
-                        }
-                    }
-                    
-                    // Clear old caches that don't match current version
-                    const cacheNames = await caches.keys();
-                    await Promise.all(
-                        cacheNames.map(cacheName => {
-                            if (!cacheName.includes('v3.3') && !cacheName.includes('v3.2') && !cacheName.includes('v3.1')) {
-                                console.log('[SW] Deleting old cache:', cacheName);
-                                return caches.delete(cacheName);
-                            }
-                        })
-                    );
-                } catch (error) {
-                    console.error('[SW] Cache cleanup error:', error);
-                }
-            }, 5000); // Wait 5 seconds after page load
-            
-            // Check for updates (but don't force reload immediately)
-            registration.update();
-            
-            // Listen for updates - only reload if user is idle
-            registration.addEventListener('updatefound', () => {
-                const newWorker = registration.installing;
-                if (newWorker) {
-                    newWorker.addEventListener('statechange', () => {
-                        if (newWorker.state === 'activated') {
-                            console.log('[SW] New service worker activated');
-                            // Only reload if app is fully initialized
-                            if (State.currentPage) {
-                                // Delay reload slightly to allow current page to finish loading
-                                setTimeout(() => {
-                                    window.location.reload();
-                                }, 2000);
-                            }
-                        }
-                    });
-                }
-            });
+            // Clear all caches
+            const cacheNames = await caches.keys();
+            await Promise.all(cacheNames.map(name => caches.delete(name)));
+            console.log('[SW] Cleared all caches');
         } catch (error) {
-            console.error('[SW] Service worker registration failed:', error);
+            console.error('[SW] Cleanup error:', error);
         }
     }
 }
@@ -627,7 +582,7 @@ async function initializeCoreApp() {
             // Check if API key is available in environment or localStorage
             // For now, we'll initialize without a key and let services handle the error gracefully
             // In production, you should provide a valid API key here
-            const apiKey = (import.meta as any).env.VITE_GEMINI_API_KEY || localStorage.getItem('gemini_api_key') || 'AIzaSyB56niwgE0S5Vfcj9JVMZtIDkBr5x1isEY';
+            const apiKey = import.meta.env.VITE_GEMINI_API_KEY || localStorage.getItem('gemini_api_key') || 'REPLACE_WITH_NEW_GEMINI_KEY';
             if (apiKey) {
                 const genAI = new GoogleGenerativeAI(apiKey);
                 setState({ api: genAI });
