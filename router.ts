@@ -8,18 +8,15 @@ import { startBaggage } from './baggage';
 import { startFcl } from './fcl';
 import { startLcl } from './lcl';
 import { startAirfreight } from './airfreight';
-import { startVehicle } from './vehicle';
 import { startRailway } from './railway';
 import { startInland } from './inland';
 import { startBulk } from './bulk';
-import { startRiverTug } from './rivertug';
 import { startWarehouse } from './warehouse';
 // FIX: Enabled import for startEcom.
 import { startEcom } from './ecommerce';
 import { startSchedules } from './schedules';
 import { startRegister } from './register';
 import { startServiceProviderRegister } from './service-provider-register';
-import { startSecureTrade } from './secure-trade';
 import { renderLandingPage, renderHelpPage, renderApiHubPage, renderPrivacyPage, renderTermsPage } from './static_pages';
 import { renderDashboard } from './dashboard';
 import { renderAddressBook, renderAccountSettings } from './account';
@@ -40,7 +37,6 @@ function getServiceModule(service: string): (() => void) | null {
         case 'fcl': return startFcl;
         case 'lcl': return startLcl;
         case 'airfreight': return startAirfreight;
-        case 'vehicle': return startVehicle;
         case 'warehouse': return startWarehouse;
         case 'ecommerce': return startEcom;
         case 'schedules': return startSchedules;
@@ -49,8 +45,6 @@ function getServiceModule(service: string): (() => void) | null {
         case 'railway': return startRailway;
         case 'inland': return startInland;
         case 'bulk': return startBulk;
-        case 'rivertug': return startRiverTug;
-        case 'secure-trade': return startSecureTrade;
         default: return null;
     }
 }
@@ -113,7 +107,6 @@ export const mountService = async (pageOrService: string) => {
             'dashboard',
             'address-book',
             'settings',
-            'secure-trade',
         ];
 
         if (servicesRequiringAuth.includes(pageOrService) && !State.isLoggedIn) {
