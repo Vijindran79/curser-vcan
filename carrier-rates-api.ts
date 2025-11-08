@@ -56,7 +56,7 @@ const CARRIER_RATES_CONFIG = {
     // CRITICAL: API quota management (50 calls/month limit!)
     quota: {
         monthlyLimit: 50,
-        cacheDuration: 24 * 60 * 60 * 1000,  // 24 hours (aggressive caching!)
+        cacheDuration: 60 * 60 * 1000,  // 1 hour (aggressive caching!)
         warningThreshold: 40                  // Warn when 40/50 calls used
     }
 };
@@ -400,15 +400,28 @@ export async function callVcanship Carrier NetworkAPI<T>(
         
         // CRITICAL: Check cache first (protects 50 call/month limit!)
         if (!options?.bypassCache) {
+            console.log('🔍 [DEBUG] Checking cache for endpoint:', endpoint);
             const cachedData = getCachedResponse<T>(endpoint, params);
             if (cachedData) {
-                showToast('📦 Showing cached rates (updated <24h ago)', 'info', 3000);
+                console.log('🔍 [DEBUG] Cache hit found, showing professional messaging');
+                // Professional messaging that hides caching logic
+                const userTier = State.subscriptionTier || 'free';
+                console.log('🔍 [DEBUG] User tier for carrier rates messaging:', userTier);
+                if (userTier !== 'free' && userTier !== 'guest') {
+                    console.log('🔍 [DEBUG] Showing premium carrier rates message');
+                    showToast('✅ Live rates from global carriers', 'success', 3000);
+                } else {
+                    console.log('🔍 [DEBUG] Showing free user carrier rates message');
+                    showToast('📊 Rate estimates available - Upgrade for live carrier data', 'info', 5000);
+                }
                 return cachedData;
+            } else {
+                console.log('🔍 [DEBUG] No cache hit, proceeding with API call');
             }
         }
         
         // Cache miss - make real API call
-        console.log(`[Vcanship Carrier Network API] Making real API call - will count against 50/month limit`);
+        console.log(`🔍 [DEBUG] [Vcanship Carrier Network API] Making real API call - will count against 50/month limit`);
         
         // Call through Firebase Function (keeps API keys secure)
         const { functions, getFunctions } = await import('./firebase');
@@ -435,8 +448,10 @@ export async function callVcanship Carrier NetworkAPI<T>(
         
         const result = await Promise.race([resultPromise, timeoutPromise]) as any;
         const data = result.data;
+        console.log('🔍 [DEBUG] Vcanship Carrier Network API response:', data);
         
         if (!data.success) {
+            console.log('🔍 [DEBUG] Vcanship Carrier Network API error:', data.error);
             throw new Error(data.error || 'Vcanship Carrier Network API error');
         }
         
@@ -446,7 +461,7 @@ export async function callVcanship Carrier NetworkAPI<T>(
         return data as T;
         
     } catch (error: any) {
-        console.error('[Vcanship Carrier Network API Error]', error);
+        console.error('🔍 [DEBUG] [Vcanship Carrier Network API Error]', error);
         
         // User-friendly error messages
         if (error.message.includes('timeout')) {

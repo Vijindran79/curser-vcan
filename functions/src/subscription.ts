@@ -1,8 +1,8 @@
 // Firebase Functions for Stripe Subscription Management
 
 // Load environment variables
-import * as dotenv from 'dotenv';
-dotenv.config();
+// import * as dotenv from 'dotenv';
+// dotenv.config(); // Disabled - using Firebase Secrets instead
 
 import { onCall, CallableRequest, HttpsError, onRequest, Request } from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';

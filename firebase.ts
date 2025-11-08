@@ -49,7 +49,7 @@ export const firebaseConfig = {
   storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "vcanship-onestop-logistics.firebasestorage.app",
   messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "685756131515",
   appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:685756131515:web:55eb447560c628f12da19e",
-  measurementId: "G-XXXXXXXXXX" // Google Analytics Measurement ID - will be auto-configured
+  measurementId: "G-ESVXH80BP1" // Google Analytics Measurement ID
 };
 
 console.log('[FIREBASE DEBUG] Firebase config loaded from environment');
@@ -215,8 +215,9 @@ export function getFunctions() {
         }
     }
     
-    const functionsInstance = fb?.functions?.();
-    console.log('[FIREBASE DEBUG] Functions instance:', functionsInstance ? 'Created' : 'Null');
+    // Create functions instance with explicit region to avoid CORS issues on custom domains
+    const functionsInstance = fb?.functions?.('us-central1');
+    console.log('[FIREBASE DEBUG] Functions instance:', functionsInstance ? 'Created for region us-central1' : 'Null');
     return functionsInstance;
 }
 

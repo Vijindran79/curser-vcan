@@ -4,7 +4,7 @@ import { GoogleGenerativeAI, Chat } from "@google/generative-ai";
 // --- TYPE DEFINITIONS ---
 
 export type Service = 'parcel' | 'baggage' | 'fcl' | 'lcl' | 'airfreight' | 'ecommerce' | 'schedules' | 'register' | 'service-provider-register' | 'railway' | 'inland' | 'bulk';
-export type Page = Service | 'landing' | 'dashboard' | 'address-book' | 'settings' | 'help' | 'api-hub' | 'privacy' | 'terms' | 'results' | 'payment' | 'confirmation' | 'subscription' | 'tracking';
+export type Page = Service | 'landing' | 'dashboard' | 'address-book' | 'settings' | 'help' | 'api-hub' | 'privacy' | 'terms' | 'results' | 'payment' | 'confirmation' | 'subscription' | 'tracking' | 'address-autocomplete';
 
 export interface Currency {
     code: string;

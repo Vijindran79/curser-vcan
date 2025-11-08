@@ -65,14 +65,31 @@ function getStaticPageRenderer(page: string): (() => void) | null {
         case 'privacy': return renderPrivacyPage;
         case 'terms': return renderTermsPage;
         case 'tracking': return () => renderTrackingPage();
+        case 'address-autocomplete':
+            return async () => {
+                try {
+                    const { renderAddressAutocompletePage, initializeAddressAutocomplete } = await import('./address-autocomplete');
+                    const page = document.getElementById('page-address-autocomplete');
+                    if (page) {
+                        page.innerHTML = renderAddressAutocompletePage();
+                        await initializeAddressAutocomplete();
+                        switchPage('address-autocomplete');
+                    } else {
+                        console.error('Address autocomplete page element not found');
+                        showToast('Address page not available', 'error');
+                    }
+                } catch (error) {
+                    console.error('Failed to load address autocomplete page:', error);
+                    showToast('Failed to load address page', 'error');
+                }
+            };
         case 'subscription': 
             return async () => {
                 try {
-                    const { renderSubscriptionPage, attachSubscriptionListeners } = await import('./subscription');
+                    const { renderSubscriptionPage } = await import('./subscription');
                     const page = document.getElementById('page-subscription');
                     if (page) {
                         page.innerHTML = renderSubscriptionPage();
-                        attachSubscriptionListeners();
                         switchPage('subscription');
                     } else {
                         console.error('Subscription page element not found');

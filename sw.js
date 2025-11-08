@@ -1,9 +1,9 @@
 // Vcanship Service Worker - SEO & Performance Optimization
-// Version: 3.4.0 - Improved i18n JSON file handling with better caching and error recovery
+// Version: 3.8.0 - Main bundle never cached to prevent stale JS bugs
 
-const CACHE_NAME = 'vcanship-v3.4-seo';
-const STATIC_CACHE_NAME = 'vcanship-static-v3.4';
-const DYNAMIC_CACHE_NAME = 'vcanship-dynamic-v3.4';
+const CACHE_NAME = 'vcanship-v3.8-seo';
+const STATIC_CACHE_NAME = 'vcanship-static-v3.8';
+const DYNAMIC_CACHE_NAME = 'vcanship-dynamic-v3.8';
 
 // Critical files for SEO and performance
 const STATIC_FILES = [
@@ -149,8 +149,11 @@ self.addEventListener('fetch', (event) => {
   } else if (url.pathname.endsWith('.json')) {
     // JSON files - network first to ensure fresh data
     event.respondWith(handleJSONRequest(request));
+  } else if (url.pathname.includes('/assets/index-') && url.pathname.endsWith('.js')) {
+    // Main bundle JS - ALWAYS fetch fresh (never cache) to avoid stale autocomplete bugs
+    event.respondWith(fetch(request));
   } else if (url.pathname.match(/\.(css|js|tsx|ts)$/)) {
-    // Static assets - cache first
+    // Other static assets - cache first
     event.respondWith(handleStaticRequest(request));
   } else if (url.pathname.match(/\.(jpg|jpeg|png|gif|webp|svg|ico)$/)) {
     // Images - cache first with long TTL
