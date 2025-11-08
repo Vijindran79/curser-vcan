@@ -2,20 +2,35 @@
 import * as nodemailer from 'nodemailer';
 import * as functions from 'firebase-functions';
 
-// Load environment variables from .env file (for local development)
-// In production, use Firebase Functions config
-const AWS_SES_USER = process.env.AWS_SES_USER || functions.config().aws?.ses_user || 'AKIAWXN6QSYXBLFGWVPS';
-const AWS_SES_PASS = process.env.AWS_SES_PASS || functions.config().aws?.ses_pass || 'BIvqBwjo+pxIC2P4CcaF14vOuy0f28Fh4rAcDikjser9';
+// LAZY INITIALIZATION for Nodemailer transporter
+let transporter: nodemailer.Transporter | null = null;
 
-// AWS SES SMTP Configuration
-const SES_CONFIG = {
-    host: 'email-smtp.us-east-1.amazonaws.com',
-    port: 587,
-    secure: false, // Use TLS
-    auth: {
-        user: AWS_SES_USER,
-        pass: AWS_SES_PASS
+function getTransporter(): nodemailer.Transporter {
+    if (!transporter) {
+        const AWS_SES_USER = process.env.AWS_SES_USER || functions.config().aws?.ses_user || 'AKIAWXN6QSYXBLFGWVPS';
+        const AWS_SES_PASS = process.env.AWS_SES_PASS || functions.config().aws?.ses_pass || 'BIvqBwjo+pxIC2P4CcaF14vOuy0f28Fh4rAcDikjser9';
+
+        const SES_CONFIG = {
+            host: 'email-smtp.us-east-1.amazonaws.com',
+            port: 587,
+            secure: false, // Use TLS
+            auth: {
+                user: AWS_SES_USER,
+                pass: AWS_SES_PASS
+            }
+        };
+
+        transporter = nodemailer.createTransport(SES_CONFIG);
+
+        transporter.verify((error, success) => {
+            if (error) {
+                console.error('❌ AWS SES connection error:', error);
+            } else {
+                console.log('✅ AWS SES is ready to send emails');
+            }
+        });
     }
+<<<<<<< Updated upstream
 };
 
 // Lazy-load transporter to avoid blocking module initialization
@@ -28,6 +43,10 @@ function getTransporter() {
 }
 
 
+=======
+    return transporter;
+}
+>>>>>>> Stashed changes
 
 /**
  * Send Welcome Email

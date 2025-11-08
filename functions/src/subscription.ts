@@ -10,9 +10,25 @@ import Stripe from 'stripe';
 
 const db = admin.firestore();
 
+<<<<<<< Updated upstream
 // Initialize Stripe from environment variables (.env file - secure backend storage)
 const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder';
 const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' });
+=======
+// LAZY INITIALIZATION for Stripe to prevent deployment errors
+let stripe: Stripe | null = null;
+
+function getStripe(): Stripe {
+    if (!stripe) {
+        const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
+        if (!STRIPE_SECRET_KEY) {
+            throw new Error('STRIPE_SECRET_KEY environment variable is required');
+        }
+        stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' });
+    }
+    return stripe;
+}
+>>>>>>> Stashed changes
 
 /**
  * Create Stripe Checkout Session for subscription
@@ -21,8 +37,13 @@ const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' });
  */
 export const createSubscriptionCheckout = onCall<{ priceId: string; plan: string; userEmail?: string }>(
     {
+<<<<<<< Updated upstream
         memory: '256MiB'
         // No invoker setting = Firebase automatically enforces authentication
+=======
+        memory: '256MiB',
+        cors: true
+>>>>>>> Stashed changes
     },
     async (req: CallableRequest<{ priceId: string; plan: string; userEmail?: string }>) => {
         if (!req.auth) {
@@ -40,7 +61,7 @@ export const createSubscriptionCheckout = onCall<{ priceId: string; plan: string
 
         try {
             // Create Stripe Checkout Session
-            const session = await stripe.checkout.sessions.create({
+            const session = await getStripe().checkout.sessions.create({
                 customer_email: userEmail || req.auth.token?.email,
                 payment_method_types: ['card'],
                 line_items: [{
@@ -102,7 +123,7 @@ export const stripeWebhook = onRequest(
             }
 
             if (webhookSecret) {
-                event = stripe.webhooks.constructEvent(rawBody, sig, webhookSecret);
+                event = getStripe().webhooks.constructEvent(rawBody, sig, webhookSecret);
             } else {
                 // For testing without webhook secret, skip verification
                 // WARNING: Only use this for development/testing
@@ -178,7 +199,7 @@ async function handleSubscriptionCreated(session: Stripe.Checkout.Session) {
         return;
     }
 
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    const subscription = await getStripe().subscriptions.retrieve(subscriptionId);
 
     // Calculate expiry date
     const expiryDate = new Date(subscription.current_period_end * 1000);
@@ -202,7 +223,7 @@ async function handleSubscriptionCreated(session: Stripe.Checkout.Session) {
  */
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
     const customerId = subscription.customer as string;
-    const customer = await stripe.customers.retrieve(customerId) as Stripe.Customer;
+    const customer = await getStripe().customers.retrieve(customerId) as Stripe.Customer;
     const userEmail = customer.email;
 
     if (!userEmail) {
@@ -225,7 +246,7 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
  */
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
     const customerId = subscription.customer as string;
-    const customer = await stripe.customers.retrieve(customerId) as Stripe.Customer;
+    const customer = await getStripe().customers.retrieve(customerId) as Stripe.Customer;
     const userEmail = customer.email;
 
     if (!userEmail) {
@@ -245,7 +266,7 @@ async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
  */
 async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
     const customerId = invoice.customer as string;
-    const customer = await stripe.customers.retrieve(customerId) as Stripe.Customer;
+    const customer = await getStripe().customers.retrieve(customerId) as Stripe.Customer;
     const userEmail = customer.email;
 
     if (!userEmail) {
@@ -264,7 +285,7 @@ async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
  */
 async function handlePaymentFailed(invoice: Stripe.Invoice) {
     const customerId = invoice.customer as string;
-    const customer = await stripe.customers.retrieve(customerId) as Stripe.Customer;
+    const customer = await getStripe().customers.retrieve(customerId) as Stripe.Customer;
     const userEmail = customer.email;
 
     if (!userEmail) {
@@ -285,8 +306,13 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
  */
 export const cancelSubscription = onCall(
     {
+<<<<<<< Updated upstream
         memory: '256MiB'
         // No invoker setting = Firebase automatically enforces authentication
+=======
+        memory: '256MiB',
+        cors: true
+>>>>>>> Stashed changes
     },
     async (req: CallableRequest<void>) => {
         if (!req.auth) {
@@ -313,7 +339,7 @@ export const cancelSubscription = onCall(
             }
 
             // Cancel subscription in Stripe (at period end)
-            await stripe.subscriptions.update(subscriptionId, {
+            await getStripe().subscriptions.update(subscriptionId, {
                 cancel_at_period_end: true
             });
 
