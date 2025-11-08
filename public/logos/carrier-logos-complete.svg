@@ -1,0 +1,179 @@
+<!-- Professional Carrier Logos - Bloomberg Effect Style -->
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  
+  <!-- MAERSK - Professional Blue -->
+  <symbol id="maersk-logo" viewBox="0 0 200 60">
+    <rect x="10" y="10" width="180" height="40" rx="8" fill="#003087" stroke="#001F6B" stroke-width="2"/>
+    <text x="100" y="35" text-anchor="middle" fill="white" font-family="Arial Black" font-size="24" font-weight="bold">MAERSK</text>
+    <circle cx="30" cy="30" r="8" fill="#00A0DF"/>
+  </symbol>
+
+  <!-- MSC - Professional Gold -->
+  <symbol id="msc-logo" viewBox="0 0 200 60">
+    <rect x="10" y="10" width="180" height="40" rx="8" fill="#000000" stroke="#333333" stroke-width="2"/>
+    <text x="100" y="35" text-anchor="middle" fill="#FFD700" font-family="Arial Black" font-size="24" font-weight="bold">MSC</text>
+    <circle cx="30" cy="30" r="8" fill="#FFD700"/>
+  </symbol>
+
+  <!-- CMA CGM - Professional Red -->
+  <symbol id="cma-cgm-logo" viewBox="0 0 200 60">
+    <rect x="10" y="10" width="180" height="40" rx="8" fill="#E60012" stroke="#B3000E" stroke-width="2"/>
+    <text x="100" y="35" text-anchor="middle" fill="white" font-family="Arial Black" font-size="20" font-weight="bold">CMA CGM</text>
+    <circle cx="30" cy="30" r="8" fill="white"/>
+  </symbol>
+
+  <!-- COSCO - Professional Blue -->
+  <symbol id="cosco-logo" viewBox="0 0 200 60">
+    <rect x="10" y="10" width="180" height="40" rx="8" fill="#003DA5" stroke="#002D7A" stroke-width="2"/>
+    <text x="100" y="35" text-anchor="middle" fill="white" font-family="Arial Black" font-size="24" font-weight="bold">COSCO</text>
+    <circle cx="30" cy="30" r="8" fill="#00A0DF"/>
+  </symbol>
+
+  <!-- HAPAG-LLOYD - Professional Orange -->
+  <symbol id="hapag-lloyd-logo" viewBox="0 0 200 60">
+    <rect x="10" y="10" width="180" height="40" rx="8" fill="#E2001A" stroke="#B20014" stroke-width="2"/>
+    <text x="100" y="35" text-anchor="middle" fill="white" font-family="Arial Black" font-size="18" font-weight="bold">HAPAG-LLOYD</text>
+    <circle cx="30" cy="30" r="8" fill="white"/>
+  </symbol>
+
+  <!-- ONE - Professional Navy -->
+  <symbol id="one-logo" viewBox="0 0 200 60">
+    <rect x="10" y="10" width="180" height="40" rx="8" fill="#00539F" stroke="#003F7A" stroke-width="2"/>
+    <text x="100" y="35" text-anchor="middle" fill="white" font-family="Arial Black" font-size="28" font-weight="bold">ONE</text>
+    <circle cx="30" cy="30" r="8" fill="#00A0DF"/>
+  </symbol>
+
+  <!-- EVERGREEN - Professional Green -->
+  <symbol id="evergreen-logo" viewBox="0 0 200 60">
+    <rect x="10" y="10" width="180" height="40" rx="8" fill="#2E8B57" stroke="#236B43" stroke-width="2"/>
+    <text x="100" y="35" text-anchor="middle" fill="white" font-family="Arial Black" font-size="20" font-weight="bold">EVERGREEN</text>
+    <circle cx="30" cy="30" r="8" fill="white"/>
+  </symbol>
+
+  <!-- YANG MING - Professional Purple -->
+  <symbol id="yang-ming-logo" viewBox="0 0 200 60">
+    <rect x="10" y="10" width="180" height="40" rx="8" fill="#6A0DAD" stroke="#4E0A82" stroke-width="2"/>
+    <text x="100" y="35" text-anchor="middle" fill="white" font-family="Arial Black" font-size="18" font-weight="bold">YANG MING</text>
+    <circle cx="30" cy="30" r="8" fill="white"/>
+  </symbol>
+
+  <!-- OOCL - Professional Teal -->
+  <symbol id="oocl-logo" viewBox="0 0 200 60">
+    <rect x="10" y="10" width="180" height="40" rx="8" fill="#008B8B" stroke="#006666" stroke-width="2"/>
+    <text x="100" y="35" text-anchor="middle" fill="white" font-family="Arial Black" font-size="24" font-weight="bold">OOCL</text>
+    <circle cx="30" cy="30" r="8" fill="white"/>
+  </symbol>
+
+  <!-- ZIM - Professional Magenta -->
+  <symbol id="zim-logo" viewBox="0 0 200 60">
+    <rect x="10" y="10" width="180" height="40" rx="8" fill="#E6007E" stroke="#B30062" stroke-width="2"/>
+    <text x="100" y="35" text-anchor="middle" fill="white" font-family="Arial Black" font-size="24" font-weight="bold">ZIM</text>
+    <circle cx="30" cy="30" r="8" fill="white"/>
+  </symbol>
+
+  <!-- PIL - Professional Burgundy -->
+  <symbol id="pil-logo" viewBox="0 0 200 60">
+    <rect x="10" y="10" width="180" height="40" rx="8" fill="#800020" stroke="#600018" stroke-width="2"/>
+    <text x="100" y="35" text-anchor="middle" fill="white" font-family="Arial Black" font-size="24" font-weight="bold">PIL</text>
+    <circle cx="30" cy="30" r="8" fill="white"/>
+  </symbol>
+
+  <!-- WAN HAI - Professional Gold -->
+  <symbol id="wan-hai-logo" viewBox="0 0 200 60">
+    <rect x="10" y="10" width="180" height="40" rx="8" fill="#DAA520" stroke="#A87C1A" stroke-width="2"/>
+    <text x="100" y="35" text-anchor="middle" fill="black" font-family="Arial Black" font-size="20" font-weight="bold">WAN HAI</text>
+    <circle cx="30" cy="30" r="8" fill="black"/>
+  </symbol>
+
+  <!-- K LINE - Professional Silver -->
+  <symbol id="k-line-logo" viewBox="0 0 200 60">
+    <rect x="10" y="10" width="180" height="40" rx="8" fill="#C0C0C0" stroke="#909090" stroke-width="2"/>
+    <text x="100" y="35" text-anchor="middle" fill="black" font-family="Arial Black" font-size="24" font-weight="bold">K LINE</text>
+    <circle cx="30" cy="30" r="8" fill="black"/>
+  </symbol>
+
+  <!-- MOL - Professional Indigo -->
+  <symbol id="mol-logo" viewBox="0 0 200 60">
+    <rect x="10" y="10" width="180" height="40" rx="8" fill="#4B0082" stroke="#380062" stroke-width="2"/>
+    <text x="100" y="35" text-anchor="middle" fill="white" font-family="Arial Black" font-size="28" font-weight="bold">MOL</text>
+    <circle cx="30" cy="30" r="8" fill="white"/>
+  </symbol>
+
+  <!-- NYK - Professional Steel Blue -->
+  <symbol id="nyk-logo" viewBox="0 0 200 60">
+    <rect x="10" y="10" width="180" height="40" rx="8" fill="#4682B4" stroke="#356190" stroke-width="2"/>
+    <text x="100" y="35" text-anchor="middle" fill="white" font-family="Arial Black" font-size="28" font-weight="bold">NYK</text>
+    <circle cx="30" cy="30" r="8" fill="white"/>
+  </symbol>
+
+  <!-- HAMBURG SÜD - Professional Orange -->
+  <symbol id="hamburg-sud-logo" viewBox="0 0 200 60">
+    <rect x="10" y="10" width="180" height="40" rx="8" fill="#FF8C00" stroke="#CC7000" stroke-width="2"/>
+    <text x="100" y="35" text-anchor="middle" fill="white" font-family="Arial Black" font-size="16" font-weight="bold">HAMBURG SÜD</text>
+    <circle cx="30" cy="30" r="8" fill="white"/>
+  </symbol>
+
+  <!-- UASC - Professional Teal -->
+  <symbol id="uasc-logo" viewBox="0 0 200 60">
+    <rect x="10" y="10" width="180" height="40" rx="8" fill="#20B2AA" stroke="#198E87" stroke-width="2"/>
+    <text x="100" y="35" text-anchor="middle" fill="white" font-family="Arial Black" font-size="20" font-weight="bold">UASC</text>
+    <circle cx="30" cy="30" r="8" fill="white"/>
+  </symbol>
+
+  <!-- CSCL - Professional Blue -->
+  <symbol id="cscl-logo" viewBox="0 0 200 60">
+    <rect x="10" y="10" width="180" height="40" rx="8" fill="#1E90FF" stroke="#1873CC" stroke-width="2"/>
+    <text x="100" y="35" text-anchor="middle" fill="white" font-family="Arial Black" font-size="20" font-weight="bold">CSCL</text>
+    <circle cx="30" cy="30" r="8" fill="white"/>
+  </symbol>
+
+  <!-- CHINA SHIPPING - Professional Red -->
+  <symbol id="china-shipping-logo" viewBox="0 0 200 60">
+    <rect x="10" y="10" width="180" height="40" rx="8" fill="#DC143C" stroke="#B01030" stroke-width="2"/>
+    <text x="100" y="35" text-anchor="middle" fill="white" font-family="Arial Black" font-size="14" font-weight="bold">CHINA SHIPPING</text>
+    <circle cx="30" cy="30" r="8" fill="white"/>
+  </symbol>
+
+  <!-- SINOTRANS - Professional Blue -->
+  <symbol id="sinotrans-logo" viewBox="0 0 200 60">
+    <rect x="10" y="10" width="180" height="40" rx="8" fill="#0066CC" stroke="#0052A3" stroke-width="2"/>
+    <text x="100" y="35" text-anchor="middle" fill="white" font-family="Arial Black" font-size="14" font-weight="bold">SINOTRANS</text>
+    <circle cx="30" cy="30" r="8" fill="white"/>
+  </symbol>
+
+  <!-- COSCO SHIPPING - Professional Blue -->
+  <symbol id="cosco-shipping-logo" viewBox="0 0 200 60">
+    <rect x="10" y="10" width="180" height="40" rx="8" fill="#003366" stroke="#002244" stroke-width="2"/>
+    <text x="100" y="35" text-anchor="middle" fill="white" font-family="Arial Black" font-size="12" font-weight="bold">COSCO SHIPPING</text>
+    <circle cx="30" cy="30" r="8" fill="white"/>
+  </symbol>
+
+  <!-- DHL - Professional Yellow -->
+  <symbol id="dhl-logo" viewBox="0 0 200 60">
+    <rect x="10" y="10" width="180" height="40" rx="8" fill="#FFCC00" stroke="#CC9900" stroke-width="2"/>
+    <text x="100" y="35" text-anchor="middle" fill="#D40511" font-family="Arial Black" font-size="32" font-weight="bold">DHL</text>
+    <circle cx="30" cy="30" r="8" fill="#D40511"/>
+  </symbol>
+
+  <!-- FEDEX - Professional Purple -->
+  <symbol id="fedex-logo" viewBox="0 0 200 60">
+    <rect x="10" y="10" width="180" height="40" rx="8" fill="#4D148C" stroke="#3A0F6B" stroke-width="2"/>
+    <text x="100" y="35" text-anchor="middle" fill="white" font-family="Arial Black" font-size="28" font-weight="bold">FedEx</text>
+    <circle cx="30" cy="30" r="8" fill="#FF6600"/>
+  </symbol>
+
+  <!-- UPS - Professional Brown -->
+  <symbol id="ups-logo" viewBox="0 0 200 60">
+    <rect x="10" y="10" width="180" height="40" rx="8" fill="#351C15" stroke="#28130F" stroke-width="2"/>
+    <text x="100" y="35" text-anchor="middle" fill="#FFB500" font-family="Arial Black" font-size="28" font-weight="bold">UPS</text>
+    <circle cx="30" cy="30" r="8" fill="#FFB500"/>
+  </symbol>
+
+  <!-- TNT - Professional Orange -->
+  <symbol id="tnt-logo" viewBox="0 0 200 60">
+    <rect x="10" y="10" width="180" height="40" rx="8" fill="#FF6600" stroke="#CC5200" stroke-width="2"/>
+    <text x="100" y="35" text-anchor="middle" fill="white" font-family="Arial Black" font-size="28" font-weight="bold">TNT</text>
+    <circle cx="30" cy="30" r="8" fill="white"/>
+  </symbol>
+
+</svg>

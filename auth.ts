@@ -744,6 +744,12 @@ async function continueAuthInitialization(authInstance: any) {
         return;
     }
     
+    // Safety timeout - force stop loading after 3 seconds if auth doesn't respond
+    const authTimeout = setTimeout(() => {
+        console.warn('[AUTH DEBUG] Auth initialization timeout - stopping loading');
+        toggleLoading(false);
+    }, 3000);
+    
     try {
         // Check for redirect result first (for redirect-based auth)
         try {
@@ -751,6 +757,7 @@ async function continueAuthInitialization(authInstance: any) {
             const redirectResult = await authInstance.getRedirectResult();
             if (redirectResult?.user) {
                 console.log('[AUTH DEBUG] Found redirect result user:', redirectResult.user.email);
+                clearTimeout(authTimeout);
                 completeLogin(redirectResult.user);
                 toggleLoading(false);
                 return;
@@ -764,6 +771,7 @@ async function continueAuthInitialization(authInstance: any) {
         // Set up auth state listener
         console.log('[AUTH DEBUG] Setting up auth state listener');
         authInstance.onAuthStateChanged((user: any) => {
+            clearTimeout(authTimeout); // Clear timeout when auth state fires
             console.log('[AUTH DEBUG] Auth state changed. User:', user ? user.email : 'No user');
             if (user) {
                 const userProfile = { name: user.displayName || user.email!.split('@')[0], email: user.email! };
@@ -786,6 +794,7 @@ async function continueAuthInitialization(authInstance: any) {
             toggleLoading(false);
         });
     } catch (error) {
+        clearTimeout(authTimeout);
         console.error('[AUTH DEBUG] Error in auth initialization:', error);
         toggleLoading(false);
         return;

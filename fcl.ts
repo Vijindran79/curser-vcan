@@ -19,7 +19,7 @@ import { blobToBase64 } from './utils';
 import { 
     createEnhancedAddressInput, 
     attachEnhancedAddressListeners, 
-    ParsedAddress
+    type ParsedAddress
 } from './address-autocomplete';
 import { 
     calculatePortFees, 
@@ -924,9 +924,11 @@ async function handleFclFormSubmit(e: Event) {
     };
     setState({ fclDetails: details });
 
+    // Load skeleton loader module once at the start
+    const skeletonLoader = await import('./skeleton-loader');
+
     try {
         // Show skeleton loader immediately
-        const skeletonLoader = await import('./skeleton-loader');
         skeletonLoader.showSkeletonLoader({
             service: 'fcl',
             estimatedTime: 15,

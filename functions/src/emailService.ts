@@ -18,8 +18,14 @@ const SES_CONFIG = {
     }
 };
 
-// Create reusable transporter
-const transporter = nodemailer.createTransport(SES_CONFIG);
+// Lazy-load transporter to avoid blocking module initialization
+let transporter: nodemailer.Transporter | null = null;
+function getTransporter() {
+    if (!transporter) {
+        transporter = nodemailer.createTransport(SES_CONFIG);
+    }
+    return transporter;
+}
 
 
 
@@ -115,7 +121,7 @@ export async function sendWelcomeEmail(
             `
         };
 
-        await transporter.sendMail(mailOptions);
+        await getTransporter().sendMail(mailOptions);
         console.log(`✅ Welcome email sent to ${recipientEmail}`);
         return true;
     } catch (error) {
@@ -273,7 +279,7 @@ export async function sendBookingConfirmationEmail(
             `
         };
 
-        await transporter.sendMail(mailOptions);
+        await getTransporter().sendMail(mailOptions);
         console.log(`✅ Booking confirmation sent to ${recipientEmail}`);
         return true;
     } catch (error) {
@@ -365,7 +371,7 @@ export async function sendTrackingUpdateEmail(
             `
         };
 
-        await transporter.sendMail(mailOptions);
+        await getTransporter().sendMail(mailOptions);
         console.log(`✅ Tracking update sent to ${recipientEmail}`);
         return true;
     } catch (error) {
@@ -435,7 +441,7 @@ export async function sendPasswordResetEmail(
             `
         };
 
-        await transporter.sendMail(mailOptions);
+        await getTransporter().sendMail(mailOptions);
         console.log(`✅ Password reset email sent to ${recipientEmail}`);
         return true;
     } catch (error) {

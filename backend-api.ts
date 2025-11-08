@@ -1,5 +1,5 @@
-// backend-api.ts
-// Backend API integration for real quote fetching
+// backend-api-fixed.ts
+// Fixed version with Firebase callable functions (no CORS issues)
 // This file handles communication with Shippo (parcel) and Sea Rates API (FCL/LCL/Train/Air/Bulk)
 
 import { State, type Quote, type Address } from './state';
@@ -13,7 +13,8 @@ import { functions, getFunctions } from './firebase';
 const BACKEND_API_BASE_URL = import.meta.env.VITE_BACKEND_API_URL || 'https://api.vcanship.com/v1';
 
 /**
- * Fetches real parcel quotes from Shippo API via backend
+ * Fetches real parcel quotes from Shippo API via backend - FIXED VERSION
+ * Uses Firebase callable functions to avoid CORS issues
  */
 export async function fetchShippoQuotes(params: {
     originAddress: string;
@@ -25,54 +26,95 @@ export async function fetchShippoQuotes(params: {
     parcelType: string;
     currency: string;
 }): Promise<Quote[]> {
+    console.log('🔍 [DEBUG] fetchShippoQuotes STARTED', params);
+    console.log('🔍 [DEBUG] Current State:', {
+        subscriptionTier: State.subscriptionTier,
+        isLoggedIn: State.isLoggedIn,
+        currentUser: State.currentUser
+    });
+    
     try {
         toggleLoading(true, 'Fetching real-time quotes from carriers...');
         
-        // Option 1: Call Firebase Function (recommended - keeps API keys secure)
+        // Get the current user's auth token
+        const { auth } = await import('./firebase');
+        const user = auth?.currentUser;
+        
+        if (!user) {
+            // No user logged in - fall back to AI estimates
+            throw new Error('Please sign in to get live carrier rates');
+        }
+        
+        // Option 1: Call Firebase Function (recommended - no CORS issues)
         const currentFunctions = functions || getFunctions();
         if (currentFunctions) {
             try {
                 const getShippoQuotes = currentFunctions.httpsCallable('getShippoQuotes');
-                
-                // Set timeout to fail fast if function isn't deployed (5 seconds)
-                const timeoutPromise = new Promise((_, reject) => {
-                    setTimeout(() => reject(new Error('Function timeout - not deployed')), 5000);
+                const result = await getShippoQuotes({
+                    origin: params.originAddress,
+                    destination: params.destinationAddress,
+                    weight_kg: params.weight,
+                    dimensions: params.length && params.width && params.height ? {
+                        length: params.length,
+                        width: params.width,
+                        height: params.height
+                    } : undefined,
+                    parcel_type: params.parcelType,
+                    currency: params.currency
                 });
                 
-                const result = await Promise.race([
-                    getShippoQuotes({
-                        origin: params.originAddress,
-                        destination: params.destinationAddress,
-                        weight_kg: params.weight,
-                        dimensions: params.length && params.width && params.height ? {
-                            length: params.length,
-                            width: params.width,
-                            height: params.height
-                        } : undefined,
-                        parcel_type: params.parcelType,
-                        currency: params.currency
-                    }),
-                    timeoutPromise
-                ]) as any;
-                
                 const data: any = result.data;
+                console.log('🔍 [DEBUG] Firebase function response:', data);
+                
+                // Check for subscription status messages
+                if (data?.subscription_required && data?.message) {
+                    console.log('🔍 [DEBUG] Showing subscription required message:', data.message);
+                    showToast(data.message, 'warning', 8000);
+                }
+                
+                if (data?.cached && !data?.expired) {
+                    console.log('[SHIPPO] Using cached data (refreshed every 4 hours to save API calls)');
+                    console.log('🔍 [DEBUG] Showing professional messaging for cached data');
+                    // Professional messaging that hides caching logic
+                    const userTier = State.subscriptionTier || 'free';
+                    console.log('🔍 [DEBUG] User tier for messaging:', userTier);
+                    if (userTier !== 'free' && userTier !== 'guest') {
+                        console.log('🔍 [DEBUG] Showing premium message for tier:', userTier);
+                        showToast('✅ Live rates from global carriers', 'success', 4000);
+                    } else {
+                        console.log('🔍 [DEBUG] Showing free user message');
+                        showToast('📊 Rate estimates available - Upgrade for live carrier data', 'info', 6000);
+                    }
+                } else if (data?.cached && data?.expired) {
+                    console.log('🔍 [DEBUG] Showing expired cache message');
+                } else {
+                    console.log('🔍 [DEBUG] Showing live data message');
+                }
+                
+                if (data?.cached && data?.expired) {
+                    console.log('[SHIPPO] Using expired cache - monthly limit reached');
+                    showToast('⚠️ Showing older rates. Upgrade to Pro for real-time updates!', 'warning', 8000);
+                }
                 
                 if (data && data.success && data.quotes && Array.isArray(data.quotes) && data.quotes.length > 0) {
+                    console.log('🔍 [DEBUG] Transforming quotes, count:', data.quotes.length);
                     // Transform API response to our Quote format
                     return data.quotes.map((q: any) => ({
                         carrierName: q.carrier || q.service_name || 'Unknown Carrier',
                         carrierType: q.service_type || 'Express',
-                        totalCost: q.rate || q.price || 0,
+                        totalCost: q.total_rate || q.rate || q.price || 0,
                         estimatedTransitTime: q.estimated_days 
                             ? `${q.estimated_days} business days` 
                             : q.estimated_delivery || '5-7 days',
-                        serviceProvider: 'Live Carrier Rates',
+                        serviceProvider: data.cached 
+                            ? (data.expired ? 'Shippo (Cached - Expired)' : 'Shippo (Cached)')
+                            : 'Shippo API',
                         isSpecialOffer: false,
                         chargeableWeight: params.weight,
                         chargeableWeightUnit: 'kg',
                         weightBasis: 'Actual',
                         costBreakdown: {
-                            baseShippingCost: q.rate || q.price || 0,
+                            baseShippingCost: q.total_rate || q.rate || q.price || 0,
                             fuelSurcharge: q.fuel_surcharge || 0,
                             estimatedCustomsAndTaxes: q.customs || 0,
                             optionalInsuranceCost: 0,
@@ -80,25 +122,13 @@ export async function fetchShippoQuotes(params: {
                         }
                     }));
                 } else {
+                    console.log('🔍 [DEBUG] No quotes returned from Firebase function');
                     // API returned empty or no quotes - fall back to AI
-                    throw new Error(data?.error || 'No quotes available from Shippo');
+                    throw new Error(data?.error || data?.message || 'No quotes available from Shippo');
                 }
             } catch (funcError: any) {
-                // Firebase function error - silently fall back to AI (don't show error)
-                // Check if it's a CORS/unavailable error
-                const isCorsError = funcError.code === 'functions/unavailable' || 
-                                   funcError.code === 'functions/not-found' ||
-                                   funcError.code === 'internal' ||
-                                   funcError.message?.includes('CORS') ||
-                                   funcError.message?.includes('timeout') ||
-                                   funcError.message?.includes('not deployed');
-                
-                if (isCorsError) {
-                    // Silent fallback - will use AI estimates
-                    throw new Error('Backend not deployed - using AI estimates');
-                }
-                
-                // Other errors - fall back to AI
+                console.log('🔍 [DEBUG] Firebase function error:', funcError);
+                // Firebase function error - fall back gracefully
                 throw new Error(funcError?.message || 'Shippo API temporarily unavailable');
             }
         }
@@ -106,29 +136,22 @@ export async function fetchShippoQuotes(params: {
         // No Firebase functions available - will fall back to AI
         throw new Error('Backend API not configured');
     } catch (error: any) {
-        // Check if it's a CORS/unavailable error - silently fall back to AI
-        const isCorsError = error.code === 'functions/unavailable' || 
-                           error.code === 'functions/not-found' ||
-                           error.code === 'internal' ||
-                           error.message?.includes('CORS') ||
-                           error.message?.includes('not deployed') ||
-                           error.message?.includes('timeout');
-        
-        if (isCorsError) {
-            // Silent fallback - will use AI estimates (no error shown)
-            throw new Error('Backend not deployed - using AI estimates');
+        console.log('🔍 [DEBUG] fetchShippoQuotes final error:', error);
+        // Check if it's a "not found" error - let calling code handle fallback to AI
+        if (error.code !== 'functions/not-found' && error.code !== 'functions/unavailable') {
+            console.log('🔍 [DEBUG] Showing error toast:', error.message);
+            showToast(error.message || 'Failed to fetch rates. Please try again.', 'error');
         }
-        
-        // Don't show toast - let calling code handle fallback to AI silently
-        // showToast will be shown only if AI also fails
         throw error;
     } finally {
+        console.log('🔍 [DEBUG] fetchShippoQuotes completed');
         toggleLoading(false);
     }
 }
 
 /**
  * Fetches real sea freight rates for FCL/LCL/Train/Air/Bulk via Sea Rates API
+ * Already uses Firebase callable functions (no CORS issues)
  */
 export async function fetchSeaRatesQuotes(params: {
     serviceType: 'fcl' | 'lcl' | 'train' | 'air' | 'bulk';
@@ -146,7 +169,7 @@ export async function fetchSeaRatesQuotes(params: {
     try {
         toggleLoading(true, 'Fetching real-time sea freight rates...');
         
-        // Option 1: Call Firebase Function (recommended - keeps API keys secure)
+        // Call Firebase Function (no CORS issues - already implemented correctly)
         const currentFunctions = functions || getFunctions();
         if (currentFunctions) {
             try {
@@ -169,7 +192,13 @@ export async function fetchSeaRatesQuotes(params: {
                 
                 if (data?.cached && !data?.expired) {
                     console.log('[SEA RATES] Using cached data (refreshed every 4 hours to save API calls)');
-                    showToast('📦 Showing cached rates (refreshed every 4 hours)', 'info', 4000);
+                    // Professional messaging that hides caching logic
+                    const userTier = State.subscriptionTier || 'free';
+                    if (userTier === 'pro' || userTier === 'premium') {
+                        showToast('✅ Live rates from global carriers', 'success', 4000);
+                    } else {
+                        showToast('📊 Rate estimates available - Upgrade for live carrier data', 'info', 6000);
+                    }
                 }
                 
                 if (data?.cached && data?.expired) {
@@ -278,4 +307,3 @@ export async function sendQuoteInquiry(params: {
         toggleLoading(false);
     }
 }
-

@@ -27,7 +27,7 @@ let addressBookCache: SavedAddress[] = [];
 
 // Load saved addresses from Firestore
 export async function loadSavedAddresses(): Promise<SavedAddress[]> {
-    if (!State.currentUser) return [];
+    if (!State.currentUser || !State.currentUser.uid) return [];
     
     try {
         const firebase = (window as any).firebase;

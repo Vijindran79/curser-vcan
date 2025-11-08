@@ -2,6 +2,12 @@
 
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
 
+@property --angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
 :root {
   --primary-orange: #F97316;
   --dark-gray: #111827;
@@ -16,6 +22,7 @@
   --error-color: #EF4444;
   --warning-bg-color: #FEF3C7;
   --warning-text-color: #92400E;
+  --angle: 0deg;
 }
 
 html[data-theme="dark"] {
@@ -198,6 +205,28 @@ header.header-hidden {
 
 html[data-theme="dark"] header {
     box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+html[data-theme="dark"] .logo {
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    padding: 4px 8px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+}
+
+html[data-theme="dark"] .logo-img {
+    filter: drop-shadow(0 0 4px rgba(255,255,255,0.7)) brightness(1.2) contrast(1.1);
+}
+
+html[data-theme="dark"] .logo strong {
+    color: #ffffff;
+    text-shadow: 0 0 8px rgba(249, 115, 22, 0.8);
+}
+
+html[data-theme="dark"] .logo span {
+    color: #FB923C;
+    text-shadow: 0 0 6px rgba(251, 146, 60, 0.9);
 }
 
 .logo {
@@ -708,6 +737,37 @@ html[data-theme="dark"] .parcel-hero-section p {
 .card-icon {
     font-size: 2.5rem;
     color: var(--primary-orange);
+    display: inline-block;
+    margin-bottom: 1rem;
+    transition: all 0.3s ease;
+}
+
+.service-promo-card:hover .card-icon {
+    transform: scale(1.1);
+    filter: drop-shadow(0 4px 12px rgba(249, 115, 22, 0.4));
+}
+
+.card-icon-air {
+    animation: takeoff-animation 2.2s ease-in-out infinite alternate;
+}
+
+.service-promo-card[data-service="fcl"] .card-icon,
+.service-promo-card[data-service="lcl"] .card-icon {
+    animation: float-boxes 2.5s ease-in-out infinite;
+}
+
+.service-promo-card[data-service="ecommerce"] .card-icon {
+    animation: pulse-icon 2s ease-in-out infinite;
+}
+
+@keyframes float-boxes {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-8px); }
+}
+
+@keyframes pulse-icon {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.08); }
 }
 .secondary-btn {
     background-color: transparent;
@@ -1588,11 +1648,13 @@ html[data-theme="dark"] .glass-contact-panel {
 html[data-theme="dark"] .glass-panel-header {
     background: rgba(0, 0, 0, 0.9);
     border-bottom-color: rgba(255, 255, 255, 0.05);
+    color: #ffffff !important;
 }
 
 html[data-theme="dark"] .glass-panel-item {
     background: rgba(255, 255, 255, 0.05);
     border-color: rgba(255, 255, 255, 0.05);
+    color: #ffffff !important;
 }
 
 html[data-theme="dark"] .glass-panel-item:hover {
@@ -1602,14 +1664,39 @@ html[data-theme="dark"] .glass-panel-item:hover {
 html[data-theme="dark"] .glass-contact-btn {
     background: rgba(255, 255, 255, 0.05);
     border-color: rgba(255, 255, 255, 0.05);
+    color: #ffffff !important;
 }
 
 html[data-theme="dark"] .glass-panel-close {
     background: rgba(255, 255, 255, 0.1);
+    color: #ffffff !important;
 }
 
 html[data-theme="dark"] .glass-panel-close:hover {
     background: rgba(255, 255, 255, 0.2);
+}
+
+/* Dark Mode Dropdown Fixes */
+html[data-theme="dark"] select,
+html[data-theme="dark"] option {
+    background: #1a1a1a !important;
+    color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+html[data-theme="dark"] input[type="text"],
+html[data-theme="dark"] input[type="email"],
+html[data-theme="dark"] input[type="number"],
+html[data-theme="dark"] textarea {
+    background: #1a1a1a !important;
+    color: #ffffff !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+html[data-theme="dark"] label,
+html[data-theme="dark"] .form-label,
+html[data-theme="dark"] .input-label {
+    color: #ffffff !important;
 }
 
 /* Mobile Optimizations */
@@ -6211,4 +6298,157 @@ header {
 /* 10. Fix toast notifications */
 #toast-container {
     z-index: 3000 !important;
+}
+
+/* ========================================
+   DARK MODE LOGO VISIBILITY ENHANCEMENTS
+   ======================================== */
+
+/* Enhanced logo visibility in dark mode */
+html[data-theme="dark"] .logo {
+    position: relative;
+    overflow: hidden;
+}
+
+html[data-theme="dark"] .logo::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg,
+        rgba(249, 115, 22, 0.3),
+        rgba(251, 146, 60, 0.3),
+        rgba(249, 115, 22, 0.3));
+    border-radius: 10px;
+    z-index: -1;
+    animation: logo-glow 3s ease-in-out infinite alternate;
+}
+
+@keyframes logo-glow {
+    0% {
+        opacity: 0.3;
+        transform: scale(1);
+    }
+    100% {
+        opacity: 0.6;
+        transform: scale(1.02);
+    }
+}
+
+/* Enhanced logo text visibility */
+html[data-theme="dark"] .logo strong {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+}
+
+html[data-theme="dark"] .logo span {
+    background: linear-gradient(135deg, #FB923C 0%, #F97316 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    font-weight: 800;
+}
+
+/* Logo hover effects for better interactivity */
+html[data-theme="dark"] .logo:hover {
+    transform: scale(1.05);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html[data-theme="dark"] .logo:hover::before {
+    opacity: 0.8;
+    animation: logo-glow-hover 1s ease-in-out infinite alternate;
+}
+
+@keyframes logo-glow-hover {
+    0% {
+        opacity: 0.6;
+        filter: blur(1px);
+    }
+    100% {
+        opacity: 0.9;
+        filter: blur(2px);
+    }
+}
+
+/* Enhanced logo image styling */
+html[data-theme="dark"] .logo-img {
+    filter: drop-shadow(0 0 6px rgba(255,255,255,0.8))
+            brightness(1.3)
+            contrast(1.2)
+            saturate(1.1);
+    transition: all 0.3s ease;
+}
+
+html[data-theme="dark"] .logo:hover .logo-img {
+    filter: drop-shadow(0 0 8px rgba(255,255,255,1))
+            brightness(1.4)
+            contrast(1.3)
+            saturate(1.2);
+}
+
+/* Ensure logo stands out against dark backgrounds */
+html[data-theme="dark"] header.minimal-header {
+    background: linear-gradient(135deg,
+        rgba(0, 0, 0, 0.95) 0%,
+        rgba(18, 18, 18, 0.98) 100%);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+/* Add subtle animation to make logo more noticeable */
+html[data-theme="dark"] .logo {
+    animation: logo-pulse 4s ease-in-out infinite;
+}
+
+@keyframes logo-pulse {
+    0%, 100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.01);
+    }
+}
+
+/* Enhanced contrast for better readability */
+html[data-theme="dark"] .logo {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5),
+                 0 0 20px rgba(249, 115, 22, 0.3);
+}
+
+/* FAQ Help Center Toggle Fix */
+.faq-item .faq-answer {
+    display: none;
+    padding: 1rem 0;
+    border-top: 1px solid var(--border-color);
+    margin-top: 0.5rem;
+}
+
+.faq-item.active .faq-answer {
+    display: block;
+}
+
+.faq-question {
+    cursor: pointer;
+    padding: 1rem 0;
+    font-weight: 500;
+    position: relative;
+    padding-right: 2rem;
+}
+
+.faq-question::after {
+    content: '▼';
+    position: absolute;
+    right: 0;
+    transition: transform 0.3s ease;
+}
+
+.faq-item.active .faq-question::after {
+    transform: rotate(180deg);
 }

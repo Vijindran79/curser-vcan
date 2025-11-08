@@ -11,6 +11,7 @@ import { checkCompliance, type ComplianceCheck, COUNTRY_PICKUP_RULES, detectCoun
 import { getLogisticsProviderLogo } from './utils';
 import { loadSavedAddresses, saveAddress, type SavedAddress } from './account';
 import { showHSCodeSearchModal } from './hs-code-intelligence';
+import { attachEnhancedAddressListeners, type ParsedAddress } from './address-autocomplete';
 
 // TYPES
 interface ParcelFormData {
@@ -747,6 +748,14 @@ function renderWizard(): string {
     const progress = (currentStep / TOTAL_STEPS) * 100;
     
     return `
+        <div class="parcel-hero-section" style="text-align: center; padding: 2rem 1rem 1rem 1rem; margin-bottom: 1.5rem;">
+            <div style="background: linear-gradient(135deg, var(--primary-orange) 0%, #ea580c 100%); width: 100px; height: 100px; border-radius: 50%; margin: 0 auto 1rem auto; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 16px rgba(249, 115, 22, 0.3);">
+                <i class="fa-solid fa-truck" style="font-size: 2.5rem; color: white; animation: drive 1s infinite alternate;"></i>
+            </div>
+            <h1 style="font-size: 2.2rem; color: var(--dark-gray); margin-bottom: 0.25rem;">Send Your Parcel</h1>
+            <p style="color: var(--medium-gray); font-size: 1rem;">Get instant quotes from multiple carriers in seconds</p>
+        </div>
+        
         <div class="parcel-wizard-container">
             <button class="back-btn static-link" data-page="landing">
                 <i class="fa-solid fa-arrow-left"></i> Back to Services
@@ -2075,113 +2084,187 @@ function renderPage() {
     firstInput?.focus();
 }
 
+// Load Geoapify API for address autocomplete
+async function loadGoogleMapsAPI(): Promise<void> {
+    // Using Geoapify REST API instead of Google Maps (more affordable, no script loading needed)
+    const geoapifyKey = import.meta.env.VITE_GEOAPIFY_API_KEY;
+    if (!geoapifyKey) {
+        console.warn('Geoapify API key not found - manual address entry only');
+        return Promise.reject(new Error('No Geoapify API key'));
+    }
+    
+    // Geoapify doesn't need script loading - it's REST API based
+    return Promise.resolve();
+}
+
 // Initialize Google Places Autocomplete for address inputs
 let autocompleteRetryCount = 0;
-function initializeAddressAutocomplete(originInput: HTMLInputElement, destInput: HTMLInputElement) {
-    // Check if Google Maps API is loaded
-    const googleMaps = (window as any).google;
-    if (typeof googleMaps === 'undefined' || !googleMaps.maps || !googleMaps.maps.places) {
-        // Only log once and retry once
-        if (autocompleteRetryCount === 0) {
-            console.info('📍 Address autocomplete: Manual entry mode (Google Maps API optional)');
-            autocompleteRetryCount++;
-            // Try once more after delay
-            setTimeout(() => {
-                const retryGoogleMaps = (window as any).google;
-                if (typeof retryGoogleMaps !== 'undefined' && retryGoogleMaps.maps && retryGoogleMaps.maps.places) {
-                    initializeAddressAutocomplete(originInput, destInput);
-                }
-            }, 2000);
-        }
+async function initializeAddressAutocomplete(originInput: HTMLInputElement, destInput: HTMLInputElement) {
+    // Use Geoapify Autocomplete API
+    const geoapifyKey = import.meta.env.VITE_GEOAPIFY_API_KEY;
+    if (!geoapifyKey) {
+        console.info('📍 Address autocomplete: Manual entry mode');
         return;
     }
 
     try {
-        console.log('Initializing Google Places Autocomplete...');
+        console.log('Initializing Geoapify Address Autocomplete v3.7 (no bias param)...');
         
-        // Enhanced autocomplete options for better postcode/address detection
-        const autocompleteOptions = {
-            fields: [
-                'formatted_address', 
-                'address_components', 
-                'geometry', 
-                'place_id',
-                'name',
-                'types'
-            ],
-            types: ['address', 'postal_code', 'premise', 'street_address'], // Include postcodes and specific addresses
-            strictBounds: false,
-        };
-
-        // Initialize autocomplete for origin address
-        originAutocomplete = new googleMaps.maps.places.Autocomplete(originInput, autocompleteOptions);
-        
-        // Set bias to user's location if available
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition((position) => {
-                const geolocation = {
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude
-                };
-                const circle = new googleMaps.maps.Circle({
-                    center: geolocation,
-                    radius: position.coords.accuracy
-                });
-                originAutocomplete?.setBounds(circle.getBounds());
-                destAutocomplete?.setBounds(circle.getBounds());
-            });
-        }
-        
-        originAutocomplete.addListener('place_changed', () => {
-            const place = originAutocomplete?.getPlace();
-            if (place && place.formatted_address) {
-                originInput.value = place.formatted_address;
-                formData.originAddress = place.formatted_address;
-                
-                // Extract and store detailed address components
-                if (place.address_components) {
-                    const addressData = extractAddressComponents(place.address_components);
-                    console.log('Origin address components:', addressData);
-                }
-                
-                // Show validation success with visual feedback
-                showAddressValidationFeedback(originInput, true);
-                showToast('✓ Origin address confirmed', 'success');
-            }
-        });
-
-        // Initialize autocomplete for destination address
-        destAutocomplete = new googleMaps.maps.places.Autocomplete(destInput, autocompleteOptions);
-        destAutocomplete.addListener('place_changed', () => {
-            const place = destAutocomplete?.getPlace();
-            if (place && place.formatted_address) {
-                destInput.value = place.formatted_address;
-                formData.destinationAddress = place.formatted_address;
-                
-                // Extract and store detailed address components
-                if (place.address_components) {
-                    const addressData = extractAddressComponents(place.address_components);
-                    console.log('Destination address components:', addressData);
-                }
-                
-                // Show validation success with visual feedback
-                showAddressValidationFeedback(destInput, true);
-                showToast('✓ Destination address confirmed', 'success');
-            }
+        // Setup autocomplete for origin input
+        setupGeoapifyAutocomplete(originInput, geoapifyKey, (address: string) => {
+            formData.originAddress = address;
+            showToast('✓ Origin address confirmed', 'success');
         });
         
-        // Add real-time address suggestions on typing (postcode lookup)
-        setupPostcodeLookup(originInput, 'origin');
-        setupPostcodeLookup(destInput, 'destination');
+        // Setup autocomplete for destination input
+        setupGeoapifyAutocomplete(destInput, geoapifyKey, (address: string) => {
+            formData.destinationAddress = address;
+            showToast('✓ Destination address confirmed', 'success');
+        });
         
-        console.log('✅ Google Places Autocomplete initialized successfully');
+        console.log('✅ Geoapify autocomplete v3.7 ready');
     } catch (error) {
-        console.error('Error initializing autocomplete:', error);
-        showToast('Address autocomplete not available. Please enter addresses manually.', 'warning');
+        console.warn('⚠️ Geoapify autocomplete failed to initialize:', error);
     }
 }
 
-// Extract useful address components
+// Setup Geoapify autocomplete for an input field
+function setupGeoapifyAutocomplete(
+    input: HTMLInputElement, 
+    apiKey: string, 
+    onSelect: (address: string) => void
+) {
+    let debounceTimer: number;
+    let resultsContainer: HTMLDivElement | null = null;
+    
+    // Create results container
+    resultsContainer = document.createElement('div');
+    resultsContainer.className = 'geoapify-autocomplete-results';
+    resultsContainer.style.cssText = `
+        position: absolute;
+        top: 100%;
+        left: 0;
+        right: 0;
+        max-height: 300px;
+        overflow-y: auto;
+        background: white;
+        border: 1px solid var(--border-color);
+        border-top: none;
+        border-radius: 0 0 8px 8px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        z-index: 1000;
+        display: none;
+    `;
+    
+    // Insert after input
+    input.parentElement?.style.setProperty('position', 'relative');
+    input.parentElement?.appendChild(resultsContainer);
+    
+    // Listen for input
+    input.addEventListener('input', (e) => {
+        const query = (e.target as HTMLInputElement).value.trim();
+        
+        // Clear previous timer
+        clearTimeout(debounceTimer);
+        
+        if (query.length < 3) {
+            resultsContainer!.style.display = 'none';
+            return;
+        }
+        
+        // Debounce API calls
+        debounceTimer = window.setTimeout(async () => {
+            try {
+                // Geoapify autocomplete - no type filter to allow postcodes, streets, cities
+                // This allows flexible searching: postcodes (PO40LW), street names, city names
+                const url = `https://api.geoapify.com/v1/geocode/autocomplete?text=${encodeURIComponent(query)}&apiKey=${apiKey}&limit=10&format=json&filter=countrycode:gb,us,ca,au,de,fr,es,it`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.results && data.results.length > 0) {
+                    displayResults(data.results, resultsContainer!, input, onSelect);
+                } else {
+                    resultsContainer!.style.display = 'none';
+                }
+            } catch (error) {
+                console.error('Geoapify autocomplete error:', error);
+                resultsContainer!.style.display = 'none';
+            }
+        }, 300);
+    });
+    
+    // Close results when clicking outside
+    document.addEventListener('click', (e) => {
+        if (!input.contains(e.target as Node) && !resultsContainer?.contains(e.target as Node)) {
+            resultsContainer!.style.display = 'none';
+        }
+    });
+}
+
+function displayResults(
+    results: any[], 
+    container: HTMLDivElement, 
+    input: HTMLInputElement,
+    onSelect: (address: string) => void
+) {
+    container.innerHTML = '';
+    container.style.display = 'block';
+    
+    results.forEach(result => {
+        const item = document.createElement('div');
+        item.className = 'geoapify-result-item';
+        item.style.cssText = `
+            padding: 0.75rem 1rem;
+            cursor: pointer;
+            border-bottom: 1px solid #f0f0f0;
+            transition: background 0.2s;
+        `;
+        
+        // Build a detailed address display
+        const housenumber = result.housenumber || '';
+        const street = result.street || '';
+        const city = result.city || result.county || '';
+        const postcode = result.postcode || '';
+        const country = result.country || '';
+        
+        // Primary line: House number + Street or formatted address
+        const primaryLine = housenumber && street 
+            ? `${housenumber} ${street}` 
+            : result.address_line1 || result.formatted || '';
+        
+        // Secondary line: City, Postcode, Country
+        const secondaryParts = [city, postcode, country].filter(Boolean);
+        const secondaryLine = secondaryParts.length > 0 ? secondaryParts.join(', ') : result.address_line2 || '';
+        
+        item.innerHTML = `
+            <div style="font-weight: 500; color: var(--dark-gray); font-size: 14px;">
+                ${primaryLine}
+            </div>
+            ${secondaryLine ? `<div style="font-size: 0.8rem; color: var(--medium-gray); margin-top: 2px;">${secondaryLine}</div>` : ''}
+        `;
+        
+        item.addEventListener('mouseenter', () => {
+            item.style.background = '#f8f9fa';
+        });
+        
+        item.addEventListener('mouseleave', () => {
+            item.style.background = 'white';
+        });
+        
+        item.addEventListener('click', () => {
+            // Use the full formatted address for the input
+            const fullAddress = result.formatted || 
+                               [result.address_line1, result.address_line2].filter(Boolean).join(', ');
+            input.value = fullAddress;
+            onSelect(fullAddress);
+            container.style.display = 'none';
+        });
+        
+        container.appendChild(item);
+    });
+}
+
+// Extract useful address components (kept for compatibility)
 function extractAddressComponents(components: any[]): any {
     const data: any = {};
     components.forEach(component => {
