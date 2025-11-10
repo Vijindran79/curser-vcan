@@ -1,9 +1,7 @@
 // Geoapify API Integration for Geocoding and Autocomplete
 // Uses Google Geoapify API keys provided
 
-import * as functions from 'firebase-functions';
-
-const GEOAPIFY_API_KEY = functions.config().geoapify?.api_key || process.env.GEOAPIFY_API_KEY || 'b0b098c3980140a9a8f6895c34f1bb29';
+const GEOAPIFY_API_KEY = process.env.GEOAPIFY_API_KEY || 'b0b098c3980140a9a8f6895c34f1bb29';
 const GEOAPIFY_BASE_URL = 'https://api.geoapify.com/v1';
 
 /**

@@ -626,21 +626,26 @@ async function initializeCoreApp() {
         // and fetched from your backend or environment variables.
         try {
             // Check if API key is available in environment or localStorage
-            // For now, we'll initialize without a key and let services handle the error gracefully
-            // In production, you should provide a valid API key here
-            const apiKey = import.meta.env.VITE_GEMINI_API_KEY || localStorage.getItem('gemini_api_key');
+            // Fallback to process.env if VITE_ prefix doesn't work
+            const apiKey = import.meta.env.VITE_GEMINI_API_KEY || 
+                          (typeof process !== 'undefined' && process.env?.GEMINI_API_KEY) || 
+                          localStorage.getItem('gemini_api_key') ||
+                          ''; // No third-party fallback – require explicit key
+            
+            console.log('[AI] Attempting to initialize with API key:', apiKey ? `${apiKey.substring(0, 10)}...` : 'NONE');
             
             // Only initialize if we have a real API key (not placeholder)
             if (apiKey && apiKey !== 'REPLACE_WITH_NEW_GEMINI_KEY' && apiKey.length > 20) {
                 const genAI = new GoogleGenerativeAI(apiKey);
                 setState({ api: genAI });
-                console.log('[AI] Google Generative AI API initialized successfully');
+                console.log('[AI] ✅ Google Generative AI API initialized successfully');
             } else {
                 // Set to null explicitly so services can handle gracefully
                 setState({ api: null });
-                console.warn('[AI] No valid Gemini API key found. AI features will be disabled.');
+                console.warn('[AI] ❌ No valid Gemini API key found. Key length:', apiKey?.length || 0);
             }
         } catch (error) {
+            console.error('[AI] ❌ Failed to initialize Gemini API:', error);
             setState({ api: null });
         }
         
@@ -694,134 +699,190 @@ async function initializeCoreApp() {
         
         initializeChatbot();
 
-        // 🏆 Initialize Bloomberg-Level Logo System - DIRECT INTEGRATION
+        // �️ Initialize carrier branding badge
         try {
-            // Add Bloomberg-style professional branding immediately
-            console.log('🏆 Initializing Bloomberg-level professional branding...');
+            document.querySelectorAll('.bloomberg-professional').forEach((node) => node.remove());
+            console.log('🛰️ Initializing carrier branding badge...');
             
-            // Add professional CSS for Bloomberg styling
+            // Add professional CSS for floating carrier badge styling
             const bloombergStyle = document.createElement('style');
             bloombergStyle.textContent = `
-                /* Bloomberg Professional Styling */
-                .bloomberg-professional {
-                    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%) !important;
-                    border: 2px solid #333 !important;
-                    border-radius: 8px !important;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
-                    font-family: 'Courier New', monospace !important;
+                .ship-floating-badge {
+                    position: fixed;
+                    top: 16px;
+                    right: 16px;
+                    z-index: 1400;
+                    display: inline-flex;
+                    align-items: center;
+                    gap: 10px;
+                    padding: 10px 18px;
+                    border-radius: 999px;
+                    background: rgba(6, 19, 36, 0.9);
+                    color: #f4f9ff;
+                    font-weight: 600;
+                    box-shadow: 0 12px 28px rgba(4, 10, 24, 0.35);
+                    backdrop-filter: blur(8px);
+                    border: 1px solid rgba(255, 255, 255, 0.12);
+                    cursor: grab;
+                    transition: transform 0.2s ease, box-shadow 0.2s ease;
                 }
-                
-                .bloomberg-ticker {
-                    color: #00ff41 !important;
-                    font-weight: bold !important;
-                    text-transform: uppercase !important;
-                    letter-spacing: 1px !important;
-                    font-size: 12px !important;
+
+                .ship-floating-badge:active {
+                    cursor: grabbing;
                 }
-                
-                .bloomberg-live-dot {
-                    width: 8px !important;
-                    height: 8px !important;
-                    background: #00ff41 !important;
-                    border-radius: 50% !important;
-                    animation: bloomberg-pulse 2s infinite !important;
-                    display: inline-block !important;
-                    margin-right: 5px !important;
+
+                .ship-floating-badge.is-dragging {
+                    transform: scale(0.98);
+                    box-shadow: 0 18px 36px rgba(4, 10, 24, 0.45);
                 }
-                
-                @keyframes bloomberg-pulse {
-                    0%, 100% { opacity: 1; }
-                    50% { opacity: 0.3; }
+
+                .ship-floating-dot {
+                    width: 10px;
+                    height: 10px;
+                    border-radius: 999px;
+                    background: #2dff85;
+                    box-shadow: 0 0 0 0 rgba(45, 255, 133, 0.6);
+                    animation: ship-floating-pulse 2.4s infinite;
                 }
-                
-                .carrier-logo-bloomberg {
-                    padding: 4px 8px !important;
-                    border-radius: 4px !important;
-                    font-size: 10px !important;
-                    font-weight: bold !important;
-                    color: white !important;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
-                    margin: 0 2px !important;
-                    display: inline-block !important;
+
+                .ship-floating-label {
+                    text-transform: uppercase;
+                    letter-spacing: 1.2px;
+                    font-size: 0.72rem;
                 }
-                
-                .maersk-bg { background: #003087 !important; }
-                .msc-bg { background: #000 !important; }
-                .cma-cgm-bg { background: #E60012 !important; }
-                .cosco-bg { background: #003DA5 !important; }
-                .hapag-lloyd-bg { background: #E2001A !important; }
-                .one-bg { background: #00539F !important; }
+
+                .ship-floating-tags {
+                    display: inline-flex;
+                    gap: 6px;
+                }
+
+                .ship-floating-tags span {
+                    font-size: 0.68rem;
+                    padding: 4px 8px;
+                    border-radius: 6px;
+                    background: rgba(255, 255, 255, 0.08);
+                    border: 1px solid rgba(255, 255, 255, 0.12);
+                    color: #cde7ff;
+                }
+
+                @keyframes ship-floating-pulse {
+                    0% {
+                        transform: scale(1);
+                        box-shadow: 0 0 0 0 rgba(45, 255, 133, 0.6);
+                    }
+                    50% {
+                        transform: scale(1.08);
+                        box-shadow: 0 0 0 10px rgba(45, 255, 133, 0);
+                    }
+                    100% {
+                        transform: scale(1);
+                        box-shadow: 0 0 0 0 rgba(45, 255, 133, 0);
+                    }
+                }
+
+                @media (max-width: 768px) {
+                    .ship-floating-badge {
+                        top: 12px;
+                        right: 12px;
+                        padding: 9px 14px;
+                    }
+
+                    .ship-floating-tags span {
+                        font-size: 0.62rem;
+                        padding: 3px 6px;
+                    }
+                }
+
+                @media (max-width: 540px) {
+                    .ship-floating-badge {
+                        left: 12px;
+                        right: 12px;
+                        top: auto;
+                        bottom: 16px;
+                        justify-content: center;
+                        flex-wrap: wrap;
+                    }
+
+                    .ship-floating-label {
+                        width: 100%;
+                        text-align: center;
+                    }
+                }
             `;
             document.head.appendChild(bloombergStyle);
             
-            // Add Bloomberg header branding
             const header = document.querySelector('header');
             if (header) {
-                const bloombergHeader = document.createElement('div');
-                bloombergHeader.className = 'bloomberg-professional';
-                bloombergHeader.style.cssText = 'position: absolute; top: 10px; right: 20px; z-index: 1000; padding: 8px 12px;';
-                bloombergHeader.innerHTML = `
-                    <div class="bloomberg-ticker">
-                        <span class="bloomberg-live-dot"></span>
-                        LIVE CARRIERS
-                    </div>
-                    <div style="display: flex; gap: 5px; margin-top: 5px;">
-                        <span class="carrier-logo-bloomberg maersk-bg">MAERSK</span>
-                        <span class="carrier-logo-bloomberg msc-bg">MSC</span>
-                        <span class="carrier-logo-bloomberg cma-cgm-bg">CMA CGM</span>
-                        <span class="carrier-logo-bloomberg cosco-bg">COSCO</span>
-                    </div>
+                const floatingBadge = document.createElement('button');
+                floatingBadge.className = 'ship-floating-badge';
+                floatingBadge.type = 'button';
+                floatingBadge.innerHTML = `
+                    <span class="ship-floating-dot"></span>
+                    <span class="ship-floating-label">Live Carriers</span>
+                    <span class="ship-floating-tags">
+                        <span>MAERSK</span>
+                        <span>MSC</span>
+                        <span>CMA</span>
+                        <span>COSCO</span>
+                    </span>
                 `;
-                header.appendChild(bloombergHeader);
-                console.log('✅ Bloomberg header branding added');
-            }
-            
-            // Add Bloomberg footer branding
-            const mainContent = document.querySelector('main') || document.body;
-            const bloombergFooter = document.createElement('div');
-            bloombergFooter.className = 'bloomberg-professional';
-            bloombergFooter.style.cssText = 'margin: 20px auto; max-width: 1200px; padding: 20px; text-align: center;';
-            bloombergFooter.innerHTML = `
-                <div class="bloomberg-ticker" style="margin-bottom: 15px; font-size: 14px;">
-                    🏆 WORLD-CLASS LOGISTICS PARTNERS
-                </div>
-                <div style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; margin-bottom: 15px;">
-                    <span class="carrier-logo-bloomberg maersk-bg" style="font-size: 11px; padding: 6px 10px;">MAERSK</span>
-                    <span class="carrier-logo-bloomberg msc-bg" style="font-size: 11px; padding: 6px 10px;">MSC</span>
-                    <span class="carrier-logo-bloomberg cma-cgm-bg" style="font-size: 11px; padding: 6px 10px;">CMA CGM</span>
-                    <span class="carrier-logo-bloomberg cosco-bg" style="font-size: 11px; padding: 6px 10px;">COSCO</span>
-                    <span class="carrier-logo-bloomberg hapag-lloyd-bg" style="font-size: 11px; padding: 6px 10px;">HAPAG-LLOYD</span>
-                    <span class="carrier-logo-bloomberg one-bg" style="font-size: 11px; padding: 6px 10px;">ONE</span>
-                </div>
-                <div style="color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">
-                    Trusted by 50,000+ businesses worldwide • Bloomberg-level professional service
-                </div>
-            `;
-            mainContent.appendChild(bloombergFooter);
-            console.log('✅ Bloomberg footer branding added');
-            
-            // Add professional trust indicators to existing elements
-            const existingServices = document.querySelectorAll('.service-card, .service-grid-item, .sidebar-btn-service');
-            existingServices.forEach((element, index) => {
-                if (index < 6) { // Add to first 6 service elements
-                    const trustBadge = document.createElement('div');
-                    trustBadge.className = 'bloomberg-professional';
-                    trustBadge.style.cssText = 'position: absolute; top: 5px; right: 5px; padding: 3px 6px; font-size: 9px; z-index: 10;';
-                    
-                    const carriers = ['MAERSK', 'MSC', 'CMA CGM', 'COSCO', 'HAPAG-LLOYD', 'ONE'];
-                    const colors = ['maersk-bg', 'msc-bg', 'cma-cgm-bg', 'cosco-bg', 'hapag-lloyd-bg', 'one-bg'];
-                    const randomIndex = index % carriers.length;
-                    
-                    trustBadge.innerHTML = `<span class="carrier-logo-bloomberg ${colors[randomIndex]}" style="font-size: 8px; padding: 2px 4px;">${carriers[randomIndex]}</span>`;
-                    (element as HTMLElement).style.position = 'relative';
-                    element.appendChild(trustBadge);
+                header.appendChild(floatingBadge);
+
+                let dragging = false;
+                let offsetX = 0;
+                let offsetY = 0;
+
+                const startDrag = (event: PointerEvent) => {
+                    dragging = true;
+                    floatingBadge.setPointerCapture(event.pointerId);
+                    floatingBadge.classList.add('is-dragging');
+                    offsetX = event.clientX - floatingBadge.getBoundingClientRect().left;
+                    offsetY = event.clientY - floatingBadge.getBoundingClientRect().top;
+                };
+
+                const duringDrag = (event: PointerEvent) => {
+                    if (!dragging) {
+                        return;
+                    }
+
+                    const parentRect = document.body.getBoundingClientRect();
+                    const badgeRect = floatingBadge.getBoundingClientRect();
+                    const x = Math.min(Math.max(event.clientX - offsetX, parentRect.left), parentRect.right - badgeRect.width);
+                    const y = Math.min(Math.max(event.clientY - offsetY, parentRect.top), window.innerHeight - badgeRect.height);
+
+                    floatingBadge.style.left = `${x}px`;
+                    floatingBadge.style.top = `${y}px`;
+                    floatingBadge.style.right = 'auto';
+                    floatingBadge.style.bottom = 'auto';
+                    floatingBadge.dataset.floatingPosition = JSON.stringify({ x, y });
+                };
+
+                const stopDrag = (event: PointerEvent) => {
+                    dragging = false;
+                    floatingBadge.releasePointerCapture(event.pointerId);
+                    floatingBadge.classList.remove('is-dragging');
+                };
+
+                floatingBadge.addEventListener('pointerdown', startDrag);
+                floatingBadge.addEventListener('pointermove', duringDrag);
+                floatingBadge.addEventListener('pointerup', stopDrag);
+                floatingBadge.addEventListener('pointercancel', stopDrag);
+
+                const saved = floatingBadge.dataset.floatingPosition;
+                if (saved) {
+                    try {
+                        const { x, y } = JSON.parse(saved);
+                        floatingBadge.style.left = `${x}px`;
+                        floatingBadge.style.top = `${y}px`;
+                        floatingBadge.style.right = 'auto';
+                        floatingBadge.style.bottom = 'auto';
+                    } catch (positionError) {
+                        console.warn('Failed to restore floating badge position', positionError);
+                    }
                 }
-            });
-            console.log('✅ Professional trust badges added to service elements');
-            
-            console.log('🏆 Bloomberg-level professional branding successfully integrated!');
+            }
         } catch (error) {
-            console.warn('Bloomberg branding integration failed:', error);
+            console.warn('Carrier branding badge initialization failed:', error);
         }
 
         // Attach listeners to static links

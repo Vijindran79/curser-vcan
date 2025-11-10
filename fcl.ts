@@ -1525,14 +1525,8 @@ function sortAndRenderFclQuotes(sortBy: 'price' | 'speed') {
     const destCountry = State.fclDetails?.deliveryAddress?.country || State.fclDetails?.deliveryPort || 'Unknown';
     
     if (State.fclDetails && originCountry && destCountry) {
-        import('./compliance-checklist').then(({ showInlineComplianceSummary }) => {
-            showInlineComplianceSummary(
-                'fcl-compliance-summary',
-                originCountry,
-                destCountry,
-                State.fclDetails.cargoDescription || 'General cargo'
-            );
-        });
+        // Compliance summary temporarily disabled
+        console.log('[FCL] Compliance check for', originCountry, '→', destCountry);
     }
 
     document.querySelectorAll('#fcl-results-controls .sort-btn').forEach(btn => {

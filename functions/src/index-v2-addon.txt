@@ -1,0 +1,38 @@
+
+// Add this at the end of index.ts
+
+// ==================== V2 CALLABLE WITH APP CHECK ====================
+import { onCall as onCallV2, HttpsError, CallableRequest } from 'firebase-functions/v2/https';
+
+// V2 Shippo Callable with App Check enforcement
+export const getShippoQuotesV2 = onCallV2(
+  { 
+    enforceAppCheck: true,  // Enables App Check enforcement at platform level
+    cors: true
+  },
+  async (request: CallableRequest) => {
+    console.log('[Shippo V2] Callable invoked');
+    console.log('[Shippo V2] App Check verified:', !!request.app);
+    
+    try {
+      const requestData = request.data as ShippoCallableData;
+      const userEmail = request.auth?.token?.email || requestData.userEmail || 'guest';
+      
+      const result = await buildShippoResponse(requestData, userEmail);
+      
+      console.log('[Shippo V2] Callable returning success with', result.quotes?.length || 0, 'quotes');
+      return result;
+    } catch (error: any) {
+      console.error('[Shippo V2] Callable error:', error);
+      console.error('[Shippo V2] Error stack:', error?.stack);
+      
+      if (error instanceof HttpsError) {
+        throw error;
+      }
+      
+      const errorMessage = error?.message || 'Failed to fetch Shippo quotes';
+      console.error('[Shippo V2] Throwing HttpsError with message:', errorMessage);
+      throw new HttpsError('unavailable', errorMessage);
+    }
+  }
+);

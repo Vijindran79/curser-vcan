@@ -3,12 +3,6 @@ import { onRequest, onCall, HttpsError, CallableRequest } from 'firebase-functio
 import * as admin from 'firebase-admin';
 import Stripe from 'stripe';
 
-// Initialize Admin SDK once per instance to enable Firestore and other services
-if (!admin.apps.length) {
-    admin.initializeApp();
-    console.log('[Stripe Module] Firebase Admin initialized');
-}
-
 // Lazy-load Stripe to avoid initialization timeouts
 let stripe: Stripe | null = null;
 
@@ -32,6 +26,12 @@ const db = admin.firestore();
 interface SubscriptionData {
     priceId: string;
     plan: 'monthly' | 'yearly';
+}
+
+interface PaymentIntentData {
+    amount: number;
+    currency: string;
+    description?: string;
 }
 
 export const stripeWebhook = functions.https.onRequest(async (req, res) => {
@@ -208,101 +208,30 @@ export const createPaymentIntent = onRequest({
     }
 });
 
-// Callable version for Firebase SDK (v1 - bypasses IAM issues)
-export const createPaymentIntentCallable = functions.https.onCall(async (request, context: any) => {
-    console.log('[Payment Intent Callable] Function invoked');
-    console.log('[Payment Intent Callable] Auth context:', { auth: !!context?.auth, app: !!context?.app });
-
-    // Temporarily skip App Check until configured in Firebase Console
-    // TODO: Re-enable after registering reCAPTCHA v3 key in Firebase Console > App Check
-    /* 
-    if (context.app === undefined) {
-      console.error('[Payment Intent Callable] App Check verification failed - no token provided');
-      throw new functions.https.HttpsError(
-        'failed-precondition',
-        'App Check token is missing. Please refresh the page.'
-      );
-    }
-    console.log('[Payment Intent Callable] App Check token verified');
-    */
-    
-    const data = request.data || request;
-    
-    try {
-        const { amount, currency, description } = data;
-
-        // Validate input
-        if (!amount || typeof amount !== 'number' || amount <= 0) {
-            console.error('[Payment Intent Callable] Invalid amount:', amount);
-            throw new functions.https.HttpsError('invalid-argument', 'Invalid amount');
-        }
-
-        if (!currency || typeof currency !== 'string') {
-            console.error('[Payment Intent Callable] Invalid currency:', currency);
-            throw new functions.https.HttpsError('invalid-argument', 'Invalid currency');
-        }
-
-        console.log('[Payment Intent Callable] Creating payment intent:', { amount, currency, description });
-
-        // Create payment intent
-        const stripeClient = getStripeClient();
-        const paymentIntent = await stripeClient.paymentIntents.create({
-            amount: Math.round(amount),
-            currency: currency.toLowerCase(),
-            description: description || 'Vcanship Shipment',
-            automatic_payment_methods: {
-                enabled: true,
-            },
-        });
-
-        console.log('[Payment Intent Callable] Created successfully:', paymentIntent.id);
-
-        return {
-            clientSecret: paymentIntent.client_secret,
-            paymentIntentId: paymentIntent.id
-        };
-    } catch (error: any) {
-        console.error('[Payment Intent Callable] Error:', error);
-        console.error('[Payment Intent Callable] Error details:', {
-            message: error.message,
-            type: error.type,
-            code: error.code
-        });
-        throw new functions.https.HttpsError('internal', error.message || 'Failed to create payment intent');
-    }
-});
-
-// ==================== V2 CALLABLE WITH APP CHECK ====================
-interface PaymentIntentData {
-    amount: number;
-    currency: string;
-    description?: string;
-}
-
 // V2 Callable version with App Check enforcement
-export const createPaymentIntentV2 = onCall<PaymentIntentData>(
+export const createPaymentIntentCallable = onCall<PaymentIntentData>(
     { 
         enforceAppCheck: true,  // Enables App Check enforcement at platform level
         cors: true
     },
     async (request: CallableRequest<PaymentIntentData>) => {
-        console.log('[Payment Intent V2] Function invoked');
-        console.log('[Payment Intent V2] App Check verified:', !!request.app);
+        console.log('[Payment Intent Callable V2] Function invoked');
+        console.log('[Payment Intent Callable V2] App Check verified:', !!request.app);
         
         const { amount, currency, description } = request.data;
 
         // Validate input
         if (!amount || typeof amount !== 'number' || amount <= 0) {
-            console.error('[Payment Intent V2] Invalid amount:', amount);
+            console.error('[Payment Intent Callable V2] Invalid amount:', amount);
             throw new HttpsError('invalid-argument', 'Invalid amount');
         }
 
         if (!currency || typeof currency !== 'string') {
-            console.error('[Payment Intent V2] Invalid currency:', currency);
+            console.error('[Payment Intent Callable V2] Invalid currency:', currency);
             throw new HttpsError('invalid-argument', 'Invalid currency');
         }
 
-        console.log('[Payment Intent V2] Creating payment intent:', { amount, currency, description });
+        console.log('[Payment Intent Callable V2] Creating payment intent:', { amount, currency, description });
 
         try {
             // Create payment intent
@@ -316,15 +245,15 @@ export const createPaymentIntentV2 = onCall<PaymentIntentData>(
                 },
             });
 
-            console.log('[Payment Intent V2] Created successfully:', paymentIntent.id);
+            console.log('[Payment Intent Callable V2] Created successfully:', paymentIntent.id);
 
             return {
                 clientSecret: paymentIntent.client_secret,
                 paymentIntentId: paymentIntent.id
             };
         } catch (error: any) {
-            console.error('[Payment Intent V2] Error:', error);
-            console.error('[Payment Intent V2] Error details:', {
+            console.error('[Payment Intent Callable V2] Error:', error);
+            console.error('[Payment Intent Callable V2] Error details:', {
                 message: error.message,
                 type: error.type,
                 code: error.code

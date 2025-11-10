@@ -2,7 +2,7 @@
 import { State, setState, type Quote, type Address } from './state';
 import { showToast, toggleLoading } from './ui';
 import { mountService } from './router';
-import { logShipment, functions } from './firebase';
+import { logShipment, functions, getFunctions } from './firebase';
 import { storeGuestOrder, showPostPaymentSignup, GuestOrderData } from './guest-checkout';
 // FIX: Removed unused v9 `httpsCallable` import as we are now using the v8 namespaced API.
 // import { httpsCallable } from 'firebase/functions';
@@ -508,14 +508,8 @@ async function mountPaymentForm() {
                 const destination = typeof destAddr === 'string' ? destAddr : destAddr?.country || '';
                 
                 if (origin && destination) {
-                    import('./compliance-checklist').then(({ showInlineComplianceSummary }) => {
-                        showInlineComplianceSummary(
-                            'payment-compliance-summary',
-                            origin,
-                            destination,
-                            'Shipment cargo'
-                        );
-                    });
+                    // Compliance summary feature temporarily disabled
+                    console.log('[PAYMENT] Compliance check for', origin, '→', destination);
                 }
             }
             
@@ -562,72 +556,36 @@ async function mountPaymentForm() {
         
         console.log('[Payment] Container element confirmed:', cardElementContainer ? 'EXISTS' : 'MISSING');
 
-        // NOW: Create a Payment Intent on the server via Firebase Function V2 HTTP endpoint
+        // NOW: Create a Payment Intent on the server via Firebase Callable Function
         let clientSecret: string;
         
         try {
-            // Call the V2 HTTP function with fetch
-            const FUNCTION_URL = 'https://us-central1-vcanship-onestop-logistics.cloudfunctions.net/createPaymentIntent';
-            
             const requestPayload = {
                 amount: Math.round(totalAmount * 100), // Stripe expects amount in cents
                 currency: State.currentCurrency.code.toLowerCase(),
                 description: `Vcanship Shipment ${shipmentId}`
             };
             
-            console.log('[Payment] Connecting to Firebase createPaymentIntent...');
-            console.log('[Payment] Request URL:', FUNCTION_URL);
+            console.log('[Payment] Calling Firebase createPaymentIntentV2...');
             console.log('[Payment] Request payload:', requestPayload);
             
-            const response = await fetch(FUNCTION_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json'
-                },
-                body: JSON.stringify(requestPayload)
-            });
-
-            console.log('[Payment] Response received:', {
-                status: response.status,
-                statusText: response.statusText,
-                ok: response.ok,
-                headers: Object.fromEntries(response.headers.entries())
-            });
-
-            // Check if response is OK before trying to parse JSON
-            if (!response.ok) {
-                let errorData: any = {};
-                try {
-                    errorData = await response.json();
-                } catch (e) {
-                    // If response is not JSON, use status text
-                    errorData = { message: response.statusText };
-                }
-                
-                const errorMessage = errorData.message || `HTTP ${response.status}: ${response.statusText}`;
-                console.error('[Payment] Failed to create payment intent:', errorMessage, errorData);
-                showToast(`Payment error: ${errorMessage}`, 'error');
-                toggleLoading(false);
-                return;
+            // Use Firebase callable function (bypasses CORS/IAM issues)
+            const currentFunctions = functions || getFunctions();
+            if (!currentFunctions) {
+                throw new Error('Firebase functions unavailable');
             }
+            
+            const createPaymentIntentV2 = currentFunctions.httpsCallable('createPaymentIntentV2');
+            const result = await createPaymentIntentV2(requestPayload);
 
-            let data: any;
-            try {
-                data = await response.json();
-            } catch (e) {
-                console.error('[Payment] Failed to parse response JSON:', e);
-                showToast('Payment error: Invalid response from server', 'error');
-                toggleLoading(false);
-                return;
-            }
+            console.log('[Payment] Response received:', result);
 
-            if (!data?.clientSecret) {
-                console.error('[Payment] Missing clientSecret in response:', data);
+            if (!result?.data?.clientSecret) {
+                console.error('[Payment] Missing clientSecret in response:', result);
                 throw new Error('Payment service did not return a valid client secret.');
             }
 
-            clientSecret = data.clientSecret;
+            clientSecret = result.data.clientSecret;
             setState({ paymentClientSecret: clientSecret });
             console.log('[Payment] ✅ Payment Intent created successfully');
             console.log('[Payment] Client secret received:', clientSecret.substring(0, 20) + '...');

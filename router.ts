@@ -68,19 +68,14 @@ function getStaticPageRenderer(page: string): (() => void) | null {
         case 'address-autocomplete':
             return async () => {
                 try {
-                    const { renderAddressAutocompletePage, initializeAddressAutocomplete } = await import('./address-autocomplete');
-                    const page = document.getElementById('page-address-autocomplete');
-                    if (page) {
-                        page.innerHTML = renderAddressAutocompletePage();
-                        await initializeAddressAutocomplete();
-                        switchPage('address-autocomplete');
-                    } else {
-                        console.error('Address autocomplete page element not found');
-                        showToast('Address page not available', 'error');
-                    }
+                    // Feature temporarily disabled - redirect to dashboard
+                    console.warn('Address autocomplete page not yet implemented');
+                    showToast('Feature coming soon', 'info');
+                    navigateTo('dashboard');
                 } catch (error) {
                     console.error('Failed to load address autocomplete page:', error);
                     showToast('Failed to load address page', 'error');
+                    navigateTo('dashboard');
                 }
             };
         case 'subscription': 

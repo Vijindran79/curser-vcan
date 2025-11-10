@@ -14,8 +14,16 @@ import { functions, getFunctions } from './firebase';
  * @returns {boolean} - True if the lookup can proceed, false otherwise.
  */
 export function checkAndDecrementLookup(): boolean {
+    console.log('[API DIAGNOSTIC] checkAndDecrementLookup called');
+    console.log('[API DIAGNOSTIC] Current state:', {
+        subscriptionTier: State.subscriptionTier,
+        isLoggedIn: State.isLoggedIn,
+        aiLookupsRemaining: State.aiLookupsRemaining
+    });
+    
     // 🚀 DEMO MODE: Unlimited lookups for business meeting tomorrow
     // TODO: Re-enable limits after demo by uncommenting lines below
+    console.log('[API DIAGNOSTIC] DEMO MODE: Returning true (unlimited lookups)');
     return true;
     
     /* COMMENTED OUT FOR DEMO - RE-ENABLE AFTER MEETING

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Payment Intent V2 Test</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 800px; margin: 40px auto; background:#f6f8fa; }
+    .card { background:#fff; border-radius:10px; padding:24px; box-shadow: 0 2px 10px rgba(0,0,0,0.08); }
+    h1 { margin: 0 0 10px; }
+    .row { margin: 10px 0; }
+    .btn { background:#0969da; color:#fff; border:0; padding:10px 16px; border-radius:6px; cursor:pointer; }
+    .btn:disabled { background:#9aa6b2; cursor:not-allowed; }
+    .status { margin-top:12px; padding:10px; border-radius:6px; font-weight:bold; }
+    .status.ok { background:#dafbe1; color:#1a7f37; }
+    .status.warn { background:#fff8c5; color:#9a6700; }
+    .status.err { background:#ffebe9; color:#d1242f; }
+    .logs { background:#0d1117; color:#7ee787; font-family:Consolas,Monaco,monospace; padding:12px; border-radius:8px; margin-top:12px; height:260px; overflow:auto; font-size:12px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>🔒 Payment Intent V2 Test</h1>
+    <div class="row">Amount (minor units): <input id="amt" type="number" value="5250" /></div>
+    <div class="row">Currency: <input id="cur" type="text" value="gbp" /></div>
+    <div class="row">Description: <input id="desc" type="text" value="Vcanship Test Shipment" size="40"/></div>
+    <div class="row">
+      <button id="run" class="btn" onclick="run()">▶ Create Payment Intent</button>
+    </div>
+    <div id="status"></div>
+    <div class="logs" id="logs"></div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+    import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js';
+    import { initializeAppCheck, ReCaptchaV3Provider } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js';
+
+    const cfg = {
+      apiKey: "AIzaSyDJEkrfcuKWQC0lqTY8QqRTt5BKhYLMg4o",
+      authDomain: "vcanship-onestop-logistics.firebaseapp.com",
+      projectId: "vcanship-onestop-logistics",
+      storageBucket: "vcanship-onestop-logistics.firebasestorage.app",
+      messagingSenderId: "457082568655",
+      appId: "1:457082568655:web:0e35a1e5e2c57e35d9cf3f",
+      measurementId: "G-X1G8R1JQNJ"
+    };
+
+    const app = initializeApp(cfg);
+    const functions = getFunctions(app);
+
+    const siteKey = '6Lf9wKUqAAAAALz0OuG0c-Q7BqyBe7JRVqA0r0PR';
+    try {
+      initializeAppCheck(app, { provider: new ReCaptchaV3Provider(siteKey), isTokenAutoRefreshEnabled: true });
+      log('✅ App Check initialized');
+    } catch (e) {
+      log('❌ App Check init failed: ' + e.message, 'err');
+    }
+
+    function log(msg, level='ok') {
+      const el = document.getElementById('logs');
+      const t = new Date().toLocaleTimeString();
+      const line = document.createElement('div');
+      line.textContent = `[${t}] ${msg}`;
+      el.appendChild(line);
+      el.scrollTop = el.scrollHeight;
+      console[level === 'err' ? 'error' : level === 'warn' ? 'warn' : 'log'](msg);
+    }
+    function setStatus(msg, cls='ok') {
+      const el = document.getElementById('status');
+      el.className = 'status ' + (cls === 'ok' ? 'ok' : cls === 'warn' ? 'warn' : 'err');
+      el.textContent = msg;
+    }
+
+    window.run = async function() {
+      const btn = document.getElementById('run');
+      btn.disabled = true;
+      setStatus('Working...', 'warn');
+      log('🚀 Invoking createPaymentIntentV2');
+
+      try {
+        const amount = parseInt(document.getElementById('amt').value, 10);
+        const currency = document.getElementById('cur').value.trim();
+        const description = document.getElementById('desc').value.trim();
+
+        const callable = httpsCallable(functions, 'createPaymentIntentV2');
+        const res = await callable({ amount, currency, description });
+        log('✅ Success: ' + JSON.stringify(res.data));
+        setStatus('Success. Client secret: ' + (res.data?.clientSecret || 'N/A'), 'ok');
+      } catch (err) {
+        log('❌ ERROR: ' + (err?.message || err?.toString()), 'err');
+        log('Code: ' + (err?.code || 'n/a'), 'err');
+        log('Details: ' + JSON.stringify(err?.details || {}), 'err');
+        setStatus('Failed: ' + (err?.message || 'Unknown error'), 'err');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    log('Page ready');
+  </script>
+</body>
+</html>

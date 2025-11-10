@@ -11,8 +11,10 @@ import { State } from './state';
 import { showToast, toggleLoading } from './ui';
 
 // Initialize Gemini AI
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || 'REPLACE_WITH_NEW_GEMINI_KEY';
-const genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY || '';
+const genAI = GEMINI_API_KEY && GEMINI_API_KEY !== 'REPLACE_WITH_NEW_GEMINI_KEY'
+    ? new GoogleGenerativeAI(GEMINI_API_KEY)
+    : null;
 
 export interface HSCodeResult {
     code: string;
@@ -50,6 +52,11 @@ export async function generateHSCode(
 
     try {
         toggleLoading(true, 'AI analyzing cargo description...');
+
+        if (!genAI) {
+            showToast('AI service not configured. Please try manual HS code entry.', 'info');
+            return null;
+        }
 
         const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-8b' });
 
@@ -117,7 +124,7 @@ IMPORTANT RULES:
         return hsCodeData;
 
     } catch (error) {
-        console.error('HS Code generation error:', error);
+    console.error('HS Code generation error:', error);
         toggleLoading(false);
         showToast('Failed to generate HS code. Please try again.', 'error');
         return null;

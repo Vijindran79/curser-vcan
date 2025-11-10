@@ -898,9 +898,8 @@ async function buildShippoResponse(requestData: ShippoCallableData, userEmail: s
   };
 }
 
-// TODO(DEPRECATE): getShippoQuotes (legacy v1 callable without enforceAppCheck). Switch clients to getShippoQuotesV2 and remove by Q1 2026.
 export const getShippoQuotes = functions.https.onCall(async (data, context: any) => {
-  console.log('[Shippo] [LEGACY] Callable getShippoQuotes invoked');
+  console.log('[Shippo] Callable getShippoQuotes invoked');
 
   // Temporarily skip App Check until configured in Firebase Console
   // TODO: Re-enable after registering reCAPTCHA v3 key in Firebase Console > App Check
@@ -1605,70 +1604,3 @@ export const getCombinedRatesHTTP = functions.https.onRequest(async (req, res) =
   }
 });
 
-
-// Add this at the end of index.ts
-
-// ==================== V2 CALLABLE WITH APP CHECK ====================
-import { onCall as onCallV2, HttpsError, CallableRequest } from 'firebase-functions/v2/https';
-
-// V2 Shippo Callable with App Check enforcement
-export const getShippoQuotesV2 = onCallV2(
-  { 
-    enforceAppCheck: true,  // Enables App Check enforcement at platform level
-    cors: true
-  },
-  async (request: CallableRequest) => {
-    console.log('[Shippo V2] Callable invoked');
-    console.log('[Shippo V2] App Check verified:', !!request.app);
-    
-    try {
-      const raw = (request.data || {}) as any;
-      // Normalize alternate payload shape (addressFrom/addressTo/parcel) -> ShippoCallableData
-      let normalized: ShippoCallableData = raw as ShippoCallableData;
-      if (raw.addressFrom && raw.addressTo && raw.parcel && !raw.origin && !raw.destination) {
-        console.log('[Shippo V2] Normalizing legacy test payload (addressFrom/addressTo/parcel)');
-        const distanceUnit = raw.parcel.distance_unit || raw.parcel.distanceUnit || 'cm';
-        const massUnit = raw.parcel.mass_unit || raw.parcel.massUnit || 'kg';
-        const lengthRaw = parseFloat(raw.parcel.length) || 10;
-        const widthRaw = parseFloat(raw.parcel.width) || 10;
-        const heightRaw = parseFloat(raw.parcel.height) || 10;
-        const weightRaw = parseFloat(raw.parcel.weight) || 1;
-        // Convert units if provided in imperial
-        const toCm = (v: number) => distanceUnit === 'in' ? +(v * 2.54).toFixed(2) : v;
-        const toKg = (v: number) => massUnit === 'lb' ? +(v * 0.453592).toFixed(3) : v;
-        normalized = {
-          origin: raw.addressFrom,
-          destination: raw.addressTo,
-          weight_kg: toKg(weightRaw),
-          dimensions: {
-            length: toCm(lengthRaw),
-            width: toCm(widthRaw),
-            height: toCm(heightRaw)
-          },
-          userEmail: raw.userEmail || raw.email || request.auth?.token?.email || 'guest'
-        };
-        console.log('[Shippo V2] Normalized payload:', JSON.stringify(normalized));
-      }
-
-      const requestData = normalized;
-      const userEmail = request.auth?.token?.email || requestData.userEmail || 'guest';
-      const result = await buildShippoResponse(requestData, userEmail);
-      
-      console.log('[Shippo V2] Callable returning success with', result.quotes?.length || 0, 'quotes');
-      return result;
-    } catch (error: any) {
-      console.error('[Shippo V2] Callable error:', error);
-      console.error('[Shippo V2] Error stack:', error?.stack);
-      
-      if (error instanceof HttpsError || (error instanceof (functions as any).https?.HttpsError)) {
-        throw error;
-      }
-      
-      const errorMessage = error?.message || 'Failed to fetch Shippo quotes';
-      console.error('[Shippo V2] Throwing HttpsError with message:', errorMessage);
-      throw new HttpsError('unavailable', errorMessage);
-    }
-  }
-);
-// Re-export Stripe functions
-export * from './stripe';

@@ -1,11 +1,10 @@
 // Email Service using AWS SES with Nodemailer
 import * as nodemailer from 'nodemailer';
-import * as functions from 'firebase-functions';
 
 // Load environment variables from .env file (for local development)
-// In production, use Firebase Functions config
-const AWS_SES_USER = process.env.AWS_SES_USER || functions.config().aws?.ses_user || 'AKIAWXN6QSYXBLFGWVPS';
-const AWS_SES_PASS = process.env.AWS_SES_PASS || functions.config().aws?.ses_pass || 'BIvqBwjo+pxIC2P4CcaF14vOuy0f28Fh4rAcDikjser9';
+// In production, use environment variables set via Firebase CLI
+const AWS_SES_USER = process.env.AWS_SES_USER || 'AKIAWXN6QSYXBLFGWVPS';
+const AWS_SES_PASS = process.env.AWS_SES_PASS || 'BIvqBwjo+pxIC2P4CcaF14vOuy0f28Fh4rAcDikjser9';
 
 // AWS SES SMTP Configuration
 const SES_CONFIG = {

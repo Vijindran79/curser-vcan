@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Shippo Live Rates Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #0066cc;
+        }
+        button {
+            background: #0066cc;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #0052a3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .status.loading {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .rates-list {
+            margin-top: 15px;
+        }
+        .rate-item {
+            background: #f8f9fa;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 5px;
+            border-left: 4px solid #0066cc;
+        }
+        .rate-item strong {
+            color: #0066cc;
+        }
+        .log-output {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+            margin-top: 15px;
+        }
+        .log-line {
+            margin: 2px 0;
+        }
+        .log-line.error {
+            color: #ff6b6b;
+        }
+        .log-line.success {
+            color: #51cf66;
+        }
+        .log-line.info {
+            color: #74c0fc;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Shippo Live Rates Test</h1>
+        
+        <div class="test-section">
+            <h3>Test Configuration</h3>
+            <p><strong>From:</strong> 123 Main St, New York, NY 10001, US</p>
+            <p><strong>To:</strong> 456 Oak Ave, Los Angeles, CA 90001, US</p>
+            <p><strong>Parcel:</strong> 10 x 10 x 10 inches, 5 lbs</p>
+        </div>
+
+        <div class="test-section">
+            <h3>Test Controls</h3>
+            <button id="testBtn" onclick="runTest()">▶ Run Live Rate Test</button>
+            <button onclick="clearLogs()">🗑 Clear Logs</button>
+            <div id="status"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Test Results</h3>
+            <div id="results"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>Console Logs</h3>
+            <div id="logs" class="log-output"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Import Firebase SDK from CDN
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+        import { getFunctions, httpsCallable } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-functions.js';
+        import { initializeAppCheck, ReCaptchaV3Provider } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app-check.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDJEkrfcuKWQC0lqTY8QqRTt5BKhYLMg4o",
+            authDomain: "vcanship-onestop-logistics.firebaseapp.com",
+            projectId: "vcanship-onestop-logistics",
+            storageBucket: "vcanship-onestop-logistics.firebasestorage.app",
+            messagingSenderId: "457082568655",
+            appId: "1:457082568655:web:0e35a1e5e2c57e35d9cf3f",
+            measurementId: "G-X1G8R1JQNJ"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const functions = getFunctions(app);
+        
+        // Initialize App Check with reCAPTCHA v3
+        const RECAPTCHA_V3_SITE_KEY = '6Lf9wKUqAAAAALz0OuG0c-Q7BqyBe7JRVqA0r0PR';
+        
+        let appCheckInitialized = false;
+        try {
+            const appCheck = initializeAppCheck(app, {
+                provider: new ReCaptchaV3Provider(RECAPTCHA_V3_SITE_KEY),
+                isTokenAutoRefreshEnabled: true
+            });
+            appCheckInitialized = true;
+            addLog('✅ App Check initialized with reCAPTCHA v3', 'success');
+        } catch (error) {
+            addLog('❌ App Check initialization failed: ' + error.message, 'error');
+        }
+
+        // Log capture
+        function addLog(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            const logLine = document.createElement('div');
+            logLine.className = `log-line ${type}`;
+            logLine.textContent = `[${timestamp}] ${message}`;
+            logsDiv.appendChild(logLine);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+            console.log(message);
+        }
+
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('status').innerHTML = '';
+        }
+
+        function setStatus(message, type) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        function displayRates(rates) {
+            const resultsDiv = document.getElementById('results');
+            
+            if (!rates || rates.length === 0) {
+                resultsDiv.innerHTML = '<p>No rates returned</p>';
+                return;
+            }
+
+            let html = `<div class="rates-list"><h4>Found ${rates.length} Shipping Options:</h4>`;
+            
+            rates.forEach((rate, index) => {
+                const carrier = rate.provider || 'Unknown';
+                const service = rate.servicelevel?.name || rate.servicelevel_name || 'Standard';
+                const amount = rate.amount || rate.amount_local || '0.00';
+                const currency = rate.currency || rate.currency_local || 'USD';
+                const duration = rate.estimated_days || rate.duration_terms || 'N/A';
+                
+                html += `
+                    <div class="rate-item">
+                        <strong>${index + 1}. ${carrier} - ${service}</strong><br>
+                        💰 Cost: ${currency} ${amount}<br>
+                        ⏱ Delivery: ${duration} days
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            resultsDiv.innerHTML = html;
+        }
+
+        // Make test function global
+        window.runTest = async function() {
+            const btn = document.getElementById('testBtn');
+            btn.disabled = true;
+            clearLogs();
+            
+            addLog('🚀 Starting Shippo Live Rates Test...', 'info');
+            setStatus('🔄 Testing in progress...', 'loading');
+
+            if (!appCheckInitialized) {
+                addLog('⚠ Warning: App Check not initialized', 'error');
+            }
+
+            try {
+                addLog('📦 Preparing test payload...', 'info');
+                
+                const payload = {
+                    addressFrom: {
+                        street1: "123 Main St",
+                        city: "New York",
+                        state: "NY",
+                        zip: "10001",
+                        country: "US"
+                    },
+                    addressTo: {
+                        street1: "456 Oak Ave",
+                        city: "Los Angeles",
+                        state: "CA",
+                        zip: "90001",
+                        country: "US"
+                    },
+                    parcel: {
+                        length: "10",
+                        width: "10",
+                        height: "10",
+                        distance_unit: "in",
+                        weight: "5",
+                        mass_unit: "lb"
+                    }
+                };
+
+                addLog('📡 Calling getShippoQuotesV2 function...', 'info');
+                
+                const getShippoQuotesV2 = httpsCallable(functions, 'getShippoQuotesV2');
+                
+                const startTime = Date.now();
+                const result = await getShippoQuotesV2(payload);
+                const duration = Date.now() - startTime;
+                
+                addLog(`✅ Function responded in ${duration}ms`, 'success');
+                addLog('📊 Response data: ' + JSON.stringify(result.data).substring(0, 200) + '...', 'info');
+
+                if (result.data && result.data.success) {
+                    const rates = result.data.rates || [];
+                    addLog(`✅ SUCCESS! Received ${rates.length} live rates`, 'success');
+                    setStatus(`✅ Test Successful! Received ${rates.length} live shipping rates`, 'success');
+                    displayRates(rates);
+                    
+                    // Log sample rates
+                    rates.slice(0, 3).forEach((rate, i) => {
+                        const carrier = rate.provider || 'Unknown';
+                        const service = rate.servicelevel?.name || rate.servicelevel_name || 'Standard';
+                        const amount = rate.amount || '0.00';
+                        addLog(`  ${i + 1}. ${carrier} ${service}: $${amount}`, 'success');
+                    });
+                } else {
+                    addLog('⚠ Function returned but no rates found', 'error');
+                    setStatus('⚠ No rates returned', 'error');
+                    displayRates([]);
+                }
+
+            } catch (error) {
+                addLog('❌ ERROR: ' + error.message, 'error');
+                addLog('Error code: ' + error.code, 'error');
+                addLog('Error details: ' + JSON.stringify(error.details || {}), 'error');
+                setStatus('❌ Test Failed: ' + error.message, 'error');
+                
+                if (error.code === 'functions/unauthenticated') {
+                    addLog('🔒 This is an App Check authentication error', 'error');
+                    addLog('💡 The function requires a valid App Check token', 'info');
+                }
+            } finally {
+                btn.disabled = false;
+            }
+        };
+
+        window.clearLogs = clearLogs;
+
+        // Auto-run test on load
+        addLog('🌐 Test page loaded', 'info');
+        addLog('🔧 Firebase initialized', 'success');
+    </script>
+</body>
+</html>

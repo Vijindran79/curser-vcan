@@ -1,9 +1,7 @@
 // NVIDIA API Integration
 // Uses NVIDIA API for AI-powered features where appropriate
 
-import * as functions from 'firebase-functions';
-
-const NVIDIA_API_KEY = functions.config().nvidia?.api_key || process.env.NVIDIA_API_KEY || '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';
+const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY || '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';
 const NVIDIA_BASE_URL = 'https://api.nvidia.com/v1';
 
 /**

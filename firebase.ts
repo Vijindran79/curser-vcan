@@ -157,6 +157,38 @@ if (typeof window !== 'undefined') {
     }
 }
 
+// Initialize App Check with reCAPTCHA v3 (enhanced logging)
+let appCheck: any = null;
+if (typeof window !== 'undefined') {
+    waitForFirebase((fb) => {
+        const startTs = Date.now();
+        if (!fb) {
+            console.warn('[APP CHECK] Firebase not ready during App Check init attempt');
+            return;
+        }
+        if (!fb.appCheck) {
+            console.warn('[APP CHECK] fb.appCheck API not present. Check that firebase-app-check-compat script loaded.');
+            return;
+        }
+        try {
+            const RECAPTCHA_V3_SITE_KEY = '6Lf9wKUqAAAAALz0OuG0c-Q7BqyBe7JRVqA0r0PR';
+            appCheck = fb.appCheck();
+            fb.appCheck().activate(RECAPTCHA_V3_SITE_KEY, true);
+            console.log('[APP CHECK] ✅ Activated reCAPTCHA v3 (auto-refresh ON) in', (Date.now() - startTs), 'ms');
+            // Probe a token for debug (non-fatal if fails)
+            if (appCheck?.getToken) {
+                appCheck.getToken().then((tokenInfo: any) => {
+                    console.log('[APP CHECK] Initial token acquired. Expires:', tokenInfo?.expireTimeMillis);
+                }).catch((tokenErr: any) => {
+                    console.warn('[APP CHECK] Token acquisition failed (will retry automatically):', tokenErr?.message || tokenErr);
+                });
+            }
+        } catch (err) {
+            console.error('[APP CHECK] ❌ Initialization error:', err);
+        }
+    }, 20, 300); // up to 6s to allow slower script load in edge cases
+}
+
 // Helper function to get auth instance (may retry if not ready)
 // This is useful when Firebase loads after module import
 export function getAuth() {
