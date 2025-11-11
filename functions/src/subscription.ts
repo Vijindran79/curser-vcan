@@ -10,11 +10,6 @@ import Stripe from 'stripe';
 
 const db = admin.firestore();
 
-<<<<<<< Updated upstream
-// Initialize Stripe from environment variables (.env file - secure backend storage)
-const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY || 'sk_test_placeholder';
-const stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' });
-=======
 // LAZY INITIALIZATION for Stripe to prevent deployment errors
 let stripe: Stripe | null = null;
 
@@ -28,7 +23,6 @@ function getStripe(): Stripe {
     }
     return stripe;
 }
->>>>>>> Stashed changes
 
 /**
  * Create Stripe Checkout Session for subscription
@@ -37,13 +31,8 @@ function getStripe(): Stripe {
  */
 export const createSubscriptionCheckout = onCall<{ priceId: string; plan: string; userEmail?: string }>(
     {
-<<<<<<< Updated upstream
-        memory: '256MiB'
-        // No invoker setting = Firebase automatically enforces authentication
-=======
         memory: '256MiB',
         cors: true
->>>>>>> Stashed changes
     },
     async (req: CallableRequest<{ priceId: string; plan: string; userEmail?: string }>) => {
         if (!req.auth) {
@@ -306,13 +295,8 @@ async function handlePaymentFailed(invoice: Stripe.Invoice) {
  */
 export const cancelSubscription = onCall(
     {
-<<<<<<< Updated upstream
-        memory: '256MiB'
-        // No invoker setting = Firebase automatically enforces authentication
-=======
         memory: '256MiB',
         cors: true
->>>>>>> Stashed changes
     },
     async (req: CallableRequest<void>) => {
         if (!req.auth) {

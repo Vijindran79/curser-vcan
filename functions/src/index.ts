@@ -1,6 +1,7 @@
 import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
 import axios from 'axios';
+import { onRequest } from 'firebase-functions/v2/https';
 
 admin.initializeApp();
 
@@ -862,251 +863,23 @@ export const getShippoQuotes = functions.https.onCall(async (data, context: any)
       subscription_required: false,
       message: `Shippo API unavailable: ${error.message}. Showing estimated rates.`
     };
-<<<<<<< Updated upstream
   }
-=======
-    currency: string;
-}
-
-interface SeaRatesQuote {
-    carrier: string;
-    carrier_name: string;
-    total_rate: number;
-    price: number;
-    ocean_freight?: number;
-    base_rate?: number;
-    baf?: number;
-    fuel_surcharge?: number;
-    customs?: number;
-    duties?: number;
-    service_fee?: number;
-    transit_time?: string;
-    estimated_days?: number;
-}
-
-/**
- * Fetches real sea freight rates from Sea Rates API
- * Function name: get-sea-rates
- */
-export const getSeaRates = functions.https.onCall(async (data: SeaRatesQuoteRequest, context) => {
-    try {
-        // Get Sea Rates API credentials from environment variables ONLY
-        const seaRatesApiKey = process.env.SEARATES_API_KEY || process.env.SEA_RATES_API_KEY;
-        const seaRatesApiUrl = process.env.SEA_RATES_API_URL || 'https://api.searates.com/v1';
-        
-        // Check subscription status for Sea Rates API (limited to 50 calls/month)
-        const userEmail = context.auth?.token?.email || 'anonymous';
-        const isSubscribed = await checkUserSubscription(userEmail);
-        
-        if (!seaRatesApiKey) {
-            throw new functions.https.HttpsError('failed-precondition', 'Sea Rates API key not configured.');
-        }
-        
-        const { service_type, origin, destination, containers, cargo, currency } = data;
-        
-        // Check if we can use cached data (refresh every 4 hours to maximize 50 calls/month)
-        const cacheKey = `sea_rates_${service_type}_${origin}_${destination}_${JSON.stringify(containers || [])}_${currency}`;
-        const cachedData = await getCachedSeaRates(cacheKey);
-        
-        if (cachedData && !isExpired(cachedData.timestamp, 4 * 60 * 60 * 1000)) { // 4 hours in milliseconds
-            console.log('Returning cached Sea Rates data');
-            return {
-                success: true,
-                quotes: cachedData.quotes,
-                cached: true,
-                subscription_required: !isSubscribed
-            };
-        }
-        
-        // Check API call limit for non-subscribers (50 calls/month)
-        if (!isSubscribed) {
-            const monthlyCalls = await getMonthlySeaRatesCalls();
-            if (monthlyCalls >= 50) {
-                // Return cached data even if expired, or use AI estimates
-                if (cachedData) {
-                    console.log('API limit reached, returning expired cache');
-                    return {
-                        success: true,
-                        quotes: cachedData.quotes,
-                        cached: true,
-                        expired: true,
-                        subscription_required: true,
-                        message: 'Free tier limit reached. Upgrade to Pro for unlimited real-time rates.'
-                    };
-                }
-                throw new functions.https.HttpsError('resource-exhausted', 'Monthly API limit reached. Please upgrade to Pro subscription for unlimited access.');
-            }
-            await incrementMonthlySeaRatesCalls();
-        }
-        
-        // Call Sea Rates API
-        // Note: Sea Rates API format may need adjustment based on actual API documentation
-        // This is a placeholder implementation - adjust endpoint and request format as needed
-        const requestBody: any = {
-            service_type, // 'fcl', 'lcl', 'train', 'air', 'bulk'
-            origin_port: origin,
-            destination_port: destination,
-            currency: currency.toUpperCase()
-        };
-        
-        if (containers && containers.length > 0) {
-            requestBody.containers = containers.map(c => ({
-                container_type: c.type,
-                quantity: c.quantity
-            }));
-        }
-        
-        if (cargo) {
-            requestBody.cargo = {
-                description: cargo.description,
-                weight_kg: cargo.weight,
-                volume_cbm: cargo.volume,
-                hs_code: cargo.hsCode
-            };
-        }
-        
-        const response = await fetch(`${seaRatesApiUrl}/quotes`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${seaRatesApiKey}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application/json'
-            },
-            body: JSON.stringify(requestBody)
-        });
-        
-        if (!response.ok) {
-            let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-            try {
-                const errorData = await response.json();
-                console.error('Sea Rates API error response:', errorData);
-                errorMessage = errorData.message || errorData.error || errorData.detail || errorMessage;
-                // Include full error data in console for debugging
-                console.error('Full error data:', JSON.stringify(errorData, null, 2));
-            } catch (e) {
-                // If response isn't JSON, get text
-                const errorText = await response.text().catch(() => response.statusText);
-                console.error('Sea Rates API non-JSON error:', errorText);
-                errorMessage = errorText || errorMessage;
-            }
-            throw new functions.https.HttpsError('internal', `Sea Rates API error: ${errorMessage}`);
-        }
-        
-        let apiData: any;
-        try {
-            apiData = await response.json();
-            console.log('Sea Rates API response received:', {
-                hasQuotes: !!(apiData.quotes || apiData.data?.quotes),
-                quoteCount: (apiData.quotes || apiData.data?.quotes || []).length,
-                responseKeys: Object.keys(apiData)
-            });
-        } catch (e: any) {
-            console.error('Failed to parse Sea Rates API response as JSON:', e);
-            const responseText = await response.text();
-            console.error('Response text:', responseText);
-            throw new functions.https.HttpsError('internal', `Sea Rates API returned invalid JSON: ${e.message}`);
-        }
-        
-        // Transform Sea Rates API response to our Quote format
-        // Adjust this mapping based on your Sea Rates API response structure
-        const rawQuotes = apiData.quotes || apiData.data?.quotes || apiData.results || [];
-        
-        if (!Array.isArray(rawQuotes) || rawQuotes.length === 0) {
-            console.warn('Sea Rates API returned no quotes. Response:', JSON.stringify(apiData, null, 2));
-            // Return empty array instead of error - let frontend fall back to AI
-            return {
-                success: true,
-                quotes: [],
-                message: 'No quotes available from Sea Rates API. Using AI estimates.',
-                fallback_required: true
-            };
-        }
-        
-        const quotes: SeaRatesQuote[] = rawQuotes.map((quote: any) => ({
-            carrier: quote.carrier_name || quote.carrier || 'Ocean Carrier',
-            carrier_name: quote.carrier_name || quote.carrier || 'Ocean Carrier',
-            total_rate: parseFloat(quote.total_rate || quote.price || quote.freight || 0),
-            price: parseFloat(quote.total_rate || quote.price || quote.freight || 0),
-            ocean_freight: parseFloat(quote.ocean_freight || quote.base_freight || 0),
-            base_rate: parseFloat(quote.base_rate || quote.ocean_freight || 0),
-            baf: parseFloat(quote.baf || quote.fuel_surcharge || 0),
-            fuel_surcharge: parseFloat(quote.fuel_surcharge || quote.baf || 0),
-            customs: parseFloat(quote.customs || quote.duties || 0),
-            duties: parseFloat(quote.duties || quote.customs || 0),
-            service_fee: parseFloat(quote.service_fee || 0),
-            transit_time: quote.transit_time || quote.estimated_transit || `${quote.estimated_days || 20} days`,
-            estimated_days: quote.estimated_days || parseInt(quote.transit_time?.match(/\d+/)?.[0] || '20')
-        }));
-        
-        // Cache the results for 4 hours to maximize 50 API calls/month (12.5 days per call)
-        try {
-            await getDb().collection('sea_rates_cache').doc(cacheKey).set({
-                quotes: quotes,
-                timestamp: admin.firestore.FieldValue.serverTimestamp(),
-                expires_at: new Date(Date.now() + 4 * 60 * 60 * 1000), // 4 hours from now
-                service_type: service_type,
-                origin: origin,
-                destination: destination
-            });
-            console.log('Successfully cached Sea Rates quotes');
-        } catch (cacheError) {
-            console.error('Failed to cache Sea Rates quotes (non-fatal):', cacheError);
-            // Don't throw - caching failure shouldn't fail the request
-        }
-        
-        return {
-            success: true,
-            quotes: quotes,
-            cached: false,
-            subscription_required: !isSubscribed
-        };
-        
-    } catch (error: any) {
-        console.error('Sea Rates API error:', error);
-        console.error('Error stack:', error.stack);
-        console.error('Error details:', {
-            code: error.code,
-            message: error.message,
-            name: error.name
-        });
-        
-        if (error instanceof functions.https.HttpsError) {
-            throw error;
-        }
-        
-        // Provide more detailed error message
-        const errorMessage = error.message || 'Unknown error occurred';
-        const errorDetails = error.code ? `Error code: ${error.code}. ` : '';
-        throw new functions.https.HttpsError('internal', `Failed to fetch sea rates: ${errorDetails}${errorMessage}`);
-    }
 });
 
 // ==========================================
 // EMAIL INQUIRY SERVICE
 // ==========================================
 
-interface QuoteInquiryRequest {
-    service_type: string;
-    quotes: any[];
-    customer: {
-        name: string;
-        email: string;
-        phone?: string;
-    };
-    shipment: any;
-    selected_quote?: any;
-}
-
 /**
  * Sends quote inquiry email and saves to Firestore
  * Function name: send-quote-inquiry
  */
-export const sendQuoteInquiry = functions.https.onCall(async (data: QuoteInquiryRequest, context) => {
+export const sendQuoteInquiry = functions.https.onCall(async (data: any, context: any) => {
     try {
         const { service_type, quotes, customer, shipment, selected_quote } = data;
         
         // Save to Firestore
-        await getDb().collection('quote_inquiries').add({
+        await admin.firestore().collection('quote_inquiries').add({
             service_type,
             quotes,
             customer,
@@ -1178,70 +951,7 @@ export const sendQuoteInquiry = functions.https.onCall(async (data: QuoteInquiry
 // ==========================================
 // HS CODE GENERATION SERVICE
 // ==========================================
-
-interface HSCodeRequest {
-    description: string;
-}
-
-/**
- * Generates HS Code suggestions using AI
- * Function name: get-hs-code
- */
-export const getHsCode = functions.https.onCall(async (data: HSCodeRequest, context) => {
-    try {
-        const { description } = data;
-        
-        if (!description || description.trim().length < 3) {
-            throw new functions.https.HttpsError('invalid-argument', 'Item description must be at least 3 characters');
-        }
-        
-        // Use Gemini API to generate HS code suggestions
-        // You can integrate with Gemini API here or use a simpler rule-based approach
-        // For now, return basic suggestions based on keywords
-        
-        const descriptionLower = description.toLowerCase();
-        const suggestions: { code: string; description: string }[] = [];
-        
-        // Basic keyword matching for common items
-        if (descriptionLower.includes('clothing') || descriptionLower.includes('garment') || descriptionLower.includes('apparel')) {
-            suggestions.push({ code: '6203.42', description: 'Men\'s or boys\' trousers' });
-            suggestions.push({ code: '6204.62', description: 'Women\'s or girls\' trousers' });
-            suggestions.push({ code: '6109.10', description: 'Cotton t-shirts' });
-        }
-        
-        if (descriptionLower.includes('electronic') || descriptionLower.includes('device') || descriptionLower.includes('phone')) {
-            suggestions.push({ code: '8517.12', description: 'Telephone sets' });
-            suggestions.push({ code: '8543.70', description: 'Electronic integrated circuits' });
-        }
-        
-        if (descriptionLower.includes('cosmetic') || descriptionLower.includes('makeup') || descriptionLower.includes('perfume')) {
-            suggestions.push({ code: '3303.00', description: 'Perfumes and toilet waters' });
-            suggestions.push({ code: '3304.30', description: 'Beauty or make-up preparations' });
-        }
-        
-        if (descriptionLower.includes('food') || descriptionLower.includes('beverage') || descriptionLower.includes('chocolate')) {
-            suggestions.push({ code: '1806.32', description: 'Chocolate and other food preparations' });
-            suggestions.push({ code: '2201.10', description: 'Waters, including natural or artificial mineral waters' });
-        }
-        
-        // If no specific matches, return general categories
-        if (suggestions.length === 0) {
-            suggestions.push({ code: '9999.99', description: 'General merchandise - please specify item type for accurate HS code' });
-        }
-        
-        return {
-            success: true,
-            suggestions: suggestions.slice(0, 5) // Return top 5 suggestions
-        };
-        
-    } catch (error: any) {
-        console.error('HS Code generation error:', error);
-        if (error instanceof functions.https.HttpsError) {
-            throw error;
-        }
-        throw new functions.https.HttpsError('internal', `Failed to generate HS code: ${error.message}`);
-    }
-});
+// (duplicate removed - keeping earlier implementation)
 
 // ==========================================
 // FIRESTORE TRIGGERS (Optional - for email notifications)
@@ -1267,10 +977,18 @@ export const getHsCode = functions.https.onCall(async (data: HSCodeRequest, cont
 //     });
 // });
 
-// Export subscription functions from subscription.ts
-// COMMENTED OUT: subscription.ts uses v2, causes deployment timeout when mixed with v1
-export { createSubscriptionCheckout, cancelSubscription, stripeWebhook } from './subscription';
+// Expose Stripe webhook endpoint
+export { stripeWebhook } from './subscription';
 
+export { sendDocumentEmail } from './emailService';
+export {
+  createSecureTrade,
+  secureTradeWebhook,
+  confirmWarehouseDelivery,
+  approveVerification,
+  confirmShipment,
+  releaseSellerPayment
+} from './secureTrade';
 // ==========================================
 // PAYMENT INTENT
 // ==========================================
@@ -1301,31 +1019,89 @@ function getStripe(): Stripe | null {
     return stripeInstance;
 }
 
-/**
- * Create a Stripe Payment Intent for one-time payments (shipment bookings)
- * Function name: createPaymentIntent - V2 with Express and CORS support
- */
-
-// Create Express app for createPaymentIntent
-const createPaymentIntentApp = express();
-
-// Configure CORS with explicit headers
-createPaymentIntentApp.use(cors({
-    origin: true, // Allow all origins
-    credentials: true,
-    methods: ['GET', 'POST', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-}));
-
-// Parse JSON request bodies
-createPaymentIntentApp.use(express.json());
-
-// Handle OPTIONS preflight requests
-createPaymentIntentApp.options('*', (_, res) => {
-    res.status(204).send();
->>>>>>> Stashed changes
+// HTTP (v2): createPaymentIntentV2 (accepts direct POST with JSON body, public invoker)
+export const createPaymentIntentV2 = onRequest({ region: 'us-central1', cors: true, invoker: 'public', secrets: ['STRIPE_SECRET_KEY'] }, async (req, res) => {
+  // CORS
+  res.set('Access-Control-Allow-Origin', '*');
+  res.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  if (req.method === 'OPTIONS') {
+    res.status(204).send('');
+    return;
+  }
+  if (req.method !== 'POST') {
+    res.status(405).json({ message: 'Method Not Allowed' });
+    return;
+  }
+  try {
+    console.log('[Payment Debug] STRIPE_SECRET_KEY exists?', !!process.env.STRIPE_SECRET_KEY);
+    console.log('[Payment Debug] Function invoked with data:', JSON.stringify(req.body || {}).substring(0, 200));
+    const amount = Number(req.body?.amount);
+    const currency = String(req.body?.currency || 'usd').toLowerCase();
+    const description = String(req.body?.description || 'Vcanship Payment');
+    if (!Number.isFinite(amount) || amount <= 0) {
+      res.status(400).json({ message: 'Invalid amount' });
+      return;
+    }
+    if (!/^[a-z]{3}$/.test(currency)) {
+      res.status(400).json({ message: 'Invalid currency' });
+      return;
+    }
+    const stripe = getStripe();
+    if (!stripe) {
+      res.status(500).json({ message: 'Stripe key is undefined' });
+      return;
+    }
+    const intent = await stripe.paymentIntents.create({
+      amount: Math.floor(amount),
+      currency,
+      description,
+      automatic_payment_methods: { enabled: true }
+    });
+    if (!intent.client_secret) {
+      throw new Error('Stripe did not return client_secret');
+    }
+    res.status(200).json({ clientSecret: intent.client_secret });
+  } catch (err: any) {
+    console.error('createPaymentIntentV2 error:', err?.message || err);
+    res.status(500).json({ message: err?.message || 'Failed to create payment intent' });
+  }
 });
 
+// Callable alternative (no auth required): createPaymentIntentV3
+export const createPaymentIntentV3 = functions.https.onCall(async (data: any) => {
+  try {
+    console.log('[Payment Debug] (callable) STRIPE_SECRET_KEY exists?', !!process.env.STRIPE_SECRET_KEY);
+    console.log('[Payment Debug] (callable) data:', JSON.stringify(data || {}).substring(0, 200));
+    const amount = Number(data?.amount);
+    const currency = String(data?.currency || 'usd').toLowerCase();
+    const description = String(data?.description || 'Vcanship Payment');
+    if (!Number.isFinite(amount) || amount <= 0) {
+      throw new functions.https.HttpsError('invalid-argument', 'Invalid amount');
+    }
+    if (!/^[a-z]{3}$/.test(currency)) {
+      throw new functions.https.HttpsError('invalid-argument', 'Invalid currency');
+    }
+    const stripe = getStripe();
+    if (!stripe) {
+      throw new functions.https.HttpsError('failed-precondition', 'Stripe key is undefined');
+    }
+    const intent = await stripe.paymentIntents.create({
+      amount: Math.floor(amount),
+      currency,
+      description,
+      automatic_payment_methods: { enabled: true }
+    });
+    if (!intent.client_secret) {
+      throw new Error('Stripe did not return client_secret');
+    }
+    return { clientSecret: intent.client_secret };
+  } catch (err: any) {
+    console.error('createPaymentIntentV3 error:', err?.message || err);
+    if (err instanceof functions.https.HttpsError) throw err;
+    throw new functions.https.HttpsError('internal', err?.message || 'Failed to create payment intent');
+  }
+});
 // Health check endpoint
 export const healthCheck = functions.https.onCall(async (data, context: any) => {
   return {
@@ -1335,9 +1111,5 @@ export const healthCheck = functions.https.onCall(async (data, context: any) => 
   };
 });
 
-// Import and export Stripe functions
-export { stripeWebhook, createSubscriptionCheckout, cancelSubscription } from './stripe';
-
-// Import and export subscription functions (v2)
-export { createSubscriptionCheckout as createSubscriptionCheckoutV2, cancelSubscription as cancelSubscriptionV2, stripeWebhook as stripeWebhookV2 } from './subscription';
+// (stripe exports removed to avoid duplicate identifiers; using subscription exports above)
 

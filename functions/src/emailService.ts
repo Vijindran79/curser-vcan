@@ -1,6 +1,7 @@
 // Email Service using AWS SES with Nodemailer
 import * as nodemailer from 'nodemailer';
 import * as functions from 'firebase-functions';
+import * as admin from 'firebase-admin';
 
 // LAZY INITIALIZATION for Nodemailer transporter
 let transporter: nodemailer.Transporter | null = null;
@@ -30,23 +31,8 @@ function getTransporter(): nodemailer.Transporter {
             }
         });
     }
-<<<<<<< Updated upstream
-};
-
-// Lazy-load transporter to avoid blocking module initialization
-let transporter: nodemailer.Transporter | null = null;
-function getTransporter() {
-    if (!transporter) {
-        transporter = nodemailer.createTransport(SES_CONFIG);
-    }
     return transporter;
 }
-
-
-=======
-    return transporter;
-}
->>>>>>> Stashed changes
 
 /**
  * Send Welcome Email
@@ -468,3 +454,35 @@ export async function sendPasswordResetEmail(
         return false;
     }
 }
+
+// Send a specific document by email (callable)
+export const sendDocumentEmail = functions.https.onCall(async (data: any, context: any) => {
+    try {
+        const { shipmentId, documentId, recipientEmail } = (data || {}) as { shipmentId: string; documentId: string; recipientEmail: string; };
+        if (!shipmentId || !documentId || !recipientEmail) {
+            throw new functions.https.HttpsError('invalid-argument', 'Missing required fields');
+        }
+        const bucket = admin.storage().bucket();
+        const [files] = await bucket.getFiles({ prefix: `documents/` });
+        const match = files.find(f => f.name.includes(`/${shipmentId}/`) && f.name.includes(`/${documentId}.`));
+        if (!match) {
+            throw new functions.https.HttpsError('not-found', 'Document not found');
+        }
+        const [signedUrl] = await match.getSignedUrl({ action: 'read', expires: Date.now() + 24 * 60 * 60 * 1000 });
+        const mailOptions = {
+            from: '"Vcanship" <noreply@vcanship.com>',
+            to: recipientEmail,
+            subject: `Your ${documentId} - Shipment ${shipmentId}`,
+            html: `
+                <p>Please find your document attached or use the link below (valid 24 hours):</p>
+                <p><a href="${signedUrl}">Download ${documentId}</a></p>
+            `
+        };
+        await getTransporter().sendMail(mailOptions);
+        return { success: true };
+    } catch (error: any) {
+        console.error('sendDocumentEmail error:', error);
+        if (error instanceof functions.https.HttpsError) throw error;
+        throw new functions.https.HttpsError('internal', error.message || 'Failed to send document');
+    }
+});

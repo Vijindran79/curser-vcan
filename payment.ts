@@ -18,7 +18,7 @@ let cardElement: any = null;
 
 // This key is publishable and safe to be exposed on the frontend.
 // Using LIVE publishable key
-const STRIPE_PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'REPLACE_WITH_NEW_STRIPE_KEY';
+const STRIPE_PUBLISHABLE_KEY = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || 'pk_live_51RnhihPyJngwy6BVAi9YTgB5kc1NMsOvqyqoJdnRFVrKAH0XvDxNWg5nBb27uObdag5nBHgAHGPEaqSa17YoYhQB006lp59yKe';
 
 /**
  * Helper: Waits for a DOM element to appear
@@ -567,7 +567,7 @@ async function mountPaymentForm() {
         
         try {
             // Call the V2 HTTP function with fetch
-            const FUNCTION_URL = 'https://us-central1-vcanship-onestop-logistics.cloudfunctions.net/createPaymentIntent';
+            const FUNCTION_URL = 'https://us-central1-vcanship-onestop-logistics.cloudfunctions.net/createPaymentIntentV2';
             
             const requestPayload = {
                 amount: Math.round(totalAmount * 100), // Stripe expects amount in cents
