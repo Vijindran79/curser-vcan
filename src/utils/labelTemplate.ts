@@ -1,5 +1,17 @@
 import type { Quote } from '../state';
 
+/**
+ * Builds an HTML document string for a printable 4×6-inch shipping label.
+ *
+ * @param shipment - Shipment details including:
+ *   - `trackingId`: tracking identifier displayed on the label
+ *   - `sender`: object with `name` and `address` for the FROM block
+ *   - `recipient`: object with `name` and `address` for the TO block
+ *   - `weightKg`: package weight in kilograms
+ *   - `pieces`: number of pieces
+ *   - `carrier` (optional): carrier name displayed in the title (defaults to "Carrier")
+ *   - `service` (optional): service name displayed in the title (defaults to "Standard")
+ * @returns A complete HTML document string containing inline CSS and markup for the shipping label suitable for printing.
 export function generateLabelHTML(shipment: {
   trackingId: string;
   sender: { name: string; address: string };
@@ -47,4 +59,3 @@ export function generateLabelHTML(shipment: {
   </body></html>`;
   return html;
 }
-

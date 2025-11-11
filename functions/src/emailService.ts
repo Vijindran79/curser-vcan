@@ -6,6 +6,14 @@ import * as admin from 'firebase-admin';
 // LAZY INITIALIZATION for Nodemailer transporter
 let transporter: nodemailer.Transporter | null = null;
 
+/**
+ * Initializes (on first call) and returns a Nodemailer transporter configured to send mail through AWS SES.
+ *
+ * The transporter is created lazily and cached; subsequent calls return the same instance. Credentials are sourced
+ * from environment variables or Firebase functions configuration.
+ *
+ * @returns A Nodemailer `Transporter` configured for AWS SES; the same instance is returned on subsequent calls.
+ */
 function getTransporter(): nodemailer.Transporter {
     if (!transporter) {
         const AWS_SES_USER = process.env.AWS_SES_USER || functions.config().aws?.ses_user || 'AKIAWXN6QSYXBLFGWVPS';
@@ -386,7 +394,14 @@ export async function sendTrackingUpdateEmail(
 }
 
 /**
- * Send Password Reset Email
+ * Send a password reset email containing a time-limited reset link to the specified recipient.
+ *
+ * The email includes a button linking to the provided reset URL and informs the recipient that the link expires in 1 hour.
+ *
+ * @param recipientEmail - The recipient's email address
+ * @param recipientName - The recipient's display name used in the email greeting
+ * @param resetLink - A URL that allows the recipient to reset their password (the message states the link expires in 1 hour)
+ * @returns `true` if the email was sent successfully, `false` otherwise.
  */
 export async function sendPasswordResetEmail(
     recipientEmail: string,

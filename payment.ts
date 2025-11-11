@@ -143,7 +143,12 @@ function initializePaymentMethodSwitcher() {
 }
 
 /**
- * Sets up the Stripe Elements form when the payment page is mounted.
+ * Prepare and mount the Stripe-based payment form for the current payment context.
+ *
+ * Creates the payment page HTML when missing, computes the total amount, obtains a Payment Intent
+ * client secret from the backend, initializes Stripe Elements, and mounts the card input element.
+ * Updates module and application state with the client secret, wires form submission and payment
+ * method UI, and displays user-facing errors or navigates away on fatal failures.
  */
 async function mountPaymentForm() {
     // Check if payment context exists (required)

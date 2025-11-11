@@ -1,3 +1,14 @@
+/**
+ * Insert a styled inline compliance summary into a DOM element identified by `targetId`.
+ *
+ * The summary displays the origin country, destination country, item (commodity),
+ * and a short list of compliance recommendations.
+ *
+ * @param targetId - The id of the DOM element to populate; no action if the element is not found
+ * @param originCountry - Origin country name to display in the summary
+ * @param destinationCountry - Destination country name to display in the summary
+ * @param commodity - Commodity/item name to display in the summary
+ */
 export function showInlineComplianceSummary(
   targetId: string,
   originCountry: string,
@@ -20,4 +31,3 @@ export function showInlineComplianceSummary(
     </div>
   `;
 }
-

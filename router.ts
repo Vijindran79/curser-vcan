@@ -26,10 +26,10 @@ import { renderTrackingPage } from './tracking';
 
 
 /**
- * Retrieves the correct start function for a given service.
- * This function acts as the central switchboard for all service modules.
- * @param service The key of the service.
- * @returns The start function or null if not found.
+ * Returns the start function associated with a service key.
+ *
+ * @param service - The service key to resolve (e.g., 'parcel', 'ecommerce').
+ * @returns The service's start function, or `null` if the key is unrecognized.
  */
 function getServiceModule(service: string): (() => void) | null {
     switch (service) {

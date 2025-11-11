@@ -2,6 +2,13 @@ import { getAllServicesConfig } from './sidebar';
 import { mountService } from './router';
 import { Page, Service } from './state';
 
+/**
+ * Creates a <style> element containing CSS rules for the mobile burger button, slide-in drawer, and overlay used on small screens.
+ *
+ * The styles include responsive breakpoints, drawer positioning and transition, visual styles for the burger lines and drawer sections/links, and the semi-transparent overlay.
+ *
+ * @returns An HTMLStyleElement whose textContent holds the mobile menu CSS rules
+ */
 function createStyles(): HTMLStyleElement {
 	const style = document.createElement('style');
 	style.textContent = `
@@ -100,6 +107,15 @@ function createStyles(): HTMLStyleElement {
 	return style;
 }
 
+/**
+ * Build categorized lists of services and pages used to populate the mobile drawer.
+ *
+ * @returns An object with four properties:
+ * - `globalShipping`: array of service configs from `getAllServicesConfig()` filtered to services whose `id` is one of `['fcl', 'lcl', 'airfreight', 'railway', 'inland', 'bulk', 'parcel', 'baggage']`.
+ * - `tools`: array of page entries for Track Shipments, Get Quote, and Booking History (each includes `id`, `name`, and `icon`).
+ * - `account`: array of page entries for Profile, Subscriptions, and Settings (each includes `id`, `name`, and `icon`).
+ * - `ecom`: array of e-commerce platform entries for Amazon, eBay, TikTok Shop, and Shopify (each includes `id`, `name`, and `icon`).
+ */
 function groupServices() {
 	const all = getAllServicesConfig();
 	return {
@@ -123,6 +139,17 @@ function groupServices() {
 	};
 }
 
+/**
+ * Populate the given drawer element with navigation sections and links for the mobile menu.
+ *
+ * Builds "Global Shipping", "Tools", "Account", and "E-commerce Hub" sections from grouped service/page data,
+ * appends them to the drawer, and wires click handlers for navigable items.
+ *
+ * Clicks on items in the Global Shipping, Tools, and Account sections mount the corresponding `Service` or `Page`
+ * and close the drawer; E-commerce Hub links are rendered without click handlers.
+ *
+ * @param drawer - The container HTMLElement to populate with drawer content
+ */
 function buildDrawerContent(drawer: HTMLElement) {
 	const { globalShipping, tools, account, ecom } = groupServices();
 	const section = (title: string, items: { id: any, name: string, icon: string }[], kind: 'service'|'page'='service') => {
@@ -168,12 +195,23 @@ let isOpen = false;
 let drawerEl: HTMLElement | null = null;
 let overlayEl: HTMLElement | null = null;
 
+/**
+ * Opens the mobile drawer UI and its overlay.
+ *
+ * If the drawer and overlay elements exist, adds the `open` class to both and updates internal open state.
+ */
 function open() {
 	if (!drawerEl || !overlayEl) return;
 	drawerEl.classList.add('open');
 	overlayEl.classList.add('open');
 	isOpen = true;
 }
+/**
+ * Closes the mobile drawer and its overlay.
+ *
+ * If the drawer or overlay elements are not present, the function does nothing.
+ * This also updates the internal `isOpen` state to `false`.
+ */
 function close() {
 	if (!drawerEl || !overlayEl) return;
 	drawerEl.classList.remove('open');
@@ -181,6 +219,17 @@ function close() {
 	isOpen = false;
 }
 
+/**
+ * Initializes the mobile burger menu and its slide-in drawer for small screens.
+ *
+ * Creates and injects required styles, a burger button (id "mobile-burger"), a drawer (id "mobile-drawer")
+ * and an overlay (id "mobile-drawer-overlay") if they do not already exist, populates the drawer content,
+ * and wires user interactions.
+ *
+ * The function is a no-op on viewports wider than 992px. After initialization the menu supports:
+ * toggling via the burger button, closing via overlay click, swipe-left-to-close gestures on the drawer,
+ * and automatic close on route changes (hashchange).
+ */
 export function initializeMobileBurgerMenu() {
 	// Only on small screens
 	if (window.innerWidth > 992) return;
@@ -237,5 +286,4 @@ export function initializeMobileBurgerMenu() {
 	// Close on route changes
 	window.addEventListener('hashchange', close);
 }
-
 

@@ -1,3 +1,8 @@
+/**
+ * Render an HTML string for a minimal address autocomplete UI.
+ *
+ * @returns An HTML string containing a padded container with a heading "Address Autocomplete", a descriptive paragraph, and an input element with id `"addr-input"` and placeholder `"Start typing an address..."`.
+ */
 export function renderAddressAutocompletePage(): string {
   return `
     <div style="padding:16px">
@@ -8,6 +13,14 @@ export function renderAddressAutocompletePage(): string {
   `;
 }
 
+/**
+ * Sets up a minimal placeholder listener on the address input element when present.
+ *
+ * If an element with id "addr-input" exists in the document, attaches an `input` event listener
+ * intended as a stub for future autocomplete integration (Places API / Geoapify).
+ *
+ * @returns No value.
+ */
 export async function initializeAddressAutocomplete(): Promise<void> {
   // Stub initializer: wire simple event listener
   const input = document.getElementById('addr-input') as HTMLInputElement | null;
@@ -26,6 +39,16 @@ export type ParsedAddress = {
   country?: string;
 };
 
+/**
+ * Create an HTML fragment for a labeled address input suitable for insertion into the DOM and later wiring.
+ *
+ * @param containerId - The id of the intended container element where this HTML may be inserted (not used by this function).
+ * @param inputId - The id to assign to the generated input element.
+ * @param label - Text to display in the label associated with the input.
+ * @param onSelected - Callback that will receive a ParsedAddress when the input is wired and a selection event occurs; this function does not attach event listeners.
+ * @param _options - Optional flags for future UI features (e.g., `showPostalCodeSearch`, `showCurrentLocation`, `required`) — currently ignored.
+ * @returns An HTML string containing a label and a text input for address entry.
+ */
 export function createEnhancedAddressInput(
   containerId: string,
   inputId: string,
@@ -40,6 +63,12 @@ export function createEnhancedAddressInput(
   `;
 }
 
+/**
+ * Attach a 'change' listener to the input identified by `inputId` that constructs a simple ParsedAddress from the input value and invokes `onSelected`.
+ *
+ * @param inputId - The DOM id of the input element to watch.
+ * @param onSelected - Callback invoked with a guessed `ParsedAddress` when the input value changes.
+ */
 export function attachEnhancedAddressListeners(
   inputId: string,
   onSelected: (address: ParsedAddress) => void
@@ -56,4 +85,3 @@ export function attachEnhancedAddressListeners(
     onSelected(guess);
   });
 }
-
