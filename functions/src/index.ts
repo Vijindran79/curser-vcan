@@ -998,6 +998,11 @@ import Stripe from 'stripe';
 
 // Use environment variable from .env file or Firebase Console
 let stripeInstance: Stripe | null = null;
+/**
+ * Get a singleton Stripe client initialized from the STRIPE_SECRET_KEY environment variable.
+ *
+ * @returns A cached Stripe client initialized with `STRIPE_SECRET_KEY`, or `null` if the key is missing or initialization failed.
+ */
 function getStripe(): Stripe | null {
     if (!stripeInstance) {
         try {
@@ -1113,4 +1118,3 @@ export const healthCheck = functions.https.onCall(async (data, context: any) => 
 });
 
 // (stripe exports removed to avoid duplicate identifiers; using subscription exports above)
-

@@ -597,7 +597,11 @@ function getCurrencySymbol(code: string): string {
 }
 
 /**
- * Update all price displays with new currency
+ * Refreshes all visible price elements to display amounts in the given target currency.
+ *
+ * Loads conversion utilities lazily, converts values whose base currency differs (assumes USD when unspecified), formats amounts to two decimal places, and marks each element with `data-price-rendered-currency`.
+ *
+ * @param currency - Target ISO currency code used to render prices (e.g., "USD", "EUR")
  */
 async function updatePriceDisplays(currency: string) {
     const symbol = getCurrencySymbol(currency);

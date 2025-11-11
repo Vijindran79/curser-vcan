@@ -19,6 +19,21 @@ export type QuoteBreakdown = {
   total: number;
 };
 
+/**
+ * Estimates a sea freight quote breakdown from the provided shipment inputs.
+ *
+ * Computes ocean freight (per-container rates for FCL or volume/weight-based for LCL/Break Bulk), origin and destination charges, surcharges (12% of ocean freight), insurance (if requested, minimum 15), a fixed documentation fee, and a rounded total.
+ *
+ * @param inputs - Shipment parameters (shipmentType, containerType, containers, weightKg, volumeCbm, incoterms, insurance, cargoValue)
+ * @returns A QuoteBreakdown with fields:
+ *  - oceanFreight: calculated ocean freight charge
+ *  - originCharges: origin handling/processing charges
+ *  - destinationCharges: destination handling/processing charges
+ *  - surcharges: aggregated surcharges (e.g., BAF/CAF/peak)
+ *  - insurance: insurance charge (0 if not requested)
+ *  - documentation: documentation fee
+ *  - total: rounded sum of all components
+ */
 export function estimateSeaFreight(inputs: SeaFreightInputs): QuoteBreakdown {
   // Stubbed logic with simple assumptions
   const oceanFreight =
@@ -43,4 +58,3 @@ export function estimateSeaFreight(inputs: SeaFreightInputs): QuoteBreakdown {
 
   return { oceanFreight, originCharges, destinationCharges, surcharges, insurance, documentation, total };
 }
-

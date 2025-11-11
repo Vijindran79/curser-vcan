@@ -52,6 +52,12 @@ export interface SecureTrade {
 const db = admin.firestore();
 
 let stripe: Stripe | null = null;
+/**
+ * Lazily initializes and returns a configured Stripe client using the STRIPE_SECRET_KEY environment variable.
+ *
+ * @returns The initialized Stripe client
+ * @throws Error if STRIPE_SECRET_KEY is not set
+ */
 function getStripe(): Stripe {
 	if (!stripe) {
 		const key = process.env.STRIPE_SECRET_KEY;
@@ -63,7 +69,11 @@ function getStripe(): Stripe {
 	return stripe;
 }
 
-// Helper notifications (Fire-and-forget logging + Firestore notifications)
+/**
+ * Creates a queued 'seller_delivery_instructions' notification for the given SecureTrade.
+ *
+ * @param tradeId - The SecureTrade document ID that the notification references
+ */
 async function sendSellerDeliveryInstructions(tradeId: string) {
 	try {
 		await db.collection('notifications').add({
@@ -76,6 +86,11 @@ async function sendSellerDeliveryInstructions(tradeId: string) {
 		console.warn('sendSellerDeliveryInstructions failed:', e);
 	}
 }
+/**
+ * Queues a `buyer_inspection_started` notification for the specified secure trade.
+ *
+ * @param tradeId - Secure trade document ID to associate with the notification
+ */
 async function notifyBuyerInspectionStarted(tradeId: string) {
 	try {
 		await db.collection('notifications').add({
@@ -88,6 +103,14 @@ async function notifyBuyerInspectionStarted(tradeId: string) {
 		console.warn('notifyBuyerInspectionStarted failed:', e);
 	}
 }
+/**
+ * Adds a queued "buyer_verification_complete" notification for the specified secure trade.
+ *
+ * This creates a notifications document with type `buyer_verification_complete`, the given `tradeId`,
+ * a server timestamp, and status `queued`. Failures are caught and logged; the caller is not notified of errors.
+ *
+ * @param tradeId - The ID of the secure trade to notify the buyer about
+ */
 async function notifyBuyerVerificationComplete(tradeId: string) {
 	try {
 		await db.collection('notifications').add({
@@ -101,6 +124,16 @@ async function notifyBuyerVerificationComplete(tradeId: string) {
 	}
 }
 
+/**
+ * Records a refund for a secure trade and queues a refund request in Firestore.
+ *
+ * This updates the trade's escrow status to `refunded` and sets the trade `status` to `cancelled`,
+ * then creates a `refundRequests` document containing the provided reason and a queued status.
+ * Note: this function does not perform an on-chain or Stripe refund; it only updates Firestore state.
+ *
+ * @param tradeId - The SecureTrade document ID to mark refunded
+ * @param reason - Short description of why the refund was initiated, stored with the refund request
+ */
 async function initiateRefund(tradeId: string, reason: string) {
 	// In a production-grade system, we would:
 	// 1) Look up the escrow PaymentIntent for the trade
@@ -352,6 +385,14 @@ export const releaseSellerPayment = functions.https.onCall(async (data: any, con
 	return result;
 });
 
+/**
+ * Releases a portion of escrowed funds for a secure trade to the seller.
+ *
+ * @param tradeId - Firestore document ID of the secure trade
+ * @param percentage - Fraction of the escrow amount to release; must be greater than 0 and less than or equal to 1
+ * @returns An object with `success: true`, the Stripe `transferId` when a real transfer was created (or `null` when simulated), and `simulated: true` when no transfer was performed
+ * @throws {HttpsError} If `percentage` is out of range or the trade document does not exist
+ */
 async function releaseSellerPaymentInternal(tradeId: string, percentage: number) {
 	if (!(percentage > 0 && percentage <= 1.0)) {
 		throw new functions.https.HttpsError('invalid-argument', 'percentage must be between 0 and 1');
@@ -399,5 +440,4 @@ async function releaseSellerPaymentInternal(tradeId: string, percentage: number)
 
 	return { success: true, transferId: transfer.id };
 }
-
 

@@ -604,6 +604,11 @@ async function initializeServiceWorker() {
     }
 }
 
+/**
+ * Bootstraps core application subsystems and UI, wiring internationalization, auth, services, and UI listeners.
+ *
+ * Ensures translations are initialized before other UI components, attempts to initialize the Google Generative AI client when a valid API key is available, and brings up locale, auth, static pages, sidebar, chat, settings, dashboard, account, and payment subsystems. Also attaches global UI listeners (static links, tracking and inspector modals) and initializes optional features (country detection, rotation suggestion, guest checkout, mobile burger menu) when available. Failures in non-critical subsystems are handled gracefully and a transient in-page error notification is shown if initialization encounters an unexpected error.
+ */
 async function initializeCoreApp() {
     try {
         initializeTheme();
