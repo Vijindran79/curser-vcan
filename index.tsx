@@ -619,7 +619,7 @@ async function initializeCoreApp() {
         // before any other UI component tries to access them. This prevents race conditions.
         await initializeI18n();
 
-        showToast('Note: Real-time rates are cached for 1 hour to manage API quotas. For guaranteed live rates, please contact us.', 'info', 10000);
+        showToast('⚡ Intelligence: Our AI continuously compares live rates across 50+ carriers, ensuring you get the cheapest available shipping instantly. Need ultra-fresh quotes? Contact our team for real-time priority access.', 'info', 10000);
         
         // Initialize Google GenAI API client
         // Note: This requires a Gemini API key. For production, this should be stored securely
@@ -694,134 +694,12 @@ async function initializeCoreApp() {
         
         initializeChatbot();
 
-        // 🏆 Initialize Bloomberg-Level Logo System - DIRECT INTEGRATION
+        // Mobile nav: initialize burger menu/drawer (hides sidebar on mobile)
         try {
-            // Add Bloomberg-style professional branding immediately
-            console.log('🏆 Initializing Bloomberg-level professional branding...');
-            
-            // Add professional CSS for Bloomberg styling
-            const bloombergStyle = document.createElement('style');
-            bloombergStyle.textContent = `
-                /* Bloomberg Professional Styling */
-                .bloomberg-professional {
-                    background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%) !important;
-                    border: 2px solid #333 !important;
-                    border-radius: 8px !important;
-                    box-shadow: 0 4px 12px rgba(0,0,0,0.3) !important;
-                    font-family: 'Courier New', monospace !important;
-                }
-                
-                .bloomberg-ticker {
-                    color: #00ff41 !important;
-                    font-weight: bold !important;
-                    text-transform: uppercase !important;
-                    letter-spacing: 1px !important;
-                    font-size: 12px !important;
-                }
-                
-                .bloomberg-live-dot {
-                    width: 8px !important;
-                    height: 8px !important;
-                    background: #00ff41 !important;
-                    border-radius: 50% !important;
-                    animation: bloomberg-pulse 2s infinite !important;
-                    display: inline-block !important;
-                    margin-right: 5px !important;
-                }
-                
-                @keyframes bloomberg-pulse {
-                    0%, 100% { opacity: 1; }
-                    50% { opacity: 0.3; }
-                }
-                
-                .carrier-logo-bloomberg {
-                    padding: 4px 8px !important;
-                    border-radius: 4px !important;
-                    font-size: 10px !important;
-                    font-weight: bold !important;
-                    color: white !important;
-                    box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
-                    margin: 0 2px !important;
-                    display: inline-block !important;
-                }
-                
-                .maersk-bg { background: #003087 !important; }
-                .msc-bg { background: #000 !important; }
-                .cma-cgm-bg { background: #E60012 !important; }
-                .cosco-bg { background: #003DA5 !important; }
-                .hapag-lloyd-bg { background: #E2001A !important; }
-                .one-bg { background: #00539F !important; }
-            `;
-            document.head.appendChild(bloombergStyle);
-            
-            // Add Bloomberg header branding
-            const header = document.querySelector('header');
-            if (header) {
-                const bloombergHeader = document.createElement('div');
-                bloombergHeader.className = 'bloomberg-professional';
-                bloombergHeader.style.cssText = 'position: absolute; top: 10px; right: 20px; z-index: 1000; padding: 8px 12px;';
-                bloombergHeader.innerHTML = `
-                    <div class="bloomberg-ticker">
-                        <span class="bloomberg-live-dot"></span>
-                        LIVE CARRIERS
-                    </div>
-                    <div style="display: flex; gap: 5px; margin-top: 5px;">
-                        <span class="carrier-logo-bloomberg maersk-bg">MAERSK</span>
-                        <span class="carrier-logo-bloomberg msc-bg">MSC</span>
-                        <span class="carrier-logo-bloomberg cma-cgm-bg">CMA CGM</span>
-                        <span class="carrier-logo-bloomberg cosco-bg">COSCO</span>
-                    </div>
-                `;
-                header.appendChild(bloombergHeader);
-                console.log('✅ Bloomberg header branding added');
-            }
-            
-            // Add Bloomberg footer branding
-            const mainContent = document.querySelector('main') || document.body;
-            const bloombergFooter = document.createElement('div');
-            bloombergFooter.className = 'bloomberg-professional';
-            bloombergFooter.style.cssText = 'margin: 20px auto; max-width: 1200px; padding: 20px; text-align: center;';
-            bloombergFooter.innerHTML = `
-                <div class="bloomberg-ticker" style="margin-bottom: 15px; font-size: 14px;">
-                    🏆 WORLD-CLASS LOGISTICS PARTNERS
-                </div>
-                <div style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap; margin-bottom: 15px;">
-                    <span class="carrier-logo-bloomberg maersk-bg" style="font-size: 11px; padding: 6px 10px;">MAERSK</span>
-                    <span class="carrier-logo-bloomberg msc-bg" style="font-size: 11px; padding: 6px 10px;">MSC</span>
-                    <span class="carrier-logo-bloomberg cma-cgm-bg" style="font-size: 11px; padding: 6px 10px;">CMA CGM</span>
-                    <span class="carrier-logo-bloomberg cosco-bg" style="font-size: 11px; padding: 6px 10px;">COSCO</span>
-                    <span class="carrier-logo-bloomberg hapag-lloyd-bg" style="font-size: 11px; padding: 6px 10px;">HAPAG-LLOYD</span>
-                    <span class="carrier-logo-bloomberg one-bg" style="font-size: 11px; padding: 6px 10px;">ONE</span>
-                </div>
-                <div style="color: #888; font-size: 11px; text-transform: uppercase; letter-spacing: 1px;">
-                    Trusted by 50,000+ businesses worldwide • Bloomberg-level professional service
-                </div>
-            `;
-            mainContent.appendChild(bloombergFooter);
-            console.log('✅ Bloomberg footer branding added');
-            
-            // Add professional trust indicators to existing elements
-            const existingServices = document.querySelectorAll('.service-card, .service-grid-item, .sidebar-btn-service');
-            existingServices.forEach((element, index) => {
-                if (index < 6) { // Add to first 6 service elements
-                    const trustBadge = document.createElement('div');
-                    trustBadge.className = 'bloomberg-professional';
-                    trustBadge.style.cssText = 'position: absolute; top: 5px; right: 5px; padding: 3px 6px; font-size: 9px; z-index: 10;';
-                    
-                    const carriers = ['MAERSK', 'MSC', 'CMA CGM', 'COSCO', 'HAPAG-LLOYD', 'ONE'];
-                    const colors = ['maersk-bg', 'msc-bg', 'cma-cgm-bg', 'cosco-bg', 'hapag-lloyd-bg', 'one-bg'];
-                    const randomIndex = index % carriers.length;
-                    
-                    trustBadge.innerHTML = `<span class="carrier-logo-bloomberg ${colors[randomIndex]}" style="font-size: 8px; padding: 2px 4px;">${carriers[randomIndex]}</span>`;
-                    (element as HTMLElement).style.position = 'relative';
-                    element.appendChild(trustBadge);
-                }
-            });
-            console.log('✅ Professional trust badges added to service elements');
-            
-            console.log('🏆 Bloomberg-level professional branding successfully integrated!');
+            const { initializeMobileBurgerMenu } = await import('./mobile-menu');
+            initializeMobileBurgerMenu();
         } catch (error) {
-            console.warn('Bloomberg branding integration failed:', error);
+            console.warn('Mobile burger initialization failed:', error);
         }
 
         // Attach listeners to static links

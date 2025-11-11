@@ -599,16 +599,40 @@ function getCurrencySymbol(code: string): string {
 /**
  * Update all price displays with new currency
  */
-function updatePriceDisplays(currency: string) {
+async function updatePriceDisplays(currency: string) {
     const symbol = getCurrencySymbol(currency);
-    
+    const desired = currency.toUpperCase();
+
     // Update all elements with data-price attribute
-    document.querySelectorAll('[data-price]').forEach(element => {
-        const price = element.getAttribute('data-price');
-        if (price) {
-            element.textContent = `${symbol}${price}`;
+    const elements = Array.from(document.querySelectorAll('[data-price]'));
+
+    // Lazy-load currency utils to avoid blocking initial paint
+    const { convertAmount } = await import('./src/utils/currency');
+
+    await Promise.all(elements.map(async (element) => {
+        const priceAttr = element.getAttribute('data-price');
+        if (!priceAttr) return;
+
+        const raw = Number(priceAttr);
+        if (!Number.isFinite(raw)) return;
+
+        // If the element specifies its base currency, use that; otherwise assume USD
+        const baseCurrency = (element.getAttribute('data-price-currency') || 'USD').toUpperCase();
+
+        // Convert only when needed
+        let displayAmount = raw;
+        if (baseCurrency !== desired) {
+            try {
+                displayAmount = await convertAmount(raw, baseCurrency, desired);
+            } catch {
+                displayAmount = raw; // fallback
+            }
         }
-    });
+
+        // Write formatted text while preserving dataset for future reflows
+        element.textContent = `${symbol}${displayAmount.toFixed(2)}`;
+        element.setAttribute('data-price-rendered-currency', desired);
+    }));
 }
 
 /**

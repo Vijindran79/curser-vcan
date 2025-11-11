@@ -11,6 +11,7 @@ import { startAirfreight } from './airfreight';
 import { startRailway } from './railway';
 import { startInland } from './inland';
 import { startBulk } from './bulk';
+import { startSecureTrade } from './secure-trade';
 // import { startWarehouse } from './warehouse'; // Temporarily removed - API integration pending
 // FIX: Enabled import for startEcom.
 import { startEcom } from './ecommerce';
@@ -45,6 +46,7 @@ function getServiceModule(service: string): (() => void) | null {
         case 'railway': return startRailway;
         case 'inland': return startInland;
         case 'bulk': return startBulk;
+        case 'secure-trade': return startSecureTrade;
         default: return null;
     }
 }

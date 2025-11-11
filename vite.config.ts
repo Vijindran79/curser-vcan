@@ -12,12 +12,9 @@ export default defineConfig(({ mode }) => {
       },
       build: {
         rollupOptions: {
-          output: {
-            manualChunks: {
-              'monaco-editor': ['monaco-editor']
-            }
-          },
+          output: {},
           external: [
+            /^monaco-editor(.*)?$/,
             /^backup-/,
             /^hip--main/
           ]
