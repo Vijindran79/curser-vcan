@@ -1,339 +1,345 @@
-// Firebase Functions for Stripe Subscription Management
-
-// Load environment variables
-// import * as dotenv from 'dotenv';
-// dotenv.config(); // Disabled - using Firebase Secrets instead
-
-import { onCall, CallableRequest, HttpsError, onRequest, Request } from 'firebase-functions/v2/https';
+import * as functions from 'firebase-functions';
 import * as admin from 'firebase-admin';
-import Stripe from 'stripe';
+import axios from 'axios';
 
-const db = admin.firestore();
-
-// LAZY INITIALIZATION for Stripe to prevent deployment errors
-let stripe: Stripe | null = null;
-
-function getStripe(): Stripe {
-    if (!stripe) {
-        const STRIPE_SECRET_KEY = process.env.STRIPE_SECRET_KEY;
-        if (!STRIPE_SECRET_KEY) {
-            throw new Error('STRIPE_SECRET_KEY environment variable is required');
-        }
-        stripe = new Stripe(STRIPE_SECRET_KEY, { apiVersion: '2023-10-16' });
-    }
-    return stripe;
-}
+admin.initializeApp();
 
 /**
- * Create Stripe Checkout Session for subscription
- * Function name: create-subscription-checkout
- * IMPORTANT: No invoker setting means authenticated users only (Firebase handles auth automatically)
+ * Phase 1: User Role & Subscription Management
+ * 
+ * This function triggers when a subscription document is updated in Firestore
+ * by the Stripe Firebase Extension. It sets custom claims on the user's auth token
+ * based on their subscription status.
  */
-export const createSubscriptionCheckout = onCall<{ priceId: string; plan: string; userEmail?: string }>(
-    {
-        memory: '256MiB',
-        cors: true
-    },
-    async (req: CallableRequest<{ priceId: string; plan: string; userEmail?: string }>) => {
-        if (!req.auth) {
-            throw new HttpsError('unauthenticated', 'User must be authenticated');
-        }
 
-        // Runtime check for Stripe key from environment variables
-        const stripeKey = process.env.STRIPE_SECRET_KEY;
-        if (!stripeKey || stripeKey === 'sk_test_placeholder') {
-            throw new HttpsError('failed-precondition', 'Stripe is not configured. Please contact vg@vcanresources.com');
-        }
+// API Usage limits by tier
+const API_LIMITS = {
+  free: 100,    // 100 calls per month
+  pro: 1000,    // 1000 calls per month
+  premium: 5000 // 5000 calls per month
+};
+
+// Set custom user claims based on subscription status
+export const onSubscriptionUpdate = functions.firestore.document('customers/{userId}/subscriptions/{subId}')
+  .onWrite(async (change, context) => {
+    const subscription = change.after.data();
+    const userId = context.params.userId;
+    
+    console.log(`[Subscription] Processing update for user: ${userId}`);
+    
+    try {
+      // Determine user role based on subscription status
+      let role = 'free'; // Default role
+      
+      if (subscription && subscription.status === 'active') {
+        // Check the price ID to determine which tier
+        const priceId = subscription.items?.[0]?.price?.id;
         
-        const { priceId, plan, userEmail } = req.data;
-        const userId = req.auth.uid;
-
-        try {
-            // Create Stripe Checkout Session
-            const session = await getStripe().checkout.sessions.create({
-                customer_email: userEmail || req.auth.token?.email,
-                payment_method_types: ['card'],
-                line_items: [{
-                    price: priceId,
-                    quantity: 1,
-                }],
-                mode: 'subscription',
-                success_url: `${process.env.FRONTEND_URL || 'https://vcanship.com'}/subscription-success?session_id={CHECKOUT_SESSION_ID}`,
-                cancel_url: `${process.env.FRONTEND_URL || 'https://vcanship.com'}/subscription`,
-                metadata: {
-                    userId: userId,
-                    userEmail: userEmail || req.auth.token?.email || '',
-                    plan: plan
-                }
-            });
-
-            return {
-                sessionId: session.id,
-                url: session.url
-            };
-        } catch (error: any) {
-            console.error('Stripe checkout error:', error);
-            throw new HttpsError('internal', `Failed to create checkout session: ${error.message}`);
-        }
-    }
-);
-
-/**
- * Webhook handler for Stripe events
- * Function name: stripe-webhook
- */
-export const stripeWebhook = onRequest(
-    { memory: '256MiB' },
-    async (req: Request, res: any) => {
-        const sig = req.headers['stripe-signature'] as string;
-        // Webhook secret will be set after you configure the webhook in Stripe Dashboard
-        // You'll get this from: Stripe Dashboard → Developers → Webhooks → Your endpoint → Signing secret
-        const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET || '';
-
-        let event: Stripe.Event;
-
-        // Get raw body for Stripe webhook verification
-        // Firebase Functions provides rawBody automatically for onRequest handlers
-        let rawBody: string | Buffer;
-
-        if ((req as any).rawBody) {
-            rawBody = (req as any).rawBody;
-        } else if (Buffer.isBuffer(req.body)) {
-            rawBody = req.body;
+        if (priceId === process.env.STRIPE_PRO_PRICE_ID) {
+          role = 'pro';
+          console.log(`[Subscription] User ${userId} upgraded to PRO tier`);
+        } else if (priceId === process.env.STRIPE_PREMIUM_PRICE_ID) {
+          role = 'premium';
+          console.log(`[Subscription] User ${userId} upgraded to PREMIUM tier`);
         } else {
-            rawBody = JSON.stringify(req.body);
+          console.log(`[Subscription] User ${userId} has active subscription with price: ${priceId}`);
         }
-
-        try {
-            if (!sig) {
-                console.error('Missing Stripe signature header');
-                res.status(400).send('Missing Stripe signature header');
-                return;
-            }
-
-            if (webhookSecret) {
-                event = getStripe().webhooks.constructEvent(rawBody, sig, webhookSecret);
-            } else {
-                // For testing without webhook secret, skip verification
-                // WARNING: Only use this for development/testing
-                console.warn('Webhook secret not configured. Signature verification skipped.');
-                event = typeof rawBody === 'string' ? JSON.parse(rawBody) : JSON.parse(rawBody.toString()) as Stripe.Event;
-            }
-        } catch (err: any) {
-            console.error('Webhook signature verification failed:', err.message);
-            res.status(400).send(`Webhook Error: ${err.message}`);
-            return;
-        }
-
-        // Handle the event
-        try {
-            switch (event.type) {
-                case 'checkout.session.completed':
-                    const session = event.data.object as Stripe.Checkout.Session;
-                    await handleSubscriptionCreated(session);
-                    break;
-
-                case 'customer.subscription.created':
-                case 'customer.subscription.updated':
-                    const subscription = event.data.object as Stripe.Subscription;
-                    await handleSubscriptionUpdated(subscription);
-                    break;
-
-                case 'customer.subscription.deleted':
-                    const deletedSubscription = event.data.object as Stripe.Subscription;
-                    await handleSubscriptionDeleted(deletedSubscription);
-                    break;
-
-                case 'invoice.payment_succeeded':
-                    const invoice = event.data.object as Stripe.Invoice;
-                    await handlePaymentSucceeded(invoice);
-                    break;
-
-                case 'invoice.payment_failed':
-                    const failedInvoice = event.data.object as Stripe.Invoice;
-                    await handlePaymentFailed(failedInvoice);
-                    break;
-
-                default:
-                    console.log(`Unhandled event type: ${event.type}`);
-            }
-
-            res.json({ received: true });
-        } catch (error: any) {
-            console.error('Unexpected error in webhook handler:', error);
-            res.status(500).json({ error: 'Internal server error' });
-        }
+      } else if (subscription && subscription.status === 'canceled') {
+        console.log(`[Subscription] User ${userId} subscription canceled, downgrading to FREE`);
+      } else {
+        console.log(`[Subscription] User ${userId} has no active subscription, role: FREE`);
+      }
+      
+      // Set custom claims on the user's auth token
+      await admin.auth().setCustomUserClaims(userId, { role });
+      
+      // Also update the user's document in Firestore for easy querying
+      await admin.firestore().collection('users').doc(userId).set({
+        subscriptionTier: role,
+        subscriptionStatus: subscription?.status || 'none',
+        lastSubscriptionUpdate: admin.firestore.FieldValue.serverTimestamp()
+      }, { merge: true });
+      
+      console.log(`[Subscription] Successfully set role: ${role} for user: ${userId}`);
+      
+      return { success: true, role };
+      
+    } catch (error) {
+      console.error(`[Subscription] Error updating claims for user ${userId}:`, error);
+      throw error;
     }
-);
+  });
 
 /**
- * Handle subscription created
+ * Phase 2: API Usage Tracking & Throttling
+ * 
+ * This is the core of the subscription enforcement logic.
+ * This proxy function is the ONLY way the frontend interacts with the SeaRates API.
  */
-async function handleSubscriptionCreated(session: Stripe.Checkout.Session) {
-    const userEmail = session.metadata?.userEmail || session.customer_email;
 
-    if (!userEmail) {
-        console.error('No user email in session metadata');
-        return;
+// Helper function to get the start of the current month
+function getCurrentMonthStart(): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), 1);
+}
+
+// Helper function to check if we need to reset the monthly counter
+function shouldResetCounter(lastReset: Date): boolean {
+  const currentMonthStart = getCurrentMonthStart();
+  return lastReset < currentMonthStart;
+}
+
+// Proxy function for SeaRates API with rate limiting
+export const proxySeaRatesAPI = functions.https.onCall(async (data, context) => {
+  console.log('[API Proxy] Request received');
+  
+  // 1. Authentication: Verify the user is authenticated
+  if (!context.auth) {
+    throw new functions.https.HttpsError(
+      'unauthenticated',
+      'User must be authenticated to access this API'
+    );
+  }
+  
+  const userId = context.auth.uid;
+  const userEmail = context.auth.token.email || 'anonymous';
+  const userRole = (context.auth.token.role as string) || 'free';
+  
+  console.log(`[API Proxy] User: ${userEmail}, Role: ${userRole}, UID: ${userId}`);
+  
+  try {
+    // 2. Check Role: Define limits based on the role
+    const apiLimit = API_LIMITS[userRole as keyof typeof API_LIMITS] || API_LIMITS.free;
+    console.log(`[API Proxy] User role: ${userRole}, API limit: ${apiLimit}`);
+    
+    // 3. Read & Reset Usage: Get the user's usage document
+    const usageRef = admin.firestore().collection('apiUsage').doc(userId);
+    const usageDoc = await usageRef.get();
+    
+    let currentCount = 0;
+    let lastReset = getCurrentMonthStart();
+    
+    if (usageDoc.exists) {
+      const usageData = usageDoc.data()!;
+      currentCount = usageData.callCount || 0;
+      lastReset = usageData.lastReset?.toDate() || getCurrentMonthStart();
+      
+      console.log(`[API Proxy] Current usage: ${currentCount}/${apiLimit}, Last reset: ${lastReset}`);
+    } else {
+      console.log(`[API Proxy] No usage document found, creating new one`);
     }
-
-    // Get subscription details
-    // session.subscription can be a string (subscription ID) or a Subscription object
-    const subscriptionId = typeof session.subscription === 'string'
-        ? session.subscription
-        : session.subscription?.id;
-
-    if (!subscriptionId) {
-        console.error('No subscription ID in checkout session');
-        return;
+    
+    // Check if we need to reset the monthly counter
+    if (shouldResetCounter(lastReset)) {
+      console.log(`[API Proxy] New month detected, resetting counter`);
+      currentCount = 0;
+      lastReset = getCurrentMonthStart();
     }
-
-    const subscription = await getStripe().subscriptions.retrieve(subscriptionId);
-
-    // Calculate expiry date
-    const expiryDate = new Date(subscription.current_period_end * 1000);
-
-    // Update user document in Firestore
-    await db.collection('users').doc(userEmail).set({
-        subscriptionTier: 'pro',
-        subscriptionStatus: 'active',
-        stripeCustomerId: subscription.customer as string,
-        stripeSubscriptionId: subscriptionId,
-        subscriptionExpiry: admin.firestore.Timestamp.fromDate(expiryDate),
-        subscriptionPlan: session.metadata?.plan || 'monthly',
-        updated_at: admin.firestore.FieldValue.serverTimestamp()
+    
+    // 4. Enforce Limit: Check if user has exceeded their limit
+    if (currentCount >= apiLimit) {
+      console.warn(`[API Proxy] API limit exceeded for user ${userId}: ${currentCount}/${apiLimit}`);
+      throw new functions.https.HttpsError(
+        'resource-exhausted',
+        `API call limit exceeded. You have used ${currentCount} of ${apiLimit} calls this month. Please upgrade your plan to continue.`
+      );
+    }
+    
+    // 5. If under limit: Increment count and make the API call
+    const newCount = currentCount + 1;
+    await usageRef.set({
+      callCount: newCount,
+      lastReset: admin.firestore.Timestamp.fromDate(lastReset),
+      userId: userId,
+      userRole: userRole
     }, { merge: true });
-
-    console.log(`Subscription created for user: ${userEmail}`);
-}
-
-/**
- * Handle subscription updated
- */
-async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
-    const customerId = subscription.customer as string;
-    const customer = await getStripe().customers.retrieve(customerId) as Stripe.Customer;
-    const userEmail = customer.email;
-
-    if (!userEmail) {
-        console.error('No email found for customer:', customerId);
-        return;
+    
+    console.log(`[API Proxy] Usage updated: ${newCount}/${apiLimit}`);
+    
+    // Get the SeaRates API key from environment variables
+    const searatesApiKey = process.env.SEARATES_API_KEY;
+    if (!searatesApiKey) {
+      throw new functions.https.HttpsError(
+        'failed-precondition',
+        'SeaRates API key not configured'
+      );
     }
-
-    const expiryDate = new Date(subscription.current_period_end * 1000);
-
-    await db.collection('users').doc(userEmail).update({
-        subscriptionStatus: subscription.status,
-        stripeSubscriptionId: subscription.id,
-        subscriptionExpiry: admin.firestore.Timestamp.fromDate(expiryDate),
-        updated_at: admin.firestore.FieldValue.serverTimestamp()
+    
+    // Make the actual server-to-server call to SeaRates API
+    const { endpoint, params } = data;
+    console.log(`[API Proxy] Calling SeaRates API: ${endpoint}`);
+    
+    const response = await axios({
+      method: 'GET',
+      url: `https://www.searates.com/api${endpoint}`,
+      params: {
+        ...params,
+        api_key: searatesApiKey
+      },
+      timeout: 30000
     });
-}
-
-/**
- * Handle subscription deleted (cancelled)
- */
-async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
-    const customerId = subscription.customer as string;
-    const customer = await getStripe().customers.retrieve(customerId) as Stripe.Customer;
-    const userEmail = customer.email;
-
-    if (!userEmail) {
-        console.error('No email found for customer:', customerId);
-        return;
+    
+    console.log(`[API Proxy] SeaRates API call successful`);
+    
+    // Return the data to the client along with usage info
+    return {
+      success: true,
+      data: response.data,
+      usage: {
+        current: newCount,
+        limit: apiLimit,
+        remaining: apiLimit - newCount,
+        resetDate: new Date(lastReset.getFullYear(), lastReset.getMonth() + 1, 1)
+      }
+    };
+    
+  } catch (error) {
+    if (error instanceof functions.https.HttpsError) {
+      throw error;
     }
-
-    await db.collection('users').doc(userEmail).update({
-        subscriptionTier: 'free',
-        subscriptionStatus: 'cancelled',
-        updated_at: admin.firestore.FieldValue.serverTimestamp()
-    });
-}
+    
+    console.error(`[API Proxy] Error for user ${userId}:`, error);
+    throw new functions.https.HttpsError(
+      'internal',
+      'Failed to process API request'
+    );
+  }
+});
 
 /**
- * Handle payment succeeded
+ * Get current API usage for a user
  */
-async function handlePaymentSucceeded(invoice: Stripe.Invoice) {
-    const customerId = invoice.customer as string;
-    const customer = await getStripe().customers.retrieve(customerId) as Stripe.Customer;
-    const userEmail = customer.email;
-
-    if (!userEmail) {
-        return;
+export const getApiUsage = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+  }
+  
+  const userId = context.auth.uid;
+  
+  try {
+    const usageRef = admin.firestore().collection('apiUsage').doc(userId);
+    const usageDoc = await usageRef.get();
+    
+    if (!usageDoc.exists) {
+      return {
+        current: 0,
+        limit: API_LIMITS.free,
+        remaining: API_LIMITS.free,
+        resetDate: getCurrentMonthStart()
+      };
     }
-
-    // Subscription is confirmed active
-    await db.collection('users').doc(userEmail).update({
-        subscriptionStatus: 'active',
-        lastPaymentDate: admin.firestore.FieldValue.serverTimestamp()
-    });
-}
-
-/**
- * Handle payment failed
- */
-async function handlePaymentFailed(invoice: Stripe.Invoice) {
-    const customerId = invoice.customer as string;
-    const customer = await getStripe().customers.retrieve(customerId) as Stripe.Customer;
-    const userEmail = customer.email;
-
-    if (!userEmail) {
-        return;
-    }
-
-    // Mark subscription as past due
-    await db.collection('users').doc(userEmail).update({
-        subscriptionStatus: 'past_due',
-        updated_at: admin.firestore.FieldValue.serverTimestamp()
-    });
-}
+    
+    const usageData = usageDoc.data()!;
+    const userRole = (context.auth.token.role as string) || 'free';
+    const apiLimit = API_LIMITS[userRole as keyof typeof API_LIMITS] || API_LIMITS.free;
+    
+    return {
+      current: usageData.callCount || 0,
+      limit: apiLimit,
+      remaining: apiLimit - (usageData.callCount || 0),
+      resetDate: new Date(usageData.lastReset?.toDate() || getCurrentMonthStart())
+    };
+  } catch (error) {
+    console.error(`[API Usage] Error for user ${userId}:`, error);
+    throw new functions.https.HttpsError('internal', 'Failed to get API usage');
+  }
+});
 
 /**
- * Cancel subscription
- * Function name: cancel-subscription
- * IMPORTANT: No invoker setting means authenticated users only (Firebase handles auth automatically)
+ * Create Stripe Checkout session for subscription
  */
-export const cancelSubscription = onCall(
-    {
-        memory: '256MiB',
-        cors: true
-    },
-    async (req: CallableRequest<void>) => {
-        if (!req.auth) {
-            throw new HttpsError('unauthenticated', 'User must be authenticated');
+export const createCheckoutSession = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+  }
+  
+  const userId = context.auth.uid;
+  const userEmail = context.auth.token.email || '';
+  const { priceId } = data;
+  
+  try {
+    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    
+    // Get or create Stripe customer
+    const userDoc = await admin.firestore().collection('users').doc(userId).get();
+    const userData = userDoc.data() || {};
+    
+    let customerId = userData.stripeCustomerId;
+    
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: userEmail,
+        metadata: {
+          firebaseUid: userId
         }
-
-        const userEmail = req.auth.token?.email;
-        if (!userEmail) {
-            throw new HttpsError('failed-precondition', 'User email not found');
-        }
-
-        try {
-            // Get user's subscription ID
-            const userDoc = await db.collection('users').doc(userEmail).get();
-            if (!userDoc.exists) {
-                throw new HttpsError('not-found', 'User not found');
-            }
-
-            const userData = userDoc.data();
-            const subscriptionId = userData?.stripeSubscriptionId;
-
-            if (!subscriptionId) {
-                throw new HttpsError('failed-precondition', 'No active subscription found');
-            }
-
-            // Cancel subscription in Stripe (at period end)
-            await getStripe().subscriptions.update(subscriptionId, {
-                cancel_at_period_end: true
-            });
-
-            return {
-                success: true,
-                message: 'Subscription will be cancelled at the end of the billing period'
-            };
-        } catch (error: any) {
-            console.error('Cancel subscription error:', error);
-            throw new HttpsError('internal', `Failed to cancel subscription: ${error.message}`);
-        }
+      });
+      customerId = customer.id;
+      
+      // Store customer ID
+      await admin.firestore().collection('users').doc(userId).set({
+        stripeCustomerId: customerId
+      }, { merge: true });
     }
-);
+    
+    // Create checkout session
+    const session = await stripe.checkout.sessions.create({
+      customer: customerId,
+      payment_method_types: ['card'],
+      line_items: [{
+        price: priceId,
+        quantity: 1
+      }],
+      mode: 'subscription',
+      success_url: `${process.env.FRONTEND_URL}/dashboard?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${process.env.FRONTEND_URL}/pricing`,
+      metadata: {
+        firebaseUid: userId
+      }
+    });
+    
+    return {
+      success: true,
+      sessionId: session.id
+    };
+  } catch (error) {
+    console.error(`[Checkout] Error creating session for user ${userId}:`, error);
+    throw new functions.https.HttpsError('internal', 'Failed to create checkout session');
+  }
+});
+
+/**
+ * Create Stripe Customer Portal session
+ */
+export const createPortalSession = functions.https.onCall(async (data, context) => {
+  if (!context.auth) {
+    throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
+  }
+  
+  const userId = context.auth.uid;
+  
+  try {
+    const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    
+    // Get user's Stripe customer ID
+    const userDoc = await admin.firestore().collection('users').doc(userId).get();
+    const userData = userDoc.data() || {};
+    
+    if (!userData.stripeCustomerId) {
+      throw new functions.https.HttpsError('failed-precondition', 'No Stripe customer found');
+    }
+    
+    // Create portal session
+    const session = await stripe.billingPortal.sessions.create({
+      customer: userData.stripeCustomerId,
+      return_url: `${process.env.FRONTEND_URL}/dashboard`
+    });
+    
+    return {
+      success: true,
+      url: session.url
+    };
+  } catch (error) {
+    console.error(`[Portal] Error creating portal session for user ${userId}:`, error);
+    throw new functions.https.HttpsError('internal', 'Failed to create portal session');
+  }
+});

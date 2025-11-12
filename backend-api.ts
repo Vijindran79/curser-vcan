@@ -36,19 +36,19 @@ export async function fetchShippoQuotes(params: {
     try {
         toggleLoading(true, 'Fetching real-time quotes from carriers...');
         
-        // Get the current user's auth token
+        // Get the current user's auth token (optional - allow guest access)
         const { auth } = await import('./firebase');
         const user = auth?.currentUser;
         
-        if (!user) {
-            // No user logged in - fall back to AI estimates
-            throw new Error('Please sign in to get live carrier rates');
-        }
+        console.log('🔍 [DEBUG] User status:', user ? 'Logged in' : 'Guest access');
+        console.log('🔍 [DEBUG] Proceeding with Firebase function call regardless of auth status');
         
         // Option 1: Call Firebase Function (recommended - no CORS issues)
+        // Works for both authenticated users and guests
         const currentFunctions = functions || getFunctions();
         if (currentFunctions) {
             try {
+                console.log('🔍 [DEBUG] Calling getShippoQuotes Firebase function...');
                 const getShippoQuotes = currentFunctions.httpsCallable('getShippoQuotes');
                 const result = await getShippoQuotes({
                     origin: params.originAddress,
@@ -60,8 +60,13 @@ export async function fetchShippoQuotes(params: {
                         height: params.height
                     } : undefined,
                     parcel_type: params.parcelType,
-                    currency: params.currency
+                    currency: params.currency,
+                    // Pass user info if available, but not required
+                    user_email: user?.email || 'guest',
+                    is_authenticated: !!user
                 });
+                
+                console.log('🔍 [DEBUG] Firebase function call successful');
                 
                 const data: any = result.data;
                 console.log('🔍 [DEBUG] Firebase function response:', data);

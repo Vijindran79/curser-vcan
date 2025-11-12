@@ -53,3 +53,16 @@ This repository is a Vite + React + TypeScript frontend with Firebase backend fu
 
 ---
 Please review this draft and tell me if you'd like more details (CI, tests, or explicit call examples for the front-end <-> functions calls). I can iterate quickly.
+
+# AUTO-COMMIT AFTER DEPLOYMENT
+Whenever a Firebase deployment succeeds, automatically:
+1. Run `git add . --all`
+2. Commit with message "AUTO: Deployment $(date)"
+3. Push to origin/main
+4. Notify user in chat
+
+# AUTO-DEPLOY ON PUSH
+When code is pushed to main branch:
+1. Run TypeScript compilation check
+2. Run `firebase deploy --only functions`
+3. Report deployment status

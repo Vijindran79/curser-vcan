@@ -1,0 +1,48 @@
+name: Auto Deploy on Push
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        
+    - name: Install root dependencies
+      run: npm ci
+      
+    - name: TypeScript compilation check
+      run: npx tsc --noEmit
+      
+    - name: Install functions dependencies
+      run: |
+        cd functions
+        npm ci
+      
+    - name: Install Firebase CLI
+      run: npm install -g firebase-tools
+      
+    - name: Deploy to Firebase Functions
+      run: firebase deploy --only functions
+      env:
+        FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
+        
+    - name: Report deployment status
+      if: always()
+      run: |
+        if [ ${{ job.status }} == 'success' ]; then
+          echo "✅ Firebase deployment successful!"
+        else
+          echo "❌ Firebase deployment failed!"
+          exit 1
+        fi

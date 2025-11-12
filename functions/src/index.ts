@@ -63,18 +63,12 @@ async function checkUserSubscription(userEmail: string): Promise<boolean> {
   }
 }
 
-// Get FCL rates with subscription check
+// Get FCL rates - NO AUTHENTICATION REQUIRED (Guest Access)
+// Users can get quotes freely without signing in
 export const getFCLRates = functions.https.onCall(async (data, context: any) => {
-  // Check authentication
-  if (!context || !context.auth) {
-    throw new functions.https.HttpsError(
-      'unauthenticated',
-      'User must be authenticated to access rates'
-    );
-  }
-
-  const userEmail = context.auth?.token?.email || 'anonymous';
-  const isSubscribed = await checkUserSubscription(userEmail);
+  // Authentication is now OPTIONAL - allow guest access
+  const userEmail = context?.auth?.token?.email || 'guest';
+  const isSubscribed = userEmail !== 'guest' ? await checkUserSubscription(userEmail) : false;
 
   // Extract parameters from data
   const origin = (data as any).origin;
@@ -224,18 +218,12 @@ export const getFCLRates = functions.https.onCall(async (data, context: any) => 
   }
 });
 
-// Get LCL rates with subscription check
+// Get LCL rates - NO AUTHENTICATION REQUIRED (Guest Access)
+// Users can get quotes freely without signing in
 export const getLCLRates = functions.https.onCall(async (data, context: any) => {
-  // Check authentication
-  if (!context || !context.auth) {
-    throw new functions.https.HttpsError(
-      'unauthenticated',
-      'User must be authenticated to access rates'
-    );
-  }
-
-  const userEmail = context.auth?.token?.email || 'anonymous';
-  const isSubscribed = await checkUserSubscription(userEmail);
+  // Authentication is now OPTIONAL - allow guest access
+  const userEmail = context?.auth?.token?.email || 'guest';
+  const isSubscribed = userEmail !== 'guest' ? await checkUserSubscription(userEmail) : false;
 
   const origin = (data as any).origin;
   const destination = (data as any).destination;
@@ -376,18 +364,12 @@ export const getLCLRates = functions.https.onCall(async (data, context: any) => 
   }
 });
 
-// Get air freight rates with subscription check
+// Get air freight rates - NO AUTHENTICATION REQUIRED (Guest Access)
+// Users can get quotes freely without signing in
 export const getAirFreightRates = functions.https.onCall(async (data, context: any) => {
-  // Check authentication
-  if (!context || !context.auth) {
-    throw new functions.https.HttpsError(
-      'unauthenticated',
-      'User must be authenticated to access rates'
-    );
-  }
-
-  const userEmail = context.auth?.token?.email || 'anonymous';
-  const isSubscribed = await checkUserSubscription(userEmail);
+  // Authentication is now OPTIONAL - allow guest access
+  const userEmail = context?.auth?.token?.email || 'guest';
+  const isSubscribed = userEmail !== 'guest' ? await checkUserSubscription(userEmail) : false;
 
   const origin = (data as any).origin;
   const destination = (data as any).destination;
@@ -526,18 +508,12 @@ export const getAirFreightRates = functions.https.onCall(async (data, context: a
   }
 });
 
-// Get parcel rates with subscription check
+// Get parcel rates - NO AUTHENTICATION REQUIRED
+// Users can get quotes freely without signing in
 export const getParcelRates = functions.https.onCall(async (data, context: any) => {
-  // Check authentication
-  if (!context || !context.auth) {
-    throw new functions.https.HttpsError(
-      'unauthenticated',
-      'User must be authenticated to access rates'
-    );
-  }
-
-  const userEmail = context.auth?.token?.email || 'anonymous';
-  const isSubscribed = await checkUserSubscription(userEmail);
+  // Authentication is now OPTIONAL - allow guest access
+  const userEmail = context?.auth?.token?.email || 'guest';
+  const isSubscribed = userEmail !== 'guest' ? await checkUserSubscription(userEmail) : false;
 
   const origin = (data as any).origin;
   const destination = (data as any).destination;
@@ -787,3 +763,6 @@ export { stripeWebhook, createSubscriptionCheckout, cancelSubscription } from '.
 
 // Import and export subscription functions (v2)
 export { createSubscriptionCheckout as createSubscriptionCheckoutV2, cancelSubscription as cancelSubscriptionV2, stripeWebhook as stripeWebhookV2 } from './subscription';
+
+// Import and export SeaRates land transport functions
+export { getRailRates, getTruckRates, getLandTransportRates } from './searates/landTransport';
