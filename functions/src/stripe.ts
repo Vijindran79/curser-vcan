@@ -34,9 +34,9 @@ export const stripeWebhook = functions.https.onRequest(async (req, res) => {
                 if (session.customer && session.subscription) {
                     await db.collection('users').doc(session.client_reference_id!).update({
                         subscription: {
-                            id: session.subscription,
+                            id: session.subscription as string,
                             status: 'active',
-                            customerId: session.customer,
+                            customerId: session.customer as string,
                             plan: session.metadata?.plan || 'monthly',
                             startDate: admin.firestore.Timestamp.fromDate(new Date()),
                             endDate: admin.firestore.Timestamp.fromDate(

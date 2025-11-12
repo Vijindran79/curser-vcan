@@ -30,23 +30,8 @@ function getTransporter(): nodemailer.Transporter {
             }
         });
     }
-<<<<<<< Updated upstream
-};
-
-// Lazy-load transporter to avoid blocking module initialization
-let transporter: nodemailer.Transporter | null = null;
-function getTransporter() {
-    if (!transporter) {
-        transporter = nodemailer.createTransport(SES_CONFIG);
-    }
     return transporter;
 }
-
-
-=======
-    return transporter;
-}
->>>>>>> Stashed changes
 
 /**
  * Send Welcome Email
