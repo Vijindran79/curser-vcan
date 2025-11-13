@@ -1,4 +1,5 @@
 import { Pool } from 'pg';
+import * as functions from 'firebase-functions';
 
 // Cloud SQL PostgreSQL connection
 // Connection uses Unix domain socket for Cloud SQL Auth proxy
