@@ -1,0 +1,110 @@
+# CodeRabbit Configuration for Vcanship
+# AI-powered code review settings
+
+language: en-US
+early_access: false
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: true
+  review_status: true
+  collapse_walkthrough: false
+  auto_review:
+    enabled: true
+    drafts: false
+    base_branches:
+      - main
+      - develop
+  
+  # Path-based review configuration
+  path_filters:
+    - "!**/node_modules/**"
+    - "!**/dist/**"
+    - "!**/.firebase/**"
+    - "!**/package-lock.json"
+    - "!**/*.min.js"
+    - "!**/*.min.css"
+  
+  # Language-specific settings
+  path_instructions:
+    - path: "**/*.ts"
+      instructions: |
+        - Focus on TypeScript best practices and type safety
+        - Check for proper error handling
+        - Verify async/await usage
+        - Look for potential null/undefined issues
+    
+    - path: "**/*.tsx"
+      instructions: |
+        - Review React component patterns and hooks usage
+        - Check for proper state management
+        - Verify accessibility (a11y) compliance
+        - Look for performance optimizations (useMemo, useCallback)
+    
+    - path: "functions/**/*.ts"
+      instructions: |
+        - Review Firebase Functions best practices
+        - Check for proper error handling and logging
+        - Verify security rules and data validation
+        - Look for optimization opportunities (cold starts, memory usage)
+    
+    - path: "**/*.css"
+      instructions: |
+        - Review CSS for mobile responsiveness
+        - Check for accessibility and color contrast
+        - Look for potential performance issues
+  
+  # Code quality checks
+  tools:
+    biome:
+      enabled: false
+    shellcheck:
+      enabled: true
+    ruff:
+      enabled: false
+    markdownlint:
+      enabled: true
+    languagetool:
+      enabled: true
+      enabled_only: false
+      level: default
+
+chat:
+  auto_reply: true
+
+# Knowledge base settings
+knowledge_base:
+  opt_in: true
+  learnings:
+    scope: auto
+  issues:
+    scope: auto
+  jira:
+    project_keys: []
+  linear:
+    team_keys: []
+
+# Additional context about the project
+# This helps CodeRabbit provide more relevant reviews
+project_context: |
+  This is a Vite + React + TypeScript logistics platform with Firebase backend.
+  
+  Tech Stack:
+  - Frontend: Vite, React 19, TypeScript
+  - Backend: Firebase Functions, Firestore
+  - APIs: Shippo, Sea Rates, Google Maps, Geoapify, Gemini AI
+  - Payment: Stripe
+  
+  Key Features:
+  - Multi-language support (13 languages)
+  - Real-time shipping quotes
+  - Document management
+  - Subscription system
+  
+  Focus Areas:
+  - Type safety and proper TypeScript usage
+  - Security (API keys, user data)
+  - Performance optimization
+  - Accessibility
+  - Error handling in async operations

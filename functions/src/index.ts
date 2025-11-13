@@ -695,6 +695,149 @@ export const getParcelRates = functions.https.onCall(async (data, context: any) 
   }
 });
 
+// Get Sendcloud parcel rates - Fallback for areas Shippo doesn't cover
+export const getSendcloudRates = functions.https.onCall(async (data, context: any) => {
+  // Authentication is OPTIONAL - allow guest access
+  const userEmail = context?.auth?.token?.email || 'guest';
+  const isSubscribed = userEmail !== 'guest' ? await checkUserSubscription(userEmail) : false;
+
+  const origin = (data as any).origin;
+  const destination = (data as any).destination;
+  const weight = (data as any).weight;
+  
+  if (!origin || !destination || !weight) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'Missing required parameters: origin, destination, weight'
+    );
+  }
+
+  console.log(`User ${userEmail} requesting Sendcloud rates. Subscribed: ${isSubscribed}`);
+
+  try {
+    // Get Sendcloud API credentials from Firebase config
+    const SENDCLOUD_PUBLIC_KEY = functions.config().sendcloud?.public_key || process.env.SENDCLOUD_PUBLIC_KEY;
+    const SENDCLOUD_SECRET_KEY = functions.config().sendcloud?.secret_key || process.env.SENDCLOUD_SECRET_KEY;
+    
+    if (!SENDCLOUD_PUBLIC_KEY || !SENDCLOUD_SECRET_KEY) {
+      console.warn('[Sendcloud] API keys not configured, returning empty result');
+      return {
+        success: false,
+        quotes: [],
+        cached: false,
+        subscription_required: false,
+        message: 'Sendcloud API not configured'
+      };
+    }
+
+    // Parse addresses from strings
+    const parseAddress = (addressStr: string) => {
+      // Handle both string and object formats
+      if (typeof addressStr === 'object') return addressStr;
+      
+      const parts = addressStr.split(',').map(p => p.trim());
+      if (parts.length >= 2) {
+        return {
+          city: parts[parts.length - 2] || 'City',
+          country: parts[parts.length - 1] || 'NL',
+          postal_code: parts.find(p => /\d/.test(p))?.match(/[A-Z0-9]{4,10}/)?.[0] || '1000'
+        };
+      }
+      return {
+        city: 'City',
+        country: 'NL',
+        postal_code: '1000'
+      };
+    };
+
+    const addressFrom = parseAddress(origin);
+    const addressTo = parseAddress(destination);
+
+    // Create Sendcloud shipping methods request
+    const sendcloudPayload = {
+      from_country: addressFrom.country,
+      to_country: addressTo.country,
+      from_postal_code: addressFrom.postal_code,
+      to_postal_code: addressTo.postal_code,
+      weight: (weight * 1000).toString(), // Convert kg to grams
+      weight_unit: 'gram'
+    };
+
+    console.log('[Sendcloud] Calling Sendcloud API for real-time rates...');
+
+    // Call Sendcloud API with Basic Auth
+    const authString = Buffer.from(`${SENDCLOUD_PUBLIC_KEY}:${SENDCLOUD_SECRET_KEY}`).toString('base64');
+    
+    const sendcloudResponse = await axios.get(
+      'https://panel.sendcloud.sc/api/v2/shipping_methods',
+      {
+        params: sendcloudPayload,
+        headers: {
+          'Authorization': `Basic ${authString}`,
+          'Content-Type': 'application/json'
+        },
+        timeout: 10000
+      }
+    );
+
+    const shippingMethods = sendcloudResponse.data.shipping_methods || [];
+
+    if (shippingMethods.length === 0) {
+      console.log('[Sendcloud] No rates returned from API');
+      return {
+        success: false,
+        quotes: [],
+        cached: false,
+        subscription_required: false,
+        message: 'No Sendcloud rates available for this route'
+      };
+    }
+
+    console.log(`[Sendcloud] Received ${shippingMethods.length} LIVE rates from API`);
+
+    // Transform Sendcloud rates to our format
+    const quotes = shippingMethods
+      .filter((method: any) => method.price !== undefined && method.price !== null)
+      .map((method: any) => ({
+        carrier: method.carrier || method.name || 'Sendcloud',
+        service_name: method.name || 'Standard',
+        total_rate: parseFloat(method.price) || 0,
+        transit_time: method.max_delivery_time 
+          ? `${method.min_delivery_time || 1}-${method.max_delivery_time} days` 
+          : 'N/A',
+        validity: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        source: 'live_carrier_api',
+        currency: 'EUR',
+        method_id: method.id,
+        countries: method.countries || []
+      }));
+
+    return {
+      success: true,
+      quotes: quotes,
+      cached: false,
+      subscription_required: false,
+      source: 'live_carrier_api',
+      message: `Live rates from ${quotes.length} carriers via Sendcloud API`
+    };
+
+  } catch (error: any) {
+    console.error('[Sendcloud] API call failed:', error.message);
+    if (error.response) {
+      console.error('[Sendcloud] Error details:', error.response.data);
+    }
+    
+    // Return empty result instead of throwing error (graceful fallback)
+    return {
+      success: false,
+      quotes: [],
+      cached: false,
+      subscription_required: false,
+      message: `Sendcloud API unavailable: ${error.message}`
+    };
+  }
+});
+
 // Get HS Code suggestions
 export const getHsCode = functions.https.onCall(async (request, context: any) => {
   try {

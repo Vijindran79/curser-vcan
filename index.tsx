@@ -1,5 +1,5 @@
 // ⚠️  READ-ONLY — DO NOT EDIT — SERVICE LOCKED ⚠️
-// Version: 3.6.0 - Cache-busting build
+// Version: 4.0.0 - Global Platform Release
 import { DOMElements } from './dom';
 import { mountService } from './router';
 // FIX: Import 'showAuthModal' to handle login button clicks from the mobile menu.
@@ -18,6 +18,8 @@ import { initializeSettings } from './settings';
 import { makeDraggable } from './utils';
 import { getChatbotResponse } from './api';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+// 🌍 GLOBAL PLATFORM INITIALIZATION - Auto-detect country, currency, language
+import { initializeGlobalPlatform } from './global-platform';
 
 // Expose switchPage and mountService to global scope for HTML onclick handlers
 (window as any).switchPage = switchPage;
@@ -606,6 +608,12 @@ async function initializeServiceWorker() {
 
 async function initializeCoreApp() {
     try {
+        // 🌍 PRIORITY 1: Initialize Global Platform FIRST
+        // This auto-detects country, sets currency, language, SEO, etc.
+        await initializeGlobalPlatform().catch(err => {
+            console.warn('Global platform initialization failed, continuing with defaults:', err);
+        });
+        
         initializeTheme();
         initializeHeaderScroll();
         

@@ -38,12 +38,22 @@ interface ParcelFormData {
     leaveInSafePlace: boolean;
     safePlaceDescription?: string;
     specialInstructions?: string;
+    // Contact Details - CRITICAL FIX
+    senderName: string;
+    senderPhone: string;
+    senderEmail: string;
+    senderCompany?: string;
+    recipientName: string;
+    recipientPhone: string;
+    recipientEmail: string;
+    recipientCompany?: string;
+    isGift: boolean;  // Flag for gift/third-party shipping
     // Quote related
     selectedQuote?: Quote;
 }
 
 let currentStep = 1;
-const TOTAL_STEPS = 6;
+const TOTAL_STEPS = 7;  // Added one more step for contact details
 let formData: Partial<ParcelFormData> = {};
 let allQuotes: Quote[] = [];
 let dropoffLocations: any[] = [];
@@ -230,8 +240,175 @@ function renderStep2(): string {
     `;
 }
 
-// STEP 3: Parcel Details with Type Selection
+// STEP 3: Contact Details - NEW CRITICAL STEP
 function renderStep3(): string {
+    // Pre-fill with logged-in user's info if available
+    const userEmail = State.currentUser?.email || sessionStorage.getItem('user_email') || '';
+    const userName = State.currentUser?.displayName || sessionStorage.getItem('user_name') || '';
+    
+    return `
+        <div class="step-content">
+            <h3>📇 Contact Information</h3>
+            <p class="subtitle">Who is sending and receiving this parcel?</p>
+            
+            <!-- Gift/Third-Party Shipping Toggle -->
+            <div class="info-card" style="margin-bottom: 2rem; padding: 1rem; background: linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%); border-left: 4px solid #F59E0B; border-radius: 8px;">
+                <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; margin: 0;">
+                    <input type="checkbox" id="is-gift-checkbox" ${formData.isGift ? 'checked' : ''} style="width: 20px; height: 20px; cursor: pointer;">
+                    <div>
+                        <strong style="color: #92400E; font-size: 1.05em;">🎁 Sending as a gift or to someone else?</strong>
+                        <p style="margin: 0.25rem 0 0 0; color: #B45309; font-size: 0.9em;">
+                            Check this if the recipient is different from you (friend, family member, business partner, etc.)
+                        </p>
+                    </div>
+                </label>
+            </div>
+            
+            <!-- Sender Details -->
+            <div class="form-section">
+                <h4 style="margin-bottom: 1rem; color: var(--primary-color); display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fa-solid fa-user"></i> Sender Details (You)
+                </h4>
+                
+                <div class="two-column">
+                    <div class="input-wrapper">
+                        <label for="sender-name">
+                            Full Name <span class="required">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            id="sender-name" 
+                            placeholder="John Smith" 
+                            value="${formData.senderName || userName}"
+                            required
+                        />
+                    </div>
+                    
+                    <div class="input-wrapper">
+                        <label for="sender-phone">
+                            Phone Number <span class="required">*</span>
+                        </label>
+                        <input 
+                            type="tel" 
+                            id="sender-phone" 
+                            placeholder="+44 7700 900000" 
+                            value="${formData.senderPhone || ''}"
+                            required
+                        />
+                        <small class="helper-text">Carrier may call for pickup/delivery issues</small>
+                    </div>
+                </div>
+                
+                <div class="two-column">
+                    <div class="input-wrapper">
+                        <label for="sender-email">
+                            Email Address <span class="required">*</span>
+                        </label>
+                        <input 
+                            type="email" 
+                            id="sender-email" 
+                            placeholder="john@example.com" 
+                            value="${formData.senderEmail || userEmail}"
+                            required
+                        />
+                        <small class="helper-text">We'll send tracking and updates here</small>
+                    </div>
+                    
+                    <div class="input-wrapper">
+                        <label for="sender-company">
+                            Company Name (Optional)
+                        </label>
+                        <input 
+                            type="text" 
+                            id="sender-company" 
+                            placeholder="ABC Corp" 
+                            value="${formData.senderCompany || ''}"
+                        />
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Recipient Details -->
+            <div class="form-section" style="margin-top: 2rem; padding-top: 2rem; border-top: 2px solid #e5e7eb;">
+                <h4 style="margin-bottom: 1rem; color: var(--primary-color); display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fa-solid fa-user-tag"></i> Recipient Details
+                </h4>
+                
+                <div id="recipient-same-notice" class="info-card success-card" style="margin-bottom: 1rem; padding: 0.75rem; background: #F0FDF4; border-left: 4px solid #10B981; border-radius: 8px; ${formData.isGift ? 'display: none;' : ''}">
+                    <p style="margin: 0; color: #065F46; font-size: 0.9em;">
+                        <i class="fa-solid fa-info-circle"></i> Recipient will be you (same as sender). Check the gift box above if sending to someone else.
+                    </p>
+                </div>
+                
+                <div class="two-column">
+                    <div class="input-wrapper">
+                        <label for="recipient-name">
+                            Full Name <span class="required">*</span>
+                        </label>
+                        <input 
+                            type="text" 
+                            id="recipient-name" 
+                            placeholder="Jane Doe" 
+                            value="${formData.recipientName || (formData.isGift ? '' : formData.senderName || userName)}"
+                            required
+                        />
+                        <small class="helper-text">Name of person receiving the parcel</small>
+                    </div>
+                    
+                    <div class="input-wrapper">
+                        <label for="recipient-phone">
+                            Phone Number <span class="required">*</span>
+                        </label>
+                        <input 
+                            type="tel" 
+                            id="recipient-phone" 
+                            placeholder="+33 1 23 45 67 89" 
+                            value="${formData.recipientPhone || (formData.isGift ? '' : formData.senderPhone || '')}"
+                            required
+                        />
+                        <small class="helper-text">Carrier will call this number for delivery</small>
+                    </div>
+                </div>
+                
+                <div class="two-column">
+                    <div class="input-wrapper">
+                        <label for="recipient-email">
+                            Email Address <span class="required">*</span>
+                        </label>
+                        <input 
+                            type="email" 
+                            id="recipient-email" 
+                            placeholder="jane@example.com" 
+                            value="${formData.recipientEmail || (formData.isGift ? '' : formData.senderEmail || userEmail)}"
+                            required
+                        />
+                        <small class="helper-text">Delivery notifications will be sent here</small>
+                    </div>
+                    
+                    <div class="input-wrapper">
+                        <label for="recipient-company">
+                            Company Name (Optional)
+                        </label>
+                        <input 
+                            type="text" 
+                            id="recipient-company" 
+                            placeholder="XYZ Ltd" 
+                            value="${formData.recipientCompany || ''}"
+                        />
+                    </div>
+                </div>
+            </div>
+            
+            <div class="info-box" style="margin-top: 1.5rem;">
+                <i class="fa-solid fa-shield-check"></i>
+                <p><strong>Privacy Notice:</strong> Your contact information is only shared with the carrier for delivery purposes and is never sold to third parties.</p>
+            </div>
+        </div>
+    `;
+}
+
+// STEP 4: Parcel Details with Type Selection (was Step 3)
+function renderStep4(): string {
     const parcelTypes = [
         { value: 'document', label: 'Document', icon: 'fa-file', desc: 'Letters, papers' },
         { value: 'small-parcel', label: 'Small Parcel', icon: 'fa-box', desc: 'Up to 2kg' },
@@ -321,8 +498,8 @@ function renderStep3(): string {
 }
 
 
-// STEP 4: Send Day & Compliance
-function renderStep4(): string {
+// STEP 5: Send Day & Compliance (was Step 4)
+function renderStep5(): string {
     return `
         <div class="step-content">
             <h3>When would you like to send?</h3>
@@ -503,14 +680,34 @@ function renderStep4(): string {
     `;
 }
 
-// STEP 5: Review & Get Quotes
-function renderStep5(): string {
+// STEP 6: Review & Get Quotes (was Step 5)
+function renderStep6(): string {
     return `
         <div class="step-content">
             <h3>Review Your Details</h3>
             <p class="subtitle">Make sure everything is correct before getting quotes</p>
             
             <div class="review-summary-card">
+                <div class="review-section">
+                    <h4><i class="fa-solid fa-user"></i> Contact Information</h4>
+                    <div class="review-item">
+                        <span>Sender:</span>
+                        <strong>${formData.senderName || 'Not set'} (${formData.senderPhone || 'No phone'})</strong>
+                        <button type="button" class="edit-btn" data-step="3"><i class="fa-solid fa-edit"></i></button>
+                    </div>
+                    <div class="review-item">
+                        <span>Recipient:</span>
+                        <strong>${formData.recipientName || 'Not set'} (${formData.recipientPhone || 'No phone'})</strong>
+                        <button type="button" class="edit-btn" data-step="3"><i class="fa-solid fa-edit"></i></button>
+                    </div>
+                    ${formData.isGift ? `
+                        <div class="review-item">
+                            <span style="color: #F59E0B;">🎁 Gift Shipment</span>
+                            <button type="button" class="edit-btn" data-step="3"><i class="fa-solid fa-edit"></i></button>
+                        </div>
+                    ` : ''}
+                </div>
+                
                 <div class="review-section">
                     <h4><i class="fa-solid fa-route"></i> Route</h4>
                     <div class="review-item">
@@ -535,24 +732,24 @@ function renderStep5(): string {
                     <div class="review-item">
                         <span>Type:</span>
                         <strong>${formData.parcelType || 'Not set'}</strong>
-                        <button type="button" class="edit-btn" data-step="3"><i class="fa-solid fa-edit"></i></button>
+                        <button type="button" class="edit-btn" data-step="4"><i class="fa-solid fa-edit"></i></button>
                     </div>
                     <div class="review-item">
                         <span>Weight:</span>
                         <strong>${formData.weight || '0'} kg</strong>
-                        <button type="button" class="edit-btn" data-step="3"><i class="fa-solid fa-edit"></i></button>
+                        <button type="button" class="edit-btn" data-step="4"><i class="fa-solid fa-edit"></i></button>
                     </div>
                     ${formData.length ? `
                         <div class="review-item">
                             <span>Dimensions:</span>
                             <strong>${formData.length} × ${formData.width} × ${formData.height} cm</strong>
-                            <button type="button" class="edit-btn" data-step="3"><i class="fa-solid fa-edit"></i></button>
+                            <button type="button" class="edit-btn" data-step="4"><i class="fa-solid fa-edit"></i></button>
                         </div>
                     ` : ''}
                     <div class="review-item">
                         <span>Contents:</span>
                         <strong>${formData.itemDescription || 'Not specified'}</strong>
-                        <button type="button" class="edit-btn" data-step="3"><i class="fa-solid fa-edit"></i></button>
+                        <button type="button" class="edit-btn" data-step="4"><i class="fa-solid fa-edit"></i></button>
                     </div>
                 </div>
                 
@@ -561,20 +758,20 @@ function renderStep5(): string {
                     <div class="review-item">
                         <span>Send Day:</span>
                         <strong>${formData.sendDay === 'weekday' ? 'Weekday' : formData.sendDay === 'saturday' ? 'Saturday (+£5)' : 'Sunday (+£8)'}</strong>
-                        <button type="button" class="edit-btn" data-step="4"><i class="fa-solid fa-edit"></i></button>
+                        <button type="button" class="edit-btn" data-step="5"><i class="fa-solid fa-edit"></i></button>
                     </div>
                     ${formData.hsCode ? `
                         <div class="review-item">
                             <span>HS Code:</span>
                             <strong>${formData.hsCode}</strong>
-                            <button type="button" class="edit-btn" data-step="4"><i class="fa-solid fa-edit"></i></button>
+                            <button type="button" class="edit-btn" data-step="5"><i class="fa-solid fa-edit"></i></button>
                         </div>
                     ` : ''}
                     ${formData.documents && formData.documents.length > 0 ? `
                         <div class="review-item">
                             <span>Documents:</span>
                             <strong>${formData.documents.length} file(s) attached</strong>
-                            <button type="button" class="edit-btn" data-step="4"><i class="fa-solid fa-edit"></i></button>
+                            <button type="button" class="edit-btn" data-step="5"><i class="fa-solid fa-edit"></i></button>
                         </div>
                     ` : ''}
                 </div>
@@ -594,8 +791,8 @@ function renderStep5(): string {
     `;
 }
 
-// STEP 6: Quotes & Selection
-function renderStep6(): string {
+// STEP 7: Quotes & Selection (was Step 6)
+function renderStep7(): string {
     if (allQuotes.length === 0) {
         return `
             <div class="step-content">
@@ -793,10 +990,11 @@ function renderWizard(): string {
                 ${currentStep === 4 ? renderStep4() : ''}
                 ${currentStep === 5 ? renderStep5() : ''}
                 ${currentStep === 6 ? renderStep6() : ''}
+                ${currentStep === 7 ? renderStep7() : ''}
                 
                 <div class="wizard-actions">
                     ${currentStep > 1 ? '<button type="button" id="prev-step-btn" class="secondary-btn"><i class="fa-solid fa-arrow-left"></i> Back</button>' : ''}
-                    ${currentStep < 6 ? '<button type="button" id="next-step-btn" class="main-submit-btn">Next <i class="fa-solid fa-arrow-right"></i></button>' : ''}
+                    ${currentStep < 7 ? '<button type="button" id="next-step-btn" class="main-submit-btn">Next <i class="fa-solid fa-arrow-right"></i></button>' : ''}
                 </div>
             </form>
         </div>
@@ -889,7 +1087,67 @@ function validateCurrentStep(): boolean {
             
             return true;
         case 3:
-            // Read current values from DOM to catch unsaved changes
+            // NEW STEP: Contact Details Validation
+            const page3 = document.getElementById('page-parcel');
+            if (!page3) return false;
+            
+            // Get contact detail inputs
+            const senderName = (page3.querySelector('#sender-name') as HTMLInputElement)?.value?.trim() || '';
+            const senderPhone = (page3.querySelector('#sender-phone') as HTMLInputElement)?.value?.trim() || '';
+            const senderEmail = (page3.querySelector('#sender-email') as HTMLInputElement)?.value?.trim() || '';
+            const recipientName = (page3.querySelector('#recipient-name') as HTMLInputElement)?.value?.trim() || '';
+            const recipientPhone = (page3.querySelector('#recipient-phone') as HTMLInputElement)?.value?.trim() || '';
+            const recipientEmail = (page3.querySelector('#recipient-email') as HTMLInputElement)?.value?.trim() || '';
+            const isGift = (page3.querySelector('#is-gift-checkbox') as HTMLInputElement)?.checked || false;
+            
+            // Update formData
+            formData.senderName = senderName;
+            formData.senderPhone = senderPhone;
+            formData.senderEmail = senderEmail;
+            formData.senderCompany = (page3.querySelector('#sender-company') as HTMLInputElement)?.value?.trim();
+            formData.recipientName = recipientName;
+            formData.recipientPhone = recipientPhone;
+            formData.recipientEmail = recipientEmail;
+            formData.recipientCompany = (page3.querySelector('#recipient-company') as HTMLInputElement)?.value?.trim();
+            formData.isGift = isGift;
+            
+            // Validate sender details
+            if (!senderName) {
+                showToast('Please enter sender name', 'warning');
+                page3.querySelector('#sender-name')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return false;
+            }
+            if (!senderPhone) {
+                showToast('Please enter sender phone number', 'warning');
+                page3.querySelector('#sender-phone')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return false;
+            }
+            if (!senderEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(senderEmail)) {
+                showToast('Please enter a valid sender email address', 'warning');
+                page3.querySelector('#sender-email')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return false;
+            }
+            
+            // Validate recipient details
+            if (!recipientName) {
+                showToast('Please enter recipient name', 'warning');
+                page3.querySelector('#recipient-name')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return false;
+            }
+            if (!recipientPhone) {
+                showToast('Please enter recipient phone number', 'warning');
+                page3.querySelector('#recipient-phone')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return false;
+            }
+            if (!recipientEmail || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(recipientEmail)) {
+                showToast('Please enter a valid recipient email address', 'warning');
+                page3.querySelector('#recipient-email')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return false;
+            }
+            
+            return true;
+        case 4:
+            // Parcel Details Validation (was case 3)
             const page = document.getElementById('page-parcel');
             if (!page) return false;
             
@@ -956,12 +1214,13 @@ function validateCurrentStep(): boolean {
             
             // All validations passed
             return true;
-        case 4:
-            const page4 = document.getElementById('page-parcel');
-            if (!page4) return false;
+        case 5:
+            // Send Day validation (was case 4)
+            const page5 = document.getElementById('page-parcel');
+            if (!page5) return false;
             
             // Check send day selection from DOM if not in formData
-            const sendDayCards = page4.querySelectorAll('.send-day-card');
+            const sendDayCards = page5.querySelectorAll('.send-day-card');
             let selectedDay = formData.sendDay;
             sendDayCards.forEach(card => {
                 if (card.classList.contains('selected')) {
@@ -981,7 +1240,11 @@ function validateCurrentStep(): boolean {
             // No warning needed
             
             return true;
-        case 5:
+        case 6:
+            // Review step (was case 5)
+            return true;
+        case 7:
+            // Quote selection step (was case 6)
             return true;
         default:
             return true;
@@ -1009,19 +1272,20 @@ async function goToNextStep() {
     // Show loading overlay with appropriate message
     const loadingMessages: { [key: number]: string } = {
         1: 'Preparing address entry...',
-        2: 'Preparing parcel details...',
-        3: 'Checking compliance requirements...',
-        4: 'Preparing review...',
-        5: 'Fetching real-time quotes from carriers... This may take 10-15 seconds'
+        2: 'Preparing contact details...',
+        3: 'Preparing parcel details...',
+        4: 'Checking compliance requirements...',
+        5: 'Preparing review...',
+        6: 'Fetching real-time quotes from carriers... This may take 10-15 seconds'
     };
     
     const loadingMessage = loadingMessages[currentStep] || 'Preparing next step...';
     toggleLoading(true, loadingMessage);
     
     try {
-        // Navigate IMMEDIATELY - don't wait for anything except step 5 (quote fetching)
-        if (currentStep === 5) {
-            // Step 5: Need to fetch quotes - show fetching message and skeleton loader
+        // Navigate IMMEDIATELY - don't wait for anything except step 6 (quote fetching)
+        if (currentStep === 6) {
+            // Step 6: Need to fetch quotes - show fetching message and skeleton loader
             const skeletonLoader = await import('./skeleton-loader');
             skeletonLoader.showSkeletonLoader({
                 service: 'parcel',
@@ -1036,7 +1300,7 @@ async function goToNextStep() {
             await fetchQuotes();
             skeletonLoader.hideSkeletonLoader();
             
-            // After fetching quotes, move to step 6 to display them
+            // After fetching quotes, move to step 7 to display them
             if (allQuotes.length > 0) {
                 currentStep++;
                 renderPage();
@@ -1081,8 +1345,8 @@ async function goToNextStep() {
             toggleLoading(false);
             
             // Run compliance checks AFTER navigation (non-blocking)
-            // Only for step 4 - run immediately but don't block navigation
-            if (currentStep === 4) {
+            // Only for step 5 (send day & compliance) - run immediately but don't block navigation
+            if (currentStep === 5) {
                 // Run compliance check immediately (it's synchronous now - instant)
                 setTimeout(() => {
                     checkProhibitedItems();
@@ -1130,55 +1394,89 @@ async function fetchQuotes() {
     toggleLoading(true, 'Finding best rates...');
     
     try {
-        // Try to fetch from Shippo API first (real quotes) - with fast timeout
+        // Try to fetch from both Shippo API and Sendcloud API in parallel
+        let shippoQuotes: Quote[] = [];
+        let sendcloudQuotes: Quote[] = [];
+        
         try {
-            const { fetchShippoQuotes } = await import('./backend-api');
+            const { fetchShippoQuotes, fetchSendcloudQuotes } = await import('./backend-api');
             
-            // Set timeout to fail fast if backend not deployed (5 seconds)
+            // Set timeout to fail fast if backend not deployed (5 seconds per API)
             const apiTimeout = new Promise((_, reject) => {
                 setTimeout(() => reject(new Error('API timeout - backend not deployed')), 5000);
             });
             
-            const realQuotes = await Promise.race([
-                fetchShippoQuotes({
-                    originAddress: formData.originAddress || '',
-                    destinationAddress: formData.destinationAddress || '',
-                    weight: formData.weight || 0,
-                    length: formData.length,
-                    width: formData.width,
-                    height: formData.height,
-                    parcelType: formData.parcelType || '',
-                    currency: State.currentCurrency.code
-                }),
-                apiTimeout
-            ]) as Quote[];
+            const requestParams = {
+                originAddress: formData.originAddress || '',
+                destinationAddress: formData.destinationAddress || '',
+                weight: formData.weight || 0,
+                length: formData.length,
+                width: formData.width,
+                height: formData.height,
+                parcelType: formData.parcelType || '',
+                currency: State.currentCurrency.code
+            };
             
-            const extraCost = formData.sendDay === 'saturday' ? 5 : formData.sendDay === 'sunday' ? 8 : 0;
+            // Fetch from both APIs in parallel
+            const [shippoResult, sendcloudResult] = await Promise.allSettled([
+                Promise.race([fetchShippoQuotes(requestParams), apiTimeout]),
+                Promise.race([fetchSendcloudQuotes(requestParams), apiTimeout])
+            ]);
             
-            // Add home pickup fee if service type is 'pickup'
-            const originCountry = detectCountry(formData.originAddress || '');
-            const pickupRules = originCountry ? COUNTRY_PICKUP_RULES[originCountry] : null;
-            const pickupFee = (formData.serviceType === 'pickup' && pickupRules) ? (pickupRules.pickupFee || 0) : 0;
+            // Extract Shippo quotes if successful
+            if (shippoResult.status === 'fulfilled' && Array.isArray(shippoResult.value)) {
+                shippoQuotes = shippoResult.value;
+                console.log(`[Parcel] Got ${shippoQuotes.length} quotes from Shippo`);
+            } else {
+                console.log('[Parcel] Shippo API failed or returned no quotes');
+            }
             
-            allQuotes = realQuotes.map(q => ({
-                ...q,
-                totalCost: q.totalCost + extraCost + pickupFee
-            })).sort((a: Quote, b: Quote) => a.totalCost - b.totalCost);
+            // Extract Sendcloud quotes if successful
+            if (sendcloudResult.status === 'fulfilled' && Array.isArray(sendcloudResult.value)) {
+                sendcloudQuotes = sendcloudResult.value;
+                console.log(`[Parcel] Got ${sendcloudQuotes.length} quotes from Sendcloud`);
+            } else {
+                console.log('[Parcel] Sendcloud API failed or returned no quotes');
+            }
             
-            // Mark that we successfully used API quotes
-            usedApiQuotes = true;
-            return;
+            // Combine all quotes from both providers
+            const allApiQuotes = [...shippoQuotes, ...sendcloudQuotes];
+            
+            if (allApiQuotes.length > 0) {
+                const extraCost = formData.sendDay === 'saturday' ? 5 : formData.sendDay === 'sunday' ? 8 : 0;
+                
+                // Add home pickup fee if service type is 'pickup'
+                const originCountry = detectCountry(formData.originAddress || '');
+                const pickupRules = originCountry ? COUNTRY_PICKUP_RULES[originCountry] : null;
+                const pickupFee = (formData.serviceType === 'pickup' && pickupRules) ? (pickupRules.pickupFee || 0) : 0;
+                
+                allQuotes = allApiQuotes.map(q => ({
+                    ...q,
+                    totalCost: q.totalCost + extraCost + pickupFee
+                })).sort((a: Quote, b: Quote) => a.totalCost - b.totalCost); // Sort by cheapest first
+                
+                // Mark that we successfully used API quotes
+                usedApiQuotes = true;
+                
+                // Show success message
+                const providersUsed = [];
+                if (shippoQuotes.length > 0) providersUsed.push('Shippo');
+                if (sendcloudQuotes.length > 0) providersUsed.push('Sendcloud');
+                console.log(`[Parcel] Combined ${allQuotes.length} quotes from: ${providersUsed.join(', ')}`);
+                
+                return;
+            } else {
+                console.log('[Parcel] No quotes from either API, falling back to AI');
+            }
         } catch (apiError: any) {
-            // Shippo API failed - try AI fallback
-            console.error('[Parcel] Shippo API error:', apiError);
+            // Both APIs failed - continue with AI fallback
+            console.error('[Parcel] All APIs failed:', apiError);
             
             // Mark that we're NOT using API quotes
             usedApiQuotes = false;
-            
-            // Continue with AI fallback instead of throwing error
         }
         
-        // AI Fallback for quotes
+        // AI Fallback for quotes (when no API quotes available)
         const extraCost = formData.sendDay === 'saturday' ? 5 : formData.sendDay === 'sunday' ? 8 : 0;
         
         // Add home pickup fee if service type is 'pickup'
@@ -1428,39 +1726,65 @@ function generateShippingLabel(trackingId: string, selectedQuote: Quote) {
     doc.setFont('courier', 'normal');
     doc.text('*' + trackingId + '*', 75, 55, { align: 'center' });
     
-    // FROM section with box
+    // FROM section with contact details
     doc.setDrawColor(200, 200, 200);
     doc.setLineWidth(0.5);
-    doc.rect(10, 70, 190, 30);
+    doc.rect(10, 70, 190, 45);
     doc.setFontSize(10);
     doc.setTextColor(249, 115, 22);
     doc.setFont('helvetica', 'bold');
-    doc.text('FROM:', 12, 77);
+    doc.text('FROM (SENDER):', 12, 77);
     doc.setFontSize(11);
     doc.setTextColor(0, 0, 0);
+    doc.setFont('helvetica', 'bold');
+    doc.text(formData.senderName || 'Sender Name', 12, 85);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     const fromLines = doc.splitTextToSize(formData.originAddress || '', 175);
-    doc.text(fromLines, 12, 85);
+    doc.text(fromLines, 12, 92);
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Phone: ${formData.senderPhone || 'N/A'}`, 12, 105);
+    doc.text(`Email: ${formData.senderEmail || 'N/A'}`, 12, 110);
+    if (formData.senderCompany) {
+        doc.text(`Company: ${formData.senderCompany}`, 12, 100);
+    }
     
-    // TO section with box (highlighted)
+    // TO section with box and contact details (highlighted)
     doc.setFillColor(255, 248, 240);
-    doc.rect(10, 105, 190, 40, 'FD');
+    doc.rect(10, 120, 190, 50, 'FD');
     doc.setFontSize(10);
     doc.setTextColor(249, 115, 22);
     doc.setFont('helvetica', 'bold');
-    doc.text('TO (DESTINATION):', 12, 112);
+    doc.text('TO (RECIPIENT - DESTINATION):', 12, 127);
     doc.setFontSize(12);
     doc.setTextColor(0, 0, 0);
     doc.setFont('helvetica', 'bold');
+    doc.text(formData.recipientName || 'Recipient Name', 12, 135);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
     const toLines = doc.splitTextToSize(formData.destinationAddress || '', 175);
-    doc.text(toLines, 12, 122);
+    doc.text(toLines, 12, 142);
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Phone: ${formData.recipientPhone || 'N/A'}`, 12, 158);
+    doc.text(`Email: ${formData.recipientEmail || 'N/A'}`, 12, 163);
+    if (formData.recipientCompany) {
+        doc.text(`Company: ${formData.recipientCompany}`, 12, 153);
+    }
+    if (formData.isGift) {
+        doc.setFontSize(9);
+        doc.setTextColor(249, 115, 22);
+        doc.setFont('helvetica', 'bold');
+        doc.text('🎁 GIFT SHIPMENT', 12, 168);
+    }
     
     // Shipment details grid
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(100, 100, 100);
     
-    const detailsY = 155;
+    const detailsY = 180;
     const col1X = 12;
     const col2X = 75;
     const col3X = 138;
@@ -1772,7 +2096,35 @@ function attachWizardListeners() {
         formData.destinationAddress = destInput.value.trim();
     });
     
-    // Step 3: Parcel type selection
+    // Step 3: Gift checkbox listener - auto-fill recipient if not gift
+    const isGiftCheckbox = page.querySelector('#is-gift-checkbox') as HTMLInputElement;
+    if (isGiftCheckbox) {
+        isGiftCheckbox.addEventListener('change', () => {
+            formData.isGift = isGiftCheckbox.checked;
+            
+            // Show/hide the notice
+            const notice = page.querySelector('#recipient-same-notice');
+            if (notice) {
+                notice.style.display = isGiftCheckbox.checked ? 'none' : 'block';
+            }
+            
+            // If unchecked (not a gift), auto-fill recipient with sender details
+            if (!isGiftCheckbox.checked) {
+                const recipientName = page.querySelector('#recipient-name') as HTMLInputElement;
+                const recipientPhone = page.querySelector('#recipient-phone') as HTMLInputElement;
+                const recipientEmail = page.querySelector('#recipient-email') as HTMLInputElement;
+                const senderName = page.querySelector('#sender-name') as HTMLInputElement;
+                const senderPhone = page.querySelector('#sender-phone') as HTMLInputElement;
+                const senderEmail = page.querySelector('#sender-email') as HTMLInputElement;
+                
+                if (recipientName && senderName) recipientName.value = senderName.value;
+                if (recipientPhone && senderPhone) recipientPhone.value = senderPhone.value;
+                if (recipientEmail && senderEmail) recipientEmail.value = senderEmail.value;
+            }
+        });
+    }
+    
+    // Step 4: Parcel type selection (was Step 3)
     page.querySelectorAll('.parcel-type-card').forEach(card => {
         card.addEventListener('click', (e) => {
             e.preventDefault();
@@ -2035,7 +2387,7 @@ function renderPage() {
     updateStepConnectors();
     
     // Update HS code requirements based on shipment type (after DOM is rendered)
-    if (currentStep === 4) {
+    if (currentStep === 5) {
         const isInternational = isInternationalShipment();
         const hsCodeLocalText = document.getElementById('hs-code-local-text');
         const hsCodeInternationalText = document.getElementById('hs-code-international-text');
@@ -2071,9 +2423,9 @@ function renderPage() {
         })();
     }
     
-    // Only show email form if we're on step 6 AND using AI quotes (not API quotes)
+    // Only show email form if we're on step 7 AND using AI quotes (not API quotes)
     // Email form is only for services without API keys or when API fails
-    if (currentStep === 6 && allQuotes.length > 0 && !usedApiQuotes) {
+    if (currentStep === 7 && allQuotes.length > 0 && !usedApiQuotes) {
         showEmailInquiryForm().catch(() => {
             // Email form is optional - fail silently
         });
