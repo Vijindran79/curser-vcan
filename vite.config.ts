@@ -34,10 +34,9 @@ export default defineConfig(({ mode }) => {
               await cp('src/locales', 'dist/src/locales', { recursive: true });
               await cp('locales.json', 'dist/locales.json');
               await cp('languages.json', 'dist/languages.json');
-              await cp('UI_UX_FIXES.css', 'dist/UI_UX_FIXES.css');
               // Copy service worker to dist
               await cp('sw.js', 'dist/sw.js');
-              console.log('✓ Copied locales, src/locales, languages.json, UI_UX_FIXES.css, and sw.js to dist');
+              console.log('✓ Copied locales, src/locales, languages.json, and sw.js to dist');
             } catch (error: any) {
               console.error('Error copying files:', error.message);
             }

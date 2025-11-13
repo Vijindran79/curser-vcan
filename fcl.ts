@@ -1520,20 +1520,8 @@ function sortAndRenderFclQuotes(sortBy: 'price' | 'speed') {
         });
     }, 100);
     
-    // Show inline compliance summary
-    const originCountry = State.fclDetails?.pickupAddress?.country || State.fclDetails?.pickupPort || 'Unknown';
-    const destCountry = State.fclDetails?.deliveryAddress?.country || State.fclDetails?.deliveryPort || 'Unknown';
-    
-    if (State.fclDetails && originCountry && destCountry) {
-        import('./compliance-checklist').then(({ showInlineComplianceSummary }) => {
-            showInlineComplianceSummary(
-                'fcl-compliance-summary',
-                originCountry,
-                destCountry,
-                State.fclDetails.cargoDescription || 'General cargo'
-            );
-        });
-    }
+    // Compliance checklist temporarily disabled
+    console.log('Compliance checklist integration pending for FCL');
 
     document.querySelectorAll('#fcl-results-controls .sort-btn').forEach(btn => {
         btn.classList.toggle('active', btn.getAttribute('data-sort') === sortBy);
