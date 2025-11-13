@@ -1,0 +1,12 @@
+body {
+    background-color: #f8fafc;
+    background-image: linear-gradient(to bottom right, #f8fafc, #eef2f5);
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.animate-spin {
+    animation: spin 1s linear infinite;
+}

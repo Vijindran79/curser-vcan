@@ -1,0 +1,30 @@
+export const seaCarriers = [
+    { name: 'A.P. Møller – Maersk', logoUrl: 'https://rsb.org/wp-content/uploads/2018/04/Maersk_Logo.png' },
+    { name: 'MSC', logoUrl: 'https://1000logos.net/wp-content/uploads/2017/09/MSC-Logo.png' },
+    { name: 'CMA CGM', logoUrl: 'https://mma.prnewswire.com/media/1697975/CMA_CGM_Logo.jpg?p=facebook' },
+    { name: 'COSCO Shipping', logoUrl: 'https://coscologam.com/assets/img/layout/logo.png' },
+    { name: 'Hapag-Lloyd', logoUrl: 'https://cdn.freebiesupply.com/logos/large/2x/hapag-lloyd-2-logo-png-transparent.png' },
+    { name: 'ONE (Ocean Network Express)', logoUrl: 'https://i0.wp.com/nzunitalent.ac.nz/wp-content/uploads/Ocean-Network-Express-logo.png?w=750&ssl=1' },
+    { name: 'Evergreen Marine', logoUrl: 'https://www.evergreen-marine.com/emc/common/images/logo/emc_logo.svg' },
+    { name: 'HMM', logoUrl: 'https://www.maritimegateway.com/wp-content/uploads/2017/01/hmm-1-e1562827005780.png' },
+    { name: 'Yang Ming', logoUrl: 'https://www.yangming.com/content/cms/SopOuKuNrlRPXlZV_overviewlogo1.png' },
+    { name: 'ZIM', logoUrl: 'https://companieslogo.com/img/orig/ZIM.D-23f5f55c.png?t=1720244494' },
+    { name: 'Wan Hai Lines', logoUrl: 'https://cdn.prod.website-files.com/635155e3a3aad319658a63f7/65705e55b44cc2d22a0017cf_6569cad0051ab3cc42d06ea6_Wan%2520Hai.jpeg' },
+    { name: 'Pacific Int. Lines (PIL)', logoUrl: 'https://www.pilship.com/wp-content/uploads/2024/05/pil-logo.png' },
+    { name: 'OOCL', logoUrl: 'https://images.squarespace-cdn.com/content/v1/619cb6a569450b58acd875e4/3e783eb9-72fa-41e9-951f-89a7e595d560/OOCL_logo_logotype_emblem%402x.png' },
+];
+
+export const airCarriers = [
+    { name: 'FedEx', logoUrl: 'https://1000logos.net/wp-content/uploads/2021/04/Fedex-logo.png' },
+    { name: 'UPS', logoUrl: 'https://1000logos.net/wp-content/uploads/2021/04/UPS-logo.png' },
+    { name: 'DHL Aviation', logoUrl: 'https://download.logo.wine/logo/DHL_Aviation/DHL_Aviation-Logo.wine.png' },
+    { name: 'Emirates', logoUrl: 'https://cdn.freebiesupply.com/logos/large/2x/emirates-airlines-1-logo-png-transparent.png' },
+    { name: 'Qatar Airways', logoUrl: 'https://logos-world.net/wp-content/uploads/2020/03/Qatar-Airways-Symbol.png' },
+    { name: 'Lufthansa', logoUrl: 'https://cdn.freebiesupply.com/logos/large/2x/lufthansa-2-logo-png-transparent.png' },
+    { name: 'Turkish Airlines', logoUrl: 'https://1000logos.net/wp-content/uploads/2020/04/Turkish_Airlines_logo.png' },
+    { name: 'Cathay Pacific Airways', logoUrl: 'https://logos-world.net/wp-content/uploads/2023/02/Cathay-Pacific-Logo.jpg' },
+    { name: 'Korean Air', logoUrl: 'https://1000logos.net/wp-content/uploads/2020/03/Korean-Air-Logo.png' },
+    { name: 'Singapore Airlines', logoUrl: 'https://1000logos.net/wp-content/uploads/2020/04/Singapore-Airlines-Logo.png' },
+    { name: 'Atlas Air', logoUrl: 'https://www.atlasairworldwide.com/wp-content/uploads/2016/04/logo_atlas-air_2-color.png' },
+    { name: 'Cargolux', logoUrl: 'https://www.airline-suppliers.com/wp-content/uploads/2019/03/Cargolux-logo.jpg' },
+];
