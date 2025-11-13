@@ -21,6 +21,7 @@ Open `http://localhost:5173`
 - **Real Quotes**: Shippo, Sea Rates, and AI-powered estimates
 - **Document Management**: Upload/download shipping labels and certificates
 - **Subscription System**: Stripe integration for Pro features
+- **AI Code Reviews**: CodeRabbit integration for automated PR reviews
 
 ## 🔧 Tech Stack
 
@@ -45,6 +46,10 @@ cd functions
 npm install
 firebase deploy --only functions
 ```
+
+## 🤖 CodeRabbit Setup
+
+This repository uses CodeRabbit for AI-powered code reviews. See [CODERABBIT_SETUP.md](./CODERABBIT_SETUP.md) for installation and usage instructions.
 
 ## 📄 License
 
