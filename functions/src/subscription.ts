@@ -1,4 +1,4 @@
-import * as functions from 'firebase-functions';
+import * as functions from 'firebase-functions/v1';
 import * as admin from 'firebase-admin';
 import axios from 'axios';
 
@@ -21,7 +21,7 @@ const API_LIMITS = {
 
 // Set custom user claims based on subscription status
 export const onSubscriptionUpdate = functions.firestore.document('customers/{userId}/subscriptions/{subId}')
-  .onWrite(async (change, context) => {
+  .onWrite(async (change: any, context: any) => {
     const subscription = change.after.data();
     const userId = context.params.userId;
     
@@ -90,7 +90,7 @@ function shouldResetCounter(lastReset: Date): boolean {
 }
 
 // Proxy function for SeaRates API with rate limiting
-export const proxySeaRatesAPI = functions.https.onCall(async (data, context) => {
+export const proxySeaRatesAPI = functions.https.onCall(async (data: any, context: any) => {
   console.log('[API Proxy] Request received');
   
   // 1. Authentication: Verify the user is authenticated
@@ -209,7 +209,7 @@ export const proxySeaRatesAPI = functions.https.onCall(async (data, context) => 
 /**
  * Get current API usage for a user
  */
-export const getApiUsage = functions.https.onCall(async (data, context) => {
+export const getApiUsage = functions.https.onCall(async (data: any, context: any) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
   }
@@ -248,7 +248,7 @@ export const getApiUsage = functions.https.onCall(async (data, context) => {
 /**
  * Create Stripe Checkout session for subscription
  */
-export const createCheckoutSession = functions.https.onCall(async (data, context) => {
+export const createCheckoutSession = functions.https.onCall(async (data: any, context: any) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
   }
@@ -310,7 +310,7 @@ export const createCheckoutSession = functions.https.onCall(async (data, context
 /**
  * Create Stripe Customer Portal session
  */
-export const createPortalSession = functions.https.onCall(async (data, context) => {
+export const createPortalSession = functions.https.onCall(async (data: any, context: any) => {
   if (!context.auth) {
     throw new functions.https.HttpsError('unauthenticated', 'User must be authenticated');
   }

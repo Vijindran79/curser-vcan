@@ -8,16 +8,16 @@ const SEARATES_API_KEY = functions.config().searates?.key || process.env.SEARATE
 const SEARATES_BASE_URL = "https://www.searates.com/api";
 
 // Database connection (will be imported from connection.ts)
-interface TransportRate {
-  origin: string;
-  destination: string;
-  mode: string;
-  service_type: string;
-  cost: number;
-  currency: string;
-  transit_time: string;
-  available_capacity: number;
-}
+// interface TransportRate {
+//   origin: string;
+//   destination: string;
+//   mode: string;
+//   service_type: string;
+//   cost: number;
+//   currency: string;
+//   transit_time: string;
+//   available_capacity: number;
+// }
 
 /**
  * Get Rail Rates from SeaRates API
