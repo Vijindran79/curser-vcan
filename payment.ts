@@ -508,14 +508,8 @@ async function mountPaymentForm() {
                 const destination = typeof destAddr === 'string' ? destAddr : destAddr?.country || '';
                 
                 if (origin && destination) {
-                    import('./compliance-checklist').then(({ showInlineComplianceSummary }) => {
-                        showInlineComplianceSummary(
-                            'payment-compliance-summary',
-                            origin,
-                            destination,
-                            'Shipment cargo'
-                        );
-                    });
+                    // Compliance checklist temporarily disabled
+                    console.log('Compliance checklist integration pending');
                 }
             }
             
