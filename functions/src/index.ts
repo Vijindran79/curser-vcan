@@ -695,6 +695,192 @@ export const getParcelRates = functions.https.onCall(async (data, context: any) 
   }
 });
 
+// Alias for getParcelRates - for backward compatibility with frontend
+export const getShippoQuotes = functions.https.onCall(async (data, context: any) => {
+  // Authentication is now OPTIONAL - allow guest access
+  const userEmail = context?.auth?.token?.email || 'guest';
+  const isSubscribed = userEmail !== 'guest' ? await checkUserSubscription(userEmail) : false;
+
+  const origin = (data as any).origin;
+  const destination = (data as any).destination;
+  const weight = (data as any).weight_kg || (data as any).weight;
+  
+  if (!origin || !destination || !weight) {
+    throw new functions.https.HttpsError(
+      'invalid-argument',
+      'Missing required parameters: origin, destination, weight'
+    );
+  }
+
+  console.log(`[getShippoQuotes] User ${userEmail} requesting parcel rates. Subscribed: ${isSubscribed}`);
+
+  try {
+    // Shippo is FREE for all users - get REAL LIVE RATES from Shippo API
+    const SHIPPO_API_KEY = functions.config().shippo?.api_key || process.env.SHIPPO_API_KEY;
+    
+    if (!SHIPPO_API_KEY || SHIPPO_API_KEY === 'your-shippo-api-key-here') {
+      console.warn('[Shippo] API key not configured, returning estimated rates');
+      return {
+        success: true,
+        quotes: [
+          {
+            carrier: 'UPS',
+            service_name: 'Ground (Estimated)',
+            total_rate: 25,
+            transit_time: '3-5 days',
+            validity: '2024-12-31',
+            source: 'estimated_rates'
+          },
+          {
+            carrier: 'FedEx',
+            service_name: 'Express (Estimated)',
+            total_rate: 35,
+            transit_time: '2-3 days',
+            validity: '2024-12-31',
+            source: 'estimated_rates'
+          }
+        ],
+        cached: true,
+        subscription_required: false,
+        message: 'API key not configured - showing estimated rates'
+      };
+    }
+
+    // Parse addresses from strings
+    const parseAddress = (addressStr: string) => {
+      // Handle both string and object formats
+      if (typeof addressStr === 'object') return addressStr;
+      
+      const parts = addressStr.split(',').map(p => p.trim());
+      if (parts.length >= 3) {
+        return {
+          street1: parts[0] || '',
+          city: parts[1] || '',
+          state: parts[2]?.split(' ')[0] || '',
+          zip: parts[2]?.split(' ')[1] || parts[3]?.match(/\d{5}/)?.[0] || '',
+          country: parts[parts.length - 1] || 'US'
+        };
+      }
+      // Fallback for incomplete addresses
+      return {
+        street1: addressStr,
+        city: 'City',
+        state: 'State',
+        zip: '00000',
+        country: 'US'
+      };
+    };
+
+    const addressFrom = parseAddress(origin);
+    const addressTo = parseAddress(destination);
+
+    // Create Shippo shipment request
+    const shippoPayload = {
+      address_from: {
+        street1: addressFrom.street1,
+        city: addressFrom.city,
+        state: addressFrom.state,
+        zip: addressFrom.zip,
+        country: addressFrom.country
+      },
+      address_to: {
+        street1: addressTo.street1,
+        city: addressTo.city,
+        state: addressTo.state,
+        zip: addressTo.zip,
+        country: addressTo.country
+      },
+      parcels: [{
+        length: (data as any).dimensions?.length?.toString() || '10',
+        width: (data as any).dimensions?.width?.toString() || '10',
+        height: (data as any).dimensions?.height?.toString() || '10',
+        distance_unit: 'cm',
+        weight: weight?.toString() || '1',
+        mass_unit: 'kg'
+      }],
+      async: false
+    };
+
+    console.log('[Shippo] Calling Shippo API for real-time rates...');
+
+    // Call Shippo API
+    const shippoResponse = await axios.post(
+      'https://api.goshippo.com/shipments',
+      shippoPayload,
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `ShippoToken ${SHIPPO_API_KEY}`
+        },
+        timeout: 10000
+      }
+    );
+
+    const rates = shippoResponse.data.rates || [];
+
+    if (rates.length === 0) {
+      console.log('[Shippo] No rates returned from API');
+      throw new Error('No rates available from carriers');
+    }
+
+    console.log(`[Shippo] Received ${rates.length} LIVE rates from API`);
+
+    // Transform Shippo rates to our format
+    const quotes = rates.map((rate: any) => ({
+      carrier: rate.provider || 'Unknown',
+      service_name: rate.servicelevel?.name || rate.servicelevel_name || 'Standard',
+      total_rate: parseFloat(rate.amount) || 0,
+      transit_time: rate.estimated_days ? `${rate.estimated_days} days` : rate.duration_terms || 'N/A',
+      validity: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+      source: 'live_carrier_api',
+      currency: rate.currency || 'USD',
+      rate_id: rate.object_id
+    }));
+
+    return {
+      success: true,
+      quotes: quotes,
+      cached: false,
+      subscription_required: false,
+      source: 'live_carrier_api',
+      message: `Live rates from ${quotes.length} carriers via Shippo API`
+    };
+
+  } catch (error: any) {
+    console.error('[Shippo] API call failed:', error.message);
+    if (error.response) {
+      console.error('[Shippo] Error details:', error.response.data);
+    }
+    
+    // Fall back to estimated rates on API failure
+    console.log('[Shippo] Returning estimated rates as fallback');
+    return {
+      success: true,
+      quotes: [
+        {
+          carrier: 'UPS',
+          service_name: 'Ground (Estimated)',
+          total_rate: 25,
+          transit_time: '3-5 days',
+          validity: '2024-12-31',
+          source: 'estimated_rates'
+        },
+        {
+          carrier: 'FedEx',
+          service_name: 'Express (Estimated)',
+          total_rate: 35,
+          transit_time: '2-3 days',
+          validity: '2024-12-31',
+          source: 'estimated_rates'
+        }
+      ],
+      cached: true,
+      subscription_required: false,
+      message: `Shippo API unavailable: ${error.message}. Showing estimated rates.`
+    };
+  }
+});
+
 // Get HS Code suggestions
 export const getHsCode = functions.https.onCall(async (request, context: any) => {
   try {
