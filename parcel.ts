@@ -1130,55 +1130,89 @@ async function fetchQuotes() {
     toggleLoading(true, 'Finding best rates...');
     
     try {
-        // Try to fetch from Shippo API first (real quotes) - with fast timeout
+        // Try to fetch from both Shippo API and Sendcloud API in parallel
+        let shippoQuotes: Quote[] = [];
+        let sendcloudQuotes: Quote[] = [];
+        
         try {
-            const { fetchShippoQuotes } = await import('./backend-api');
+            const { fetchShippoQuotes, fetchSendcloudQuotes } = await import('./backend-api');
             
-            // Set timeout to fail fast if backend not deployed (5 seconds)
+            // Set timeout to fail fast if backend not deployed (5 seconds per API)
             const apiTimeout = new Promise((_, reject) => {
                 setTimeout(() => reject(new Error('API timeout - backend not deployed')), 5000);
             });
             
-            const realQuotes = await Promise.race([
-                fetchShippoQuotes({
-                    originAddress: formData.originAddress || '',
-                    destinationAddress: formData.destinationAddress || '',
-                    weight: formData.weight || 0,
-                    length: formData.length,
-                    width: formData.width,
-                    height: formData.height,
-                    parcelType: formData.parcelType || '',
-                    currency: State.currentCurrency.code
-                }),
-                apiTimeout
-            ]) as Quote[];
+            const requestParams = {
+                originAddress: formData.originAddress || '',
+                destinationAddress: formData.destinationAddress || '',
+                weight: formData.weight || 0,
+                length: formData.length,
+                width: formData.width,
+                height: formData.height,
+                parcelType: formData.parcelType || '',
+                currency: State.currentCurrency.code
+            };
             
-            const extraCost = formData.sendDay === 'saturday' ? 5 : formData.sendDay === 'sunday' ? 8 : 0;
+            // Fetch from both APIs in parallel
+            const [shippoResult, sendcloudResult] = await Promise.allSettled([
+                Promise.race([fetchShippoQuotes(requestParams), apiTimeout]),
+                Promise.race([fetchSendcloudQuotes(requestParams), apiTimeout])
+            ]);
             
-            // Add home pickup fee if service type is 'pickup'
-            const originCountry = detectCountry(formData.originAddress || '');
-            const pickupRules = originCountry ? COUNTRY_PICKUP_RULES[originCountry] : null;
-            const pickupFee = (formData.serviceType === 'pickup' && pickupRules) ? (pickupRules.pickupFee || 0) : 0;
+            // Extract Shippo quotes if successful
+            if (shippoResult.status === 'fulfilled' && Array.isArray(shippoResult.value)) {
+                shippoQuotes = shippoResult.value;
+                console.log(`[Parcel] Got ${shippoQuotes.length} quotes from Shippo`);
+            } else {
+                console.log('[Parcel] Shippo API failed or returned no quotes');
+            }
             
-            allQuotes = realQuotes.map(q => ({
-                ...q,
-                totalCost: q.totalCost + extraCost + pickupFee
-            })).sort((a: Quote, b: Quote) => a.totalCost - b.totalCost);
+            // Extract Sendcloud quotes if successful
+            if (sendcloudResult.status === 'fulfilled' && Array.isArray(sendcloudResult.value)) {
+                sendcloudQuotes = sendcloudResult.value;
+                console.log(`[Parcel] Got ${sendcloudQuotes.length} quotes from Sendcloud`);
+            } else {
+                console.log('[Parcel] Sendcloud API failed or returned no quotes');
+            }
             
-            // Mark that we successfully used API quotes
-            usedApiQuotes = true;
-            return;
+            // Combine all quotes from both providers
+            const allApiQuotes = [...shippoQuotes, ...sendcloudQuotes];
+            
+            if (allApiQuotes.length > 0) {
+                const extraCost = formData.sendDay === 'saturday' ? 5 : formData.sendDay === 'sunday' ? 8 : 0;
+                
+                // Add home pickup fee if service type is 'pickup'
+                const originCountry = detectCountry(formData.originAddress || '');
+                const pickupRules = originCountry ? COUNTRY_PICKUP_RULES[originCountry] : null;
+                const pickupFee = (formData.serviceType === 'pickup' && pickupRules) ? (pickupRules.pickupFee || 0) : 0;
+                
+                allQuotes = allApiQuotes.map(q => ({
+                    ...q,
+                    totalCost: q.totalCost + extraCost + pickupFee
+                })).sort((a: Quote, b: Quote) => a.totalCost - b.totalCost); // Sort by cheapest first
+                
+                // Mark that we successfully used API quotes
+                usedApiQuotes = true;
+                
+                // Show success message
+                const providersUsed = [];
+                if (shippoQuotes.length > 0) providersUsed.push('Shippo');
+                if (sendcloudQuotes.length > 0) providersUsed.push('Sendcloud');
+                console.log(`[Parcel] Combined ${allQuotes.length} quotes from: ${providersUsed.join(', ')}`);
+                
+                return;
+            } else {
+                console.log('[Parcel] No quotes from either API, falling back to AI');
+            }
         } catch (apiError: any) {
-            // Shippo API failed - try AI fallback
-            console.error('[Parcel] Shippo API error:', apiError);
+            // Both APIs failed - continue with AI fallback
+            console.error('[Parcel] All APIs failed:', apiError);
             
             // Mark that we're NOT using API quotes
             usedApiQuotes = false;
-            
-            // Continue with AI fallback instead of throwing error
         }
         
-        // AI Fallback for quotes
+        // AI Fallback for quotes (when no API quotes available)
         const extraCost = formData.sendDay === 'saturday' ? 5 : formData.sendDay === 'sunday' ? 8 : 0;
         
         // Add home pickup fee if service type is 'pickup'

@@ -155,6 +155,104 @@ export async function fetchShippoQuotes(params: {
 }
 
 /**
+ * Fetches real parcel quotes from Sendcloud API via backend
+ * Used as fallback for areas Shippo doesn't cover
+ */
+export async function fetchSendcloudQuotes(params: {
+    originAddress: string;
+    destinationAddress: string;
+    weight: number;
+    length?: number;
+    width?: number;
+    height?: number;
+    parcelType: string;
+    currency: string;
+}): Promise<Quote[]> {
+    console.log('🔍 [DEBUG] fetchSendcloudQuotes STARTED', params);
+    
+    try {
+        toggleLoading(true, 'Fetching rates from Sendcloud...');
+        
+        // Get the current user's auth token (optional - allow guest access)
+        const { auth } = await import('./firebase');
+        const user = auth?.currentUser;
+        
+        console.log('🔍 [DEBUG] Sendcloud User status:', user ? 'Logged in' : 'Guest access');
+        
+        // Call Firebase Function
+        const currentFunctions = functions || getFunctions();
+        if (currentFunctions) {
+            try {
+                console.log('🔍 [DEBUG] Calling getSendcloudRates Firebase function...');
+                const getSendcloudRates = currentFunctions.httpsCallable('getSendcloudRates');
+                const result = await getSendcloudRates({
+                    origin: params.originAddress,
+                    destination: params.destinationAddress,
+                    weight: params.weight,
+                    dimensions: params.length && params.width && params.height ? {
+                        length: params.length,
+                        width: params.width,
+                        height: params.height
+                    } : undefined,
+                    parcel_type: params.parcelType,
+                    currency: params.currency,
+                    user_email: user?.email || 'guest',
+                    is_authenticated: !!user
+                });
+                
+                console.log('🔍 [DEBUG] Sendcloud Firebase function call successful');
+                
+                const data: any = result.data;
+                console.log('🔍 [DEBUG] Sendcloud Firebase function response:', data);
+                
+                if (data && data.success && data.quotes && Array.isArray(data.quotes) && data.quotes.length > 0) {
+                    console.log('🔍 [DEBUG] Sendcloud transforming quotes, count:', data.quotes.length);
+                    // Transform API response to our Quote format
+                    return data.quotes.map((q: any) => ({
+                        carrierName: q.carrier || q.service_name || 'Sendcloud',
+                        carrierType: q.service_type || 'Standard',
+                        totalCost: q.total_rate || q.rate || q.price || 0,
+                        estimatedTransitTime: q.estimated_days 
+                            ? `${q.estimated_days} business days` 
+                            : q.estimated_delivery || q.transit_time || '3-5 days',
+                        serviceProvider: 'Sendcloud API',
+                        isSpecialOffer: false,
+                        chargeableWeight: params.weight,
+                        chargeableWeightUnit: 'kg',
+                        weightBasis: 'Actual',
+                        costBreakdown: {
+                            baseShippingCost: q.total_rate || q.rate || q.price || 0,
+                            fuelSurcharge: q.fuel_surcharge || 0,
+                            estimatedCustomsAndTaxes: q.customs || 0,
+                            optionalInsuranceCost: 0,
+                            ourServiceFee: 0
+                        }
+                    }));
+                } else {
+                    console.log('🔍 [DEBUG] No Sendcloud quotes returned');
+                    // Return empty array instead of throwing (graceful fallback)
+                    return [];
+                }
+            } catch (funcError: any) {
+                console.log('🔍 [DEBUG] Sendcloud Firebase function error:', funcError);
+                // Return empty array instead of throwing (graceful fallback)
+                return [];
+            }
+        }
+        
+        // No Firebase functions available
+        return [];
+    } catch (error: any) {
+        console.log('🔍 [DEBUG] fetchSendcloudQuotes final error:', error);
+        // Return empty array for graceful degradation
+        return [];
+    } finally {
+        console.log('🔍 [DEBUG] fetchSendcloudQuotes completed');
+        toggleLoading(false);
+    }
+}
+
+/**
  * Fetches real sea freight rates for FCL/LCL/Train/Air/Bulk via Sea Rates API
  * Already uses Firebase callable functions (no CORS issues)
  */
