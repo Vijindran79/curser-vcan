@@ -68,14 +68,38 @@ function getStaticPageRenderer(page: string): (() => void) | null {
         case 'address-autocomplete':
             return async () => {
                 try {
-                    // Feature temporarily disabled - redirect to dashboard
-                    console.warn('Address autocomplete page not yet implemented');
-                    showToast('Feature coming soon', 'info');
-                    navigateTo('dashboard');
+                    // Re-enable address autocomplete page - show basic info page
+                    const page = document.getElementById('page-address-autocomplete');
+                    if (page) {
+                        page.innerHTML = `
+                            <div class="service-page-header">
+                                <h2>Address Autocomplete</h2>
+                                <p class="subtitle">Smart address suggestions powered by Geoapify</p>
+                            </div>
+                            <div class="form-container">
+                                <div class="info-card">
+                                    <h4><i class="fa-solid fa-info-circle"></i> Feature Information</h4>
+                                    <p>Address autocomplete is integrated directly into the parcel booking flow. As you type addresses in the booking form, smart suggestions will appear automatically.</p>
+                                    <p class="helper-text">No separate configuration needed - just start typing in any address field!</p>
+                                </div>
+                                <div class="form-actions">
+                                    <button class="secondary-btn" id="back-to-parcel-btn">
+                                        <i class="fa-solid fa-arrow-left"></i> Back to Parcel Booking
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                        switchPage('address-autocomplete');
+                        
+                        // Add event listener for the back button
+                        document.getElementById('back-to-parcel-btn')?.addEventListener('click', () => {
+                            switchPage('parcel');
+                        });
+                    }
                 } catch (error) {
                     console.error('Failed to load address autocomplete page:', error);
                     showToast('Failed to load address page', 'error');
-                    navigateTo('dashboard');
+                    switchPage('dashboard');
                 }
             };
         case 'subscription': 

@@ -78,24 +78,18 @@
             </button>
         </header>
         
-        <!-- FLOATING GLASS BUTTONS (Movable & Beautiful) - FORCE VISIBLE -->
-        <div class="floating-glass-buttons" id="floating-glass-buttons" style="display: flex !important; visibility: visible !important; opacity: 1 !important; z-index: 2147483647 !important; position: fixed !important; bottom: 24px !important; right: 24px !important;">
-            <!-- Button 1: AI Chatbot -->
-            <button class="glass-fab glass-fab-chat" id="glass-fab-chat" aria-label="Open AI Assistant" title="AI Assistant" style="display: flex !important; visibility: visible !important; opacity: 1 !important; z-index: 2147483647 !important;">
+        <!-- HAMBURGER MENU BUTTON - Mobile Only -->
+        <button class="hamburger-menu-btn" id="hamburger-menu-btn" aria-label="Open menu" aria-expanded="false">
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+            <span class="hamburger-line"></span>
+        </button>
+        
+        <!-- FLOATING CHAT BUTTON - Prominent and always visible -->
+        <div class="floating-chat-container" id="floating-chat-container">
+            <button class="glass-fab glass-fab-chat" id="glass-fab-chat" aria-label="Open AI Assistant" title="AI Assistant">
                 <i class="fa-solid fa-comments"></i>
                 <span class="glass-fab-label" data-i18n="floating.chat">Chat</span>
-            </button>
-            
-            <!-- Button 2: Settings Menu -->
-            <button class="glass-fab glass-fab-settings" id="glass-fab-settings" aria-label="Settings & Menu" title="Settings" style="display: flex !important; visibility: visible !important; opacity: 1 !important; z-index: 2147483647 !important;">
-                <i class="fa-solid fa-gear"></i>
-                <span class="glass-fab-label" data-i18n="floating.menu">Menu</span>
-            </button>
-            
-            <!-- Button 3: Quick Contact -->
-            <button class="glass-fab glass-fab-contact" id="glass-fab-contact" aria-label="Quick Contact" title="Contact Us" style="display: flex !important; visibility: visible !important; opacity: 1 !important; z-index: 2147483647 !important;">
-                <i class="fa-solid fa-headset"></i>
-                <span class="glass-fab-label" data-i18n="floating.help">Help</span>
             </button>
         </div>
         
@@ -215,6 +209,84 @@
         
         <!-- Backdrop for panels -->
         <div class="glass-panel-backdrop hidden" id="glass-panel-backdrop"></div>
+        
+        <!-- HAMBURGER MENU OVERLAY -->
+        <div class="hamburger-menu-overlay hidden" id="hamburger-menu-overlay">
+            <div class="hamburger-menu-content">
+                <div class="hamburger-menu-header">
+                    <a href="#" class="logo static-link" data-page="landing" aria-label="VCanship Home">
+                        <img src="./logo.svg" alt="VCanship Logo" class="logo-img">
+                    </a>
+                    <button class="hamburger-menu-close" id="hamburger-menu-close" aria-label="Close menu">
+                        <i class="fa-solid fa-times"></i>
+                    </button>
+                </div>
+                
+                <nav class="hamburger-menu-nav">
+                    <!-- User Section -->
+                    <div class="hamburger-menu-section" id="hamburger-user-section">
+                        <!-- Content injected by JavaScript -->
+                    </div>
+                    
+                    <!-- Main Services -->
+                    <div class="hamburger-menu-section">
+                        <h4 class="hamburger-section-title">
+                            <i class="fa-solid fa-boxes-stacked"></i>
+                            <span data-i18n="mobile_menu.services">Shipping Services</span>
+                        </h4>
+                        <div class="hamburger-menu-items" id="hamburger-services">
+                            <!-- Content injected by JavaScript -->
+                        </div>
+                    </div>
+                    
+                    <!-- Tools & Resources -->
+                    <div class="hamburger-menu-section">
+                        <h4 class="hamburger-section-title">
+                            <i class="fa-solid fa-tools"></i>
+                            <span data-i18n="mobile_menu.tools">Tools & Resources</span>
+                        </h4>
+                        <div class="hamburger-menu-items" id="hamburger-tools">
+                            <!-- Content injected by JavaScript -->
+                        </div>
+                    </div>
+                    
+                    <!-- Account & Settings -->
+                    <div class="hamburger-menu-section">
+                        <h4 class="hamburger-section-title">
+                            <i class="fa-solid fa-user-gear"></i>
+                            <span data-i18n="mobile_menu.account">Account & Settings</span>
+                        </h4>
+                        <div class="hamburger-menu-items" id="hamburger-account">
+                            <!-- Content injected by JavaScript -->
+                        </div>
+                    </div>
+                    
+                    <!-- Help & Support -->
+                    <div class="hamburger-menu-section">
+                        <h4 class="hamburger-section-title">
+                            <i class="fa-solid fa-circle-question"></i>
+                            <span data-i18n="mobile_menu.help">Help & Support</span>
+                        </h4>
+                        <div class="hamburger-menu-items" id="hamburger-help">
+                            <!-- Content injected by JavaScript -->
+                        </div>
+                    </div>
+                </nav>
+                
+                <div class="hamburger-menu-footer">
+                    <div class="hamburger-menu-settings">
+                        <button class="hamburger-menu-item" id="hamburger-locale-btn">
+                            <i class="fa-solid fa-globe"></i>
+                            <span data-i18n="settings.language_currency">Language & Region</span>
+                        </button>
+                        <button class="hamburger-menu-item theme-switch">
+                            <i class="fa-solid fa-circle-half-stroke"></i>
+                            <span id="hamburger-theme-text">Toggle Theme</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
         
         <!-- LEGACY ELEMENTS (Hidden but kept for compatibility) -->
         <div style="display: none;">

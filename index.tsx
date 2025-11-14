@@ -127,8 +127,215 @@ function initializeHeaderScroll() {
         lastScrollTop = scrollTop;
     }, false);
 }
+// --- Hamburger Menu System ---
+
+function initializeHamburgerMenu() {
+    const hamburgerBtn = document.getElementById('hamburger-menu-btn');
+    const hamburgerOverlay = document.getElementById('hamburger-menu-overlay');
+    const hamburgerClose = document.getElementById('hamburger-menu-close');
+    const hamburgerLocaleBtn = document.getElementById('hamburger-locale-btn');
+    const headerLocaleBtn = document.getElementById('header-locale-btn');
+    
+    if (!hamburgerBtn || !hamburgerOverlay) return;
+    
+    // Toggle hamburger menu
+    function toggleHamburgerMenu() {
+        const isActive = !hamburgerOverlay.classList.contains('hidden');
+        
+        if (isActive) {
+            // Close menu
+            hamburgerOverlay.classList.add('hidden');
+            hamburgerBtn.classList.remove('active');
+            hamburgerBtn.setAttribute('aria-expanded', 'false');
+            document.body.style.overflow = '';
+        } else {
+            // Open menu
+            populateHamburgerMenu();
+            hamburgerOverlay.classList.remove('hidden');
+            hamburgerBtn.classList.add('active');
+            hamburgerBtn.setAttribute('aria-expanded', 'true');
+            document.body.style.overflow = 'hidden';
+        }
+    }
+    
+    // Close menu
+    function closeHamburgerMenu() {
+        hamburgerOverlay.classList.add('hidden');
+        hamburgerBtn.classList.remove('active');
+        hamburgerBtn.setAttribute('aria-expanded', 'false');
+        document.body.style.overflow = '';
+    }
+    
+    // Event listeners
+    hamburgerBtn.addEventListener('click', toggleHamburgerMenu);
+    hamburgerClose?.addEventListener('click', closeHamburgerMenu);
+    hamburgerOverlay.addEventListener('click', (e) => {
+        if (e.target === hamburgerOverlay) {
+            closeHamburgerMenu();
+        }
+    });
+    
+    // Locale button in hamburger menu
+    if (hamburgerLocaleBtn && headerLocaleBtn) {
+        hamburgerLocaleBtn.addEventListener('click', () => {
+            headerLocaleBtn.click();
+            closeHamburgerMenu();
+        });
+    }
+    
+    // Escape key to close menu
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && !hamburgerOverlay.classList.contains('hidden')) {
+            closeHamburgerMenu();
+        }
+    });
+}
+
+function populateHamburgerMenu() {
+    const { isLoggedIn, currentUser } = State;
+    const services = getAllServicesConfig();
+    
+    // User section
+    const userSection = document.getElementById('hamburger-user-section');
+    if (userSection) {
+        if (isLoggedIn && currentUser) {
+            const initials = currentUser.name?.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() || 'U';
+            userSection.innerHTML = `
+                <div class="hamburger-menu-user">
+                    <div class="user-avatar">${initials}</div>
+                    <div class="hamburger-menu-user-info">
+                        <div class="hamburger-menu-user-name">${currentUser.name || 'User'}</div>
+                        <div class="hamburger-menu-user-email">${currentUser.email || ''}</div>
+                    </div>
+                </div>
+                <button class="hamburger-menu-item static-link" data-page="dashboard">
+                    <i class="fa-solid fa-table-columns"></i>
+                    <span data-i18n="mobile_menu.dashboard">Dashboard</span>
+                </button>
+                <button class="hamburger-menu-item static-link" data-page="address-book">
+                    <i class="fa-solid fa-address-book"></i>
+                    <span data-i18n="mobile_menu.address_book">Address Book</span>
+                </button>
+            `;
+        } else {
+            userSection.innerHTML = `
+                <button class="hamburger-menu-item" id="hamburger-login-btn">
+                    <i class="fa-solid fa-arrow-right-to-bracket"></i>
+                    <span data-i18n="mobile_menu.login">Login / Sign Up</span>
+                </button>
+            `;
+            
+            // Add login button handler
+            document.getElementById('hamburger-login-btn')?.addEventListener('click', () => {
+                showAuthModal();
+                const hamburgerOverlay = document.getElementById('hamburger-menu-overlay');
+                hamburgerOverlay?.classList.add('hidden');
+                document.body.style.overflow = '';
+            });
+        }
+    }
+    
+    // Services section
+    const servicesContainer = document.getElementById('hamburger-services');
+    if (servicesContainer) {
+        const coreServices = services.filter(s =>
+            ['parcel', 'baggage', 'fcl', 'lcl', 'airfreight', 'vehicle', 'railway', 'inland', 'bulk', 'rivertug', 'warehouse'].includes(s.id)
+        );
+        
+        servicesContainer.innerHTML = coreServices.map(s => `
+            <button class="hamburger-menu-item sidebar-btn-service" data-service="${s.id}">
+                <i class="${s.icon}"></i>
+                <span>${s.name}</span>
+            </button>
+        `).join('');
+    }
+    
+    // Tools section
+    const toolsContainer = document.getElementById('hamburger-tools');
+    if (toolsContainer) {
+        toolsContainer.innerHTML = `
+            <button class="hamburger-menu-item static-link" data-page="schedules">
+                <i class="fa-solid fa-calendar-days"></i>
+                <span data-i18n="sidebar.schedules">Schedules</span>
+            </button>
+            <button class="hamburger-menu-item static-link" data-page="ecommerce">
+                <i class="fa-solid fa-store"></i>
+                <span data-i18n="sidebar.ecommerce">E-commerce Hub</span>
+            </button>
+            <button class="hamburger-menu-item static-link" data-page="api-hub">
+                <i class="fa-solid fa-code"></i>
+                <span data-i18n="sidebar.apiHub">API Hub</span>
+            </button>
+            <button class="hamburger-menu-item static-link" data-page="address-autocomplete">
+                <i class="fa-solid fa-magnifying-glass-location"></i>
+                <span data-i18n="sidebar.addressAutocomplete">Address Lookup</span>
+            </button>
+        `;
+    }
+    
+    // Account section
+    const accountContainer = document.getElementById('hamburger-account');
+    if (accountContainer) {
+        if (isLoggedIn) {
+            accountContainer.innerHTML = `
+                <button class="hamburger-menu-item static-link" data-page="settings">
+                    <i class="fa-solid fa-gear"></i>
+                    <span data-i18n="mobile_menu.account_settings">Settings</span>
+                </button>
+                <button class="hamburger-menu-item" id="hamburger-logout-btn">
+                    <i class="fa-solid fa-arrow-right-from-bracket"></i>
+                    <span data-i18n="mobile_menu.logout">Log Out</span>
+                </button>
+            `;
+            
+            // Add logout handler
+            document.getElementById('hamburger-logout-btn')?.addEventListener('click', () => {
+                handleLogout();
+                const hamburgerOverlay = document.getElementById('hamburger-menu-overlay');
+                hamburgerOverlay?.classList.add('hidden');
+                document.body.style.overflow = '';
+            });
+        } else {
+            accountContainer.innerHTML = `
+                <button class="hamburger-menu-item static-link" data-page="service-provider-register">
+                    <i class="fa-solid fa-handshake"></i>
+                    <span data-i18n="sidebar.partner">Partner with Us</span>
+                </button>
+            `;
+        }
+    }
+    
+    // Help section
+    const helpContainer = document.getElementById('hamburger-help');
+    if (helpContainer) {
+        helpContainer.innerHTML = `
+            <button class="hamburger-menu-item static-link" data-page="help">
+                <i class="fa-solid fa-question-circle"></i>
+                <span data-i18n="sidebar.helpCenter">Help Center</span>
+            </button>
+            <button class="hamburger-menu-item" id="hamburger-contact-btn">
+                <i class="fa-solid fa-headset"></i>
+                <span data-i18n="contact.title">Contact Support</span>
+            </button>
+        `;
+        
+        // Add contact button handler
+        document.getElementById('hamburger-contact-btn')?.addEventListener('click', () => {
+            const contactPanel = document.getElementById('glass-contact-panel');
+            const backdrop = document.getElementById('glass-panel-backdrop');
+            if (contactPanel && backdrop) {
+                contactPanel.classList.remove('hidden');
+                backdrop.classList.remove('hidden');
+            }
+            const hamburgerOverlay = document.getElementById('hamburger-menu-overlay');
+            hamburgerOverlay?.classList.add('hidden');
+            document.body.style.overflow = '';
+        });
+    }
+}
 
 // --- Mobile Menu & FAB ---
+
 function populateMobileMenu() {
     const contentContainer = document.getElementById('mobile-menu-content');
     if (!contentContainer) return;
@@ -699,191 +906,7 @@ async function initializeCoreApp() {
         
         initializeChatbot();
 
-        // �️ Initialize carrier branding badge
-        try {
-            document.querySelectorAll('.bloomberg-professional').forEach((node) => node.remove());
-            console.log('🛰️ Initializing carrier branding badge...');
-            
-            // Add professional CSS for floating carrier badge styling
-            const bloombergStyle = document.createElement('style');
-            bloombergStyle.textContent = `
-                .ship-floating-badge {
-                    position: fixed;
-                    top: 16px;
-                    right: 16px;
-                    z-index: 1400;
-                    display: inline-flex;
-                    align-items: center;
-                    gap: 10px;
-                    padding: 10px 18px;
-                    border-radius: 999px;
-                    background: rgba(6, 19, 36, 0.9);
-                    color: #f4f9ff;
-                    font-weight: 600;
-                    box-shadow: 0 12px 28px rgba(4, 10, 24, 0.35);
-                    backdrop-filter: blur(8px);
-                    border: 1px solid rgba(255, 255, 255, 0.12);
-                    cursor: grab;
-                    transition: transform 0.2s ease, box-shadow 0.2s ease;
-                }
-
-                .ship-floating-badge:active {
-                    cursor: grabbing;
-                }
-
-                .ship-floating-badge.is-dragging {
-                    transform: scale(0.98);
-                    box-shadow: 0 18px 36px rgba(4, 10, 24, 0.45);
-                }
-
-                .ship-floating-dot {
-                    width: 10px;
-                    height: 10px;
-                    border-radius: 999px;
-                    background: #2dff85;
-                    box-shadow: 0 0 0 0 rgba(45, 255, 133, 0.6);
-                    animation: ship-floating-pulse 2.4s infinite;
-                }
-
-                .ship-floating-label {
-                    text-transform: uppercase;
-                    letter-spacing: 1.2px;
-                    font-size: 0.72rem;
-                }
-
-                .ship-floating-tags {
-                    display: inline-flex;
-                    gap: 6px;
-                }
-
-                .ship-floating-tags span {
-                    font-size: 0.68rem;
-                    padding: 4px 8px;
-                    border-radius: 6px;
-                    background: rgba(255, 255, 255, 0.08);
-                    border: 1px solid rgba(255, 255, 255, 0.12);
-                    color: #cde7ff;
-                }
-
-                @keyframes ship-floating-pulse {
-                    0% {
-                        transform: scale(1);
-                        box-shadow: 0 0 0 0 rgba(45, 255, 133, 0.6);
-                    }
-                    50% {
-                        transform: scale(1.08);
-                        box-shadow: 0 0 0 10px rgba(45, 255, 133, 0);
-                    }
-                    100% {
-                        transform: scale(1);
-                        box-shadow: 0 0 0 0 rgba(45, 255, 133, 0);
-                    }
-                }
-
-                @media (max-width: 768px) {
-                    .ship-floating-badge {
-                        top: 12px;
-                        right: 12px;
-                        padding: 9px 14px;
-                    }
-
-                    .ship-floating-tags span {
-                        font-size: 0.62rem;
-                        padding: 3px 6px;
-                    }
-                }
-
-                @media (max-width: 540px) {
-                    .ship-floating-badge {
-                        left: 12px;
-                        right: 12px;
-                        top: auto;
-                        bottom: 16px;
-                        justify-content: center;
-                        flex-wrap: wrap;
-                    }
-
-                    .ship-floating-label {
-                        width: 100%;
-                        text-align: center;
-                    }
-                }
-            `;
-            document.head.appendChild(bloombergStyle);
-            
-            const header = document.querySelector('header');
-            if (header) {
-                const floatingBadge = document.createElement('button');
-                floatingBadge.className = 'ship-floating-badge';
-                floatingBadge.type = 'button';
-                floatingBadge.innerHTML = `
-                    <span class="ship-floating-dot"></span>
-                    <span class="ship-floating-label">Live Carriers</span>
-                    <span class="ship-floating-tags">
-                        <span>MAERSK</span>
-                        <span>MSC</span>
-                        <span>CMA</span>
-                        <span>COSCO</span>
-                    </span>
-                `;
-                header.appendChild(floatingBadge);
-
-                let dragging = false;
-                let offsetX = 0;
-                let offsetY = 0;
-
-                const startDrag = (event: PointerEvent) => {
-                    dragging = true;
-                    floatingBadge.setPointerCapture(event.pointerId);
-                    floatingBadge.classList.add('is-dragging');
-                    offsetX = event.clientX - floatingBadge.getBoundingClientRect().left;
-                    offsetY = event.clientY - floatingBadge.getBoundingClientRect().top;
-                };
-
-                const duringDrag = (event: PointerEvent) => {
-                    if (!dragging) {
-                        return;
-                    }
-
-                    const parentRect = document.body.getBoundingClientRect();
-                    const badgeRect = floatingBadge.getBoundingClientRect();
-                    const x = Math.min(Math.max(event.clientX - offsetX, parentRect.left), parentRect.right - badgeRect.width);
-                    const y = Math.min(Math.max(event.clientY - offsetY, parentRect.top), window.innerHeight - badgeRect.height);
-
-                    floatingBadge.style.left = `${x}px`;
-                    floatingBadge.style.top = `${y}px`;
-                    floatingBadge.style.right = 'auto';
-                    floatingBadge.style.bottom = 'auto';
-                    floatingBadge.dataset.floatingPosition = JSON.stringify({ x, y });
-                };
-
-                const stopDrag = (event: PointerEvent) => {
-                    dragging = false;
-                    floatingBadge.releasePointerCapture(event.pointerId);
-                    floatingBadge.classList.remove('is-dragging');
-                };
-
-                floatingBadge.addEventListener('pointerdown', startDrag);
-                floatingBadge.addEventListener('pointermove', duringDrag);
-                floatingBadge.addEventListener('pointerup', stopDrag);
-                floatingBadge.addEventListener('pointercancel', stopDrag);
-
-                const saved = floatingBadge.dataset.floatingPosition;
-                if (saved) {
-                    try {
-                        const { x, y } = JSON.parse(saved);
-                        floatingBadge.style.left = `${x}px`;
-                        floatingBadge.style.top = `${y}px`;
-                        floatingBadge.style.right = 'auto';
-                        floatingBadge.style.bottom = 'auto';
-                    } catch (positionError) {
-                        console.warn('Failed to restore floating badge position', positionError);
-                    }
-                }
-            }
-        } catch (error) {
-            console.warn('Carrier branding badge initialization failed:', error);
-        }
+        // Removed floating badge with carrier names/logos as per branding update
 
         // Attach listeners to static links
         document.body.addEventListener('click', (e) => {

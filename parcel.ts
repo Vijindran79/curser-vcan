@@ -903,19 +903,16 @@ function validateCurrentStep(): boolean {
             
             return true;
         case 3:
-            console.log('[STEP3_VALIDATION] ===== STARTING STEP 3 VALIDATION =====');
-            
             // Read current values from DOM to catch unsaved changes
             const page = document.getElementById('page-parcel');
             if (!page) {
-                console.error('[STEP3_VALIDATION] ❌ Page element not found');
+                showToast('Page error. Please refresh.', 'error');
                 return false;
             }
             
             // Get parcel type from selected card or formData
             const selectedCard = page.querySelector('.parcel-type-card.selected') as HTMLElement;
             const parcelType = selectedCard?.dataset.value || formData.parcelType || '';
-            console.log('[STEP3_VALIDATION] Parcel type:', parcelType, 'from', selectedCard ? 'selected card' : 'formData');
             
             const weightInput = page.querySelector('#parcel-weight') as HTMLInputElement;
             const descInput = page.querySelector('#item-description') as HTMLInputElement;
@@ -924,9 +921,6 @@ function validateCurrentStep(): boolean {
             const weight = weightStr ? parseFloat(weightStr) : formData.weight || 0;
             const itemDescription = descInput?.value?.trim() || formData.itemDescription?.trim() || '';
             
-            console.log('[STEP3_VALIDATION] Weight:', weight, 'kg (from input:', weightStr, ')');
-            console.log('[STEP3_VALIDATION] Item description:', itemDescription);
-            
             // Update formData with current values BEFORE validation
             if (parcelType) formData.parcelType = parcelType;
             if (weight && weight > 0) formData.weight = weight;
@@ -934,7 +928,6 @@ function validateCurrentStep(): boolean {
             
             // Validation with clear error messages
             if (!parcelType) {
-                console.error('[STEP3_VALIDATION] ❌ No parcel type selected');
                 showToast('Please select a parcel type', 'warning');
                 // Scroll to parcel type cards
                 const parcelTypeSection = page.querySelector('.parcel-type-selector');
@@ -944,14 +937,12 @@ function validateCurrentStep(): boolean {
                 return false;
             }
             if (!weightStr || !weight || weight <= 0 || isNaN(weight)) {
-                console.error('[STEP3_VALIDATION] ❌ Invalid weight:', weight);
                 showToast('Please enter a valid weight (must be greater than 0)', 'warning');
                 weightInput?.focus();
                 weightInput?.scrollIntoView({ behavior: 'smooth', block: 'center' });
                 return false;
             }
             if (!itemDescription) {
-                console.error('[STEP3_VALIDATION] ❌ No item description');
                 showToast('Please enter item description', 'warning');
                 descInput?.focus();
                 descInput?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -973,7 +964,6 @@ function validateCurrentStep(): boolean {
             
             for (const [keyword, info] of Object.entries(prohibitedKeywords)) {
                 if (description.includes(keyword)) {
-                    console.error('[STEP3_VALIDATION] ❌ Prohibited item detected:', keyword);
                     showToast(info.message, 'error');
                     descInput?.focus();
                     descInput?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -981,13 +971,6 @@ function validateCurrentStep(): boolean {
                 }
             }
             
-            // All validations passed
-            console.log('[STEP3_VALIDATION] ✅ All validations passed');
-            console.log('[STEP3_VALIDATION] Final formData:', {
-                parcelType: formData.parcelType,
-                weight: formData.weight,
-                itemDescription: formData.itemDescription
-            });
             return true;
         case 4:
             const page4 = document.getElementById('page-parcel');
@@ -1023,16 +1006,10 @@ function validateCurrentStep(): boolean {
 
 
 async function goToNextStep() {
-    console.log('[GO_TO_NEXT_STEP] ===== CALLED =====');
-    console.log('[GO_TO_NEXT_STEP] Current step:', currentStep);
-    
     // Validate before proceeding
     const isValid = validateCurrentStep();
     
-    console.log('[GO_TO_NEXT_STEP] Validation result:', isValid);
-    
     if (!isValid) {
-        console.error('[GO_TO_NEXT_STEP] ❌ Validation failed, staying on step', currentStep);
         return;
     }
     
@@ -1073,26 +1050,9 @@ async function goToNextStep() {
             
             // Fetch quotes in background with comprehensive error handling
             try {
-                console.log('[PARCEL] ===== STARTING QUOTE FETCH =====');
-                console.log('[PARCEL] Step 5 → Step 6 transition initiated');
-                console.log('[PARCEL] Form data:', {
-                    origin: formData.originAddress,
-                    destination: formData.destinationAddress,
-                    weight: formData.weight,
-                    parcelType: formData.parcelType
-                });
-                
                 await fetchQuotes();
                 
-                console.log('[PARCEL] Quote fetch completed. Quotes received:', allQuotes.length);
-                console.log('[PARCEL] Used API quotes:', usedApiQuotes);
-                
-                if (allQuotes.length > 0) {
-                    console.log('[PARCEL] First quote:', allQuotes[0]);
-                }
-
                 if (allQuotes.length === 0) {
-                    console.warn('[PARCEL] No quotes returned from backend or AI fallback. Generating emergency estimates...');
                     const extraCost = formData.sendDay === 'saturday' ? 5 : formData.sendDay === 'sunday' ? 8 : 0;
                     const originCountry = detectCountry(formData.originAddress || '');
                     const pickupRules = originCountry ? COUNTRY_PICKUP_RULES[originCountry] : null;
@@ -1105,29 +1065,22 @@ async function goToNextStep() {
                         pickupFee
                     );
                     if (emergencyQuotes.length > 0) {
-                        console.log('[PARCEL] ✅ Emergency fallback quotes generated:', emergencyQuotes.length);
                         allQuotes = emergencyQuotes;
                         usedApiQuotes = false;
                     }
                 }
             } catch (fetchError) {
-                console.error('[PARCEL] ❌ FATAL ERROR in fetchQuotes:', fetchError);
-                console.error('[PARCEL] Error details:', {
-                    message: (fetchError as Error).message,
-                    stack: (fetchError as Error).stack
-                });
-                showToast('Critical error fetching quotes. Check console for details.', 'error');
+                console.error('[PARCEL] Error fetching quotes:', fetchError);
+                showToast('Critical error fetching quotes. Please try again.', 'error');
             }
             
             skeletonLoader.hideSkeletonLoader();
             
             // After fetching quotes, move to step 6 to display them
             if (allQuotes.length > 0) {
-                console.log('[PARCEL] ✅ Moving to Step 6 with', allQuotes.length, 'quotes');
                 currentStep++;
                 renderPage();
             } else {
-                console.error('[PARCEL] ❌ No quotes available, staying on Step 5');
                 showToast('Failed to get quotes. Please try again.', 'error');
             }
             toggleLoading(false);
@@ -1143,7 +1096,6 @@ async function goToNextStep() {
         
         // For all other steps - navigate INSTANTLY (don't wait for compliance checks)
         if (currentStep < TOTAL_STEPS) {
-            console.log('[GO_TO_NEXT_STEP] Moving from step', currentStep, 'to step', currentStep + 1);
             
             // Before leaving Step 2, check if user wants to save addresses
             if (currentStep === 2 && State.isLoggedIn) {
@@ -1162,12 +1114,7 @@ async function goToNextStep() {
             }
             
             currentStep++;
-            console.log('[GO_TO_NEXT_STEP] ✅ Step incremented to:', currentStep);
-            
-            // Render immediately - this should be instant
-            console.log('[GO_TO_NEXT_STEP] Calling renderPage()...');
             renderPage();
-            console.log('[GO_TO_NEXT_STEP] ✅ renderPage() completed');
             
             // Hide loading immediately after render (navigation is instant)
             toggleLoading(false);
@@ -1175,7 +1122,6 @@ async function goToNextStep() {
             // Run compliance checks AFTER navigation (non-blocking)
             // Only for step 4 - run immediately but don't block navigation
             if (currentStep === 4) {
-                console.log('[GO_TO_NEXT_STEP] Running compliance check for step 4...');
                 // Run compliance check immediately (it's synchronous now - instant)
                 setTimeout(() => {
                     checkProhibitedItems();
@@ -1224,13 +1170,6 @@ function generateHardcodedQuotes(
     extraCost: number,
     pickupFee: number
 ): Quote[] {
-    console.log('[HARDCODED_QUOTES] Generating fallback quotes for:', {
-        origin,
-        destination,
-        weight,
-        extraCost,
-        pickupFee
-    });
     
     // Calculate base price: $10 base + ($5 per kg) + distance factor
     const basePrice = 10 + (weight * 5);
@@ -1336,54 +1275,27 @@ function generateHardcodedQuotes(
         }
     ];
     
-    console.log('[HARDCODED_QUOTES] Generated', quotes.length, 'fallback quotes');
     return quotes;
 }
 
 // FETCH QUOTES
 async function fetchQuotes() {
-    console.log('[PARCEL DIAGNOSTIC] ===== FETCH QUOTES STARTED =====');
-    console.log('[PARCEL DIAGNOSTIC] Current formData:', {
-        origin: formData.originAddress,
-        destination: formData.destinationAddress,
-        weight: formData.weight,
-        parcelType: formData.parcelType,
-        serviceType: formData.serviceType,
-        sendDay: formData.sendDay
-    });
-    
     if (!checkAndDecrementLookup()) {
-        console.log('[PARCEL DIAGNOSTIC] ❌ Lookup limit check failed');
         return;
     }
-    
-    console.log('[PARCEL DIAGNOSTIC] ✅ Lookup limit check passed');
     
     toggleLoading(true, 'Finding best rates...');
     
     try {
-        console.log('[FETCH_QUOTES] Attempting to fetch from Shippo API...');
-        
         // Try to fetch from Shippo API first (real quotes) - with fast timeout
         try {
-            console.log('[PARCEL DIAGNOSTIC] Attempting Shippo API fetch...');
             const { fetchShippoQuotes } = await import('./backend-api');
-            console.log('[PARCEL DIAGNOSTIC] ✅ Backend API module imported');
             
             // Set timeout to fail fast if backend not deployed (5 seconds)
             const apiTimeout = new Promise((_, reject) => {
                 setTimeout(() => {
-                    console.log('[PARCEL DIAGNOSTIC] ⏰ Shippo API timeout reached (5 seconds)');
                     reject(new Error('API timeout - backend not deployed'));
                 }, 5000);
-            });
-            
-            console.log('[PARCEL DIAGNOSTIC] Calling fetchShippoQuotes with params:', {
-                originAddress: formData.originAddress || '',
-                destinationAddress: formData.destinationAddress || '',
-                weight: formData.weight || 0,
-                parcelType: formData.parcelType || '',
-                currency: State.currentCurrency.code
             });
             
             const realQuotes = await Promise.race([
@@ -1400,10 +1312,6 @@ async function fetchQuotes() {
                 apiTimeout
             ]) as Quote[];
             
-            console.log('[PARCEL DIAGNOSTIC] ✅ Shippo API returned quotes:', realQuotes.length);
-            if (realQuotes.length > 0) {
-                console.log('[PARCEL DIAGNOSTIC] First quote sample:', realQuotes[0]);
-            }
             
             const extraCost = formData.sendDay === 'saturday' ? 5 : formData.sendDay === 'sunday' ? 8 : 0;
             
@@ -1417,11 +1325,8 @@ async function fetchQuotes() {
                 totalCost: q.totalCost + extraCost + pickupFee
             })).sort((a: Quote, b: Quote) => a.totalCost - b.totalCost);
             
-            console.log('[PARCEL DIAGNOSTIC] ✅ Processed', allQuotes.length, 'quotes with extra costs');
-            
             // Mark that we successfully used API quotes
             usedApiQuotes = true;
-            console.log('[PARCEL DIAGNOSTIC] ✅ SUCCESS - Using real API quotes');
             return;
         } catch (apiError: any) {
             // Shippo API failed - try AI fallback
@@ -1435,7 +1340,6 @@ async function fetchQuotes() {
             // Show user-friendly error
             showToast('Backend API unavailable. Generating estimated quotes...', 'warning', 5000);
             
-            console.log('[PARCEL DIAGNOSTIC] Falling back to AI quotes...');
             // Continue with AI fallback instead of throwing error
         }
         
@@ -1463,12 +1367,11 @@ async function fetchQuotes() {
         
     } catch (error: any) {
         // Handle any errors from the entire fetch process
-        console.error('[PARCEL DIAGNOSTIC] Failed to fetch quotes:', error);
+        console.error('[PARCEL] Failed to fetch quotes:', error);
         showToast('Failed to get quotes. Please try again.', 'error');
         currentStep = 5;
         renderPage();
     } finally {
-        console.log('[PARCEL DIAGNOSTIC] fetchQuotes completed, total quotes:', allQuotes.length);
         toggleLoading(false);
     }
 }
@@ -1530,7 +1433,7 @@ function generateShippingLabel(trackingId: string, selectedQuote: Quote) {
         doc.setTextColor(100, 100, 100);
         doc.text('Scan to track', 170, 73, { align: 'center' });
     } catch (e) {
-        console.warn('QR code generation failed:', e);
+        // QR code generation is optional - fail silently
     }
     
     // Tracking number (large and prominent)
@@ -1809,18 +1712,12 @@ function attachWizardListeners() {
     const nextBtn = page.querySelector('#next-step-btn');
     const prevBtn = page.querySelector('#prev-step-btn');
     
-    console.log('[EVENT_SETUP] Next button found:', nextBtn ? 'YES' : 'NO');
-    console.log('[EVENT_SETUP] Current step:', currentStep);
-    
     nextBtn?.addEventListener('click', async (e) => {
-        console.log('[NEXT_BTN_CLICK] ===== NEXT BUTTON CLICKED =====');
-        console.log('[NEXT_BTN_CLICK] Current step before action:', currentStep);
         e.preventDefault();
         e.stopPropagation();
         await goToNextStep();
     });
     prevBtn?.addEventListener('click', (e) => {
-        console.log('[PREV_BTN_CLICK] Previous button clicked');
         e.preventDefault();
         e.stopPropagation();
         goToPreviousStep();
@@ -1867,7 +1764,6 @@ function attachWizardListeners() {
         } catch (error) {
             toggleLoading(false);
             showToast('Failed to find drop-off locations', 'error');
-            console.error('Drop-off location error:', error);
         }
     });
     
@@ -1903,11 +1799,9 @@ function attachWizardListeners() {
     // Step 3: Parcel type selection
     page.querySelectorAll('.parcel-type-card').forEach(card => {
         card.addEventListener('click', (e) => {
-            console.log('[PARCEL_TYPE_CLICK] Parcel type card clicked');
             e.preventDefault();
             e.stopPropagation();
             const parcelType = (card as HTMLElement).dataset.value || '';
-            console.log('[PARCEL_TYPE_CLICK] Selected type:', parcelType);
             if (parcelType) {
                 formData.parcelType = parcelType;
                 // Update visual state immediately without full re-render
@@ -1915,7 +1809,6 @@ function attachWizardListeners() {
                     c.classList.remove('selected');
                 });
                 card.classList.add('selected');
-                console.log('[PARCEL_TYPE_CLICK] Card selected, triggering re-render...');
                 // Optionally re-render for consistency, but use requestAnimationFrame for smooth transition
                 requestAnimationFrame(() => {
                     renderPage();
@@ -2248,7 +2141,7 @@ function renderPage() {
                     }
                 }
             } catch (error) {
-                console.error('[HS Code] Auto-assignment error:', error);
+                // HS code auto-assignment is optional - fail silently
             }
         })();
     }
@@ -2271,7 +2164,6 @@ async function loadGoogleMapsAPI(): Promise<void> {
     // Using Geoapify REST API instead of Google Maps (more affordable, no script loading needed)
     const geoapifyKey = import.meta.env.VITE_GEOAPIFY_API_KEY;
     if (!geoapifyKey) {
-        console.warn('Geoapify API key not found - manual address entry only');
         return Promise.reject(new Error('No Geoapify API key'));
     }
     
@@ -2285,13 +2177,10 @@ async function initializeAddressAutocomplete(originInput: HTMLInputElement, dest
     // Use Geoapify Autocomplete API
     const geoapifyKey = import.meta.env.VITE_GEOAPIFY_API_KEY;
     if (!geoapifyKey) {
-        console.info('📍 Address autocomplete: Manual entry mode');
         return;
     }
 
     try {
-        console.log('Initializing Geoapify Address Autocomplete v3.7 (no bias param)...');
-        
         // Setup autocomplete for origin input
         setupGeoapifyAutocomplete(originInput, geoapifyKey, (address: string) => {
             formData.originAddress = address;
@@ -2303,10 +2192,8 @@ async function initializeAddressAutocomplete(originInput: HTMLInputElement, dest
             formData.destinationAddress = address;
             showToast('✓ Destination address confirmed', 'success');
         });
-        
-        console.log('✅ Geoapify autocomplete v3.7 ready');
     } catch (error) {
-        console.warn('⚠️ Geoapify autocomplete failed to initialize:', error);
+        // Autocomplete initialization failed - manual entry mode
     }
 }
 
@@ -2369,7 +2256,6 @@ function setupGeoapifyAutocomplete(
                     resultsContainer!.style.display = 'none';
                 }
             } catch (error) {
-                console.error('Geoapify autocomplete error:', error);
                 resultsContainer!.style.display = 'none';
             }
         }, 300);
@@ -3149,7 +3035,6 @@ async function sendBookingConfirmationEmail(trackingId: string, quote: Quote) {
     try {
         const recipientEmail = sessionStorage.getItem('user_email') || '';
         if (!recipientEmail) {
-            console.warn('No email available for booking confirmation');
             return;
         }
 
@@ -3176,10 +3061,10 @@ async function sendBookingConfirmationEmail(trackingId: string, quote: Quote) {
         if (response.ok) {
             console.log('Booking confirmation email queued successfully');
         } else {
-            console.warn('Failed to queue booking email:', await response.text());
+            console.warn('Failed to queue booking email');
         }
     } catch (error) {
-        console.error('Email notification error:', error);
+        // Email notification is optional - fail silently
     }
 }
 
@@ -3598,7 +3483,7 @@ function showPaymentConfirmation() {
     
     // Send booking confirmation email (fire and forget)
     sendBookingConfirmationEmail(trackingId, data.selectedQuote || allQuotes[0]).catch(err => {
-        console.warn('Email notification failed:', err);
+        // Email notification is optional - fail silently
     });
     
     // Download label button
@@ -3674,7 +3559,6 @@ async function saveAddressFromString(addressString: string, label: string) {
         const parts = addressString.split(',').map(p => p.trim());
         
         if (parts.length < 3) {
-            console.warn('Address too short to parse:', addressString);
             return;
         }
         
@@ -3700,7 +3584,7 @@ async function saveAddressFromString(addressString: string, label: string) {
             showToast(`✓ ${label} address saved to address book`, 'success');
         }
     } catch (error) {
-        console.error('Error saving address:', error);
+        // Address saving is optional - fail silently
     }
 }
 
@@ -3877,7 +3761,6 @@ async function showAddressBookModal() {
         
     } catch (error) {
         toggleLoading(false);
-        console.error('Error loading addresses:', error);
         showToast('Failed to load saved addresses', 'error');
     }
 }
@@ -3902,96 +3785,93 @@ export function startParcel() {
 // SMART HS CODE VERIFICATION POPUP (SUSPICIOUS ITEMS ONLY)
 // ============================================================================
 function showHSCodeVerificationPopup(
-    primaryCode: {code: string, description: string}, 
+    primaryCode: {code: string, description: string},
     allSuggestions: Array<{code: string, description: string}>,
     itemDescription: string
 ) {
     const modal = document.createElement('div');
-    modal.className = 'modal active';
-    modal.style.zIndex = '10000';
+    modal.className = 'hs-code-verification-modal active';
     
     // Determine tax category based on item type
     const desc = itemDescription.toLowerCase();
     let taxCategory = 'Standard';
     let taxEstimate = '0-10%';
-    let taxColor = 'var(--success-color)';
+    let taxClass = '';
     
     if (desc.includes('alcohol') || desc.includes('tobacco') || desc.includes('wine') || desc.includes('beer')) {
         taxCategory = 'High Duty';
         taxEstimate = '20-100%';
-        taxColor = '#dc2626';
+        taxClass = 'high-duty';
     } else if (desc.includes('jewelry') || desc.includes('luxury') || desc.includes('gold') || desc.includes('diamond')) {
         taxCategory = 'Luxury Goods';
         taxEstimate = '10-30%';
-        taxColor = '#f59e0b';
+        taxClass = 'luxury';
     } else if (desc.includes('electronics') || desc.includes('phone') || desc.includes('laptop') || desc.includes('battery')) {
         taxCategory = 'Electronics';
         taxEstimate = '5-15%';
-        taxColor = '#3b82f6';
+        taxClass = 'electronics';
     } else if (desc.includes('medicine') || desc.includes('pharmaceutical') || desc.includes('drug')) {
         taxCategory = 'Regulated';
         taxEstimate = 'Requires Permit';
-        taxColor = '#8b5cf6';
+        taxClass = 'regulated';
     } else if (desc.includes('perfume') || desc.includes('cosmetics')) {
         taxCategory = 'Cosmetics';
         taxEstimate = '5-20%';
-        taxColor = '#ec4899';
+        taxClass = 'cosmetics';
     }
     
     modal.innerHTML = `
-        <div class="modal-content" style="max-width: 600px; max-height: 90vh; overflow-y: auto;">
-            <div class="modal-header" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 1.5rem; border-radius: 12px 12px 0 0;">
-                <h3 style="margin: 0; display: flex; align-items: center; gap: 0.75rem;">
+        <div class="hs-code-verification-content">
+            <div class="hs-code-verification-header">
+                <h3>
                     <i class="fa-solid fa-shield-check"></i>
                     Customs Classification Verified
                 </h3>
-                <p style="margin: 0.5rem 0 0; opacity: 0.9; font-size: 0.95rem;">Please confirm the details below</p>
+                <p>Please confirm the details below</p>
             </div>
             
-            <div style="padding: 1.5rem;">
+            <div class="hs-code-verification-body">
                 <!-- Item Description -->
-                <div style="background: #f8fafc; border: 2px solid #e2e8f0; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem;">
-                    <strong style="color: #475569; font-size: 0.875rem; display: block; margin-bottom: 0.5rem;">YOUR ITEM:</strong>
-                    <p style="margin: 0; color: #1e293b; font-size: 1rem; font-weight: 500;">${itemDescription}</p>
+                <div class="hs-item-description">
+                    <strong>YOUR ITEM:</strong>
+                    <p>${itemDescription}</p>
                 </div>
                 
                 <!-- Primary HS Code -->
-                <div style="background: linear-gradient(to right, #f0f9ff, #e0f2fe); border: 2px solid #3b82f6; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
-                        <strong style="color: #1e40af; font-size: 1.125rem;">✓ Recommended HS Code</strong>
-                        <span style="background: #3b82f6; color: white; padding: 0.375rem 1rem; border-radius: 999px; font-weight: 700; font-size: 1rem; letter-spacing: 0.5px;">
-                            ${primaryCode.code}
-                        </span>
+                <div class="hs-primary-code">
+                    <div class="hs-primary-code-header">
+                        <strong>✓ Recommended HS Code</strong>
+                        <span class="hs-code-badge">${primaryCode.code}</span>
                     </div>
-                    <p style="margin: 0; color: #475569; font-size: 0.9375rem; line-height: 1.5;">${primaryCode.description}</p>
+                    <p>${primaryCode.description}</p>
                 </div>
                 
                 <!-- Tax Information -->
-                <div style="background: ${taxColor}15; border: 2px solid ${taxColor}; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem;">
-                    <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem;">
-                        <i class="fa-solid fa-coins" style="color: ${taxColor}; font-size: 1.5rem;"></i>
+                <div class="hs-tax-info ${taxClass}">
+                    <div class="hs-tax-info-header">
+                        <i class="fa-solid fa-coins"></i>
                         <div>
-                            <strong style="color: ${taxColor}; display: block; font-size: 1.0625rem;">Tax Category: ${taxCategory}</strong>
-                            <span style="color: #64748b; font-size: 0.9375rem;">Estimated Duty Rate: ${taxEstimate}</span>
+                            <span class="hs-tax-category">Tax Category: ${taxCategory}</span>
+                            <span class="hs-tax-rate">Estimated Duty Rate: ${taxEstimate}</span>
                         </div>
                     </div>
-                    <p style="margin: 0; color: #475569; font-size: 0.875rem; line-height: 1.6;">
-                        <strong>💡 Good to know:</strong> This item may be subject to customs duties and taxes at the destination country. 
+                    <p>
+                        <strong>💡 Good to know:</strong> This item may be subject to customs duties and taxes at the destination country.
                         The exact amount is determined by customs authorities based on item value and local regulations.
                     </p>
                 </div>
                 
                 ${allSuggestions.length > 1 ? `
                 <!-- Alternative Options -->
-                <details style="margin-bottom: 1.5rem;">
-                    <summary style="cursor: pointer; color: #6366f1; font-weight: 600; padding: 0.875rem; background: #f8fafc; border-radius: 8px; list-style: none; border: 1px solid #e2e8f0; transition: all 0.2s;">
+                <details class="hs-alternatives">
+                    <summary>
                         <i class="fa-solid fa-list-ul"></i> View ${allSuggestions.length - 1} Alternative Classification${allSuggestions.length > 2 ? 's' : ''} (Optional)
                     </summary>
-                    <div style="margin-top: 0.75rem; display: flex; flex-direction: column; gap: 0.625rem;">
+                    <div class="hs-alternative-options">
                         ${allSuggestions.slice(1, 4).map(alt => `
-                            <div class="hs-alt-option" data-code="${alt.code}" style="padding: 0.9375rem; background: white; border: 1px solid #e2e8f0; border-radius: 6px; cursor: pointer; transition: all 0.2s;">
-                                <strong style="color: #3b82f6; font-size: 0.9375rem;">${alt.code}</strong>
-                                <p style="margin: 0.375rem 0 0; color: #64748b; font-size: 0.875rem; line-height: 1.4;">${alt.description}</p>
+                            <div class="hs-alternative-option" data-code="${alt.code}">
+                                <strong>${alt.code}</strong>
+                                <p>${alt.description}</p>
                             </div>
                         `).join('')}
                     </div>
@@ -3999,20 +3879,20 @@ function showHSCodeVerificationPopup(
                 ` : ''}
                 
                 <!-- Disclaimer -->
-                <div style="background: #fef3c7; border-left: 4px solid #f59e0b; padding: 1rem; margin-bottom: 1.5rem; border-radius: 4px;">
-                    <p style="margin: 0; color: #92400e; font-size: 0.875rem; line-height: 1.6;">
-                        <strong><i class="fa-solid fa-exclamation-triangle"></i> Customs Notice:</strong> 
-                        HS codes are automatically assigned using AI. For high-value or regulated items, we recommend consulting a licensed customs broker. 
+                <div class="hs-disclaimer">
+                    <p>
+                        <strong><i class="fa-solid fa-exclamation-triangle"></i> Customs Notice:</strong>
+                        HS codes are automatically assigned using AI. For high-value or regulated items, we recommend consulting a licensed customs broker.
                         Vcanship handles customs documentation but is not responsible for duty payments or customs decisions.
                     </p>
                 </div>
                 
                 <!-- Actions -->
-                <div style="display: flex; gap: 0.75rem;">
-                    <button id="confirm-hs-code" class="primary-btn" style="flex: 1; padding: 1rem; font-weight: 600; font-size: 1rem;">
+                <div class="hs-actions">
+                    <button id="confirm-hs-code" class="hs-confirm-btn">
                         <i class="fa-solid fa-check-circle"></i> Confirm & Continue
                     </button>
-                    <button id="cancel-hs-verification" class="secondary-btn" style="padding: 1rem; font-size: 1rem;">
+                    <button id="cancel-hs-verification" class="hs-cancel-btn">
                         <i class="fa-solid fa-times"></i> Cancel
                     </button>
                 </div>
@@ -4035,7 +3915,7 @@ function showHSCodeVerificationPopup(
     });
     
     // Alternative options click handler
-    modal.querySelectorAll('.hs-alt-option').forEach(option => {
+    modal.querySelectorAll('.hs-alternative-option').forEach(option => {
         option.addEventListener('click', (e) => {
             const code = (e.currentTarget as HTMLElement).dataset.code;
             if (code) {
@@ -4048,18 +3928,6 @@ function showHSCodeVerificationPopup(
                 showToast(`✓ HS Code changed to ${code}`, 'success');
                 modal.remove();
             }
-        });
-        
-        // Hover effects
-        option.addEventListener('mouseenter', (e) => {
-            (e.currentTarget as HTMLElement).style.borderColor = '#3b82f6';
-            (e.currentTarget as HTMLElement).style.background = '#f0f9ff';
-            (e.currentTarget as HTMLElement).style.transform = 'translateX(4px)';
-        });
-        option.addEventListener('mouseleave', (e) => {
-            (e.currentTarget as HTMLElement).style.borderColor = '#e2e8f0';
-            (e.currentTarget as HTMLElement).style.background = 'white';
-            (e.currentTarget as HTMLElement).style.transform = 'translateX(0)';
         });
     });
     

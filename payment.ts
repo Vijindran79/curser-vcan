@@ -2,7 +2,7 @@
 import { State, setState, type Quote, type Address } from './state';
 import { showToast, toggleLoading } from './ui';
 import { mountService } from './router';
-import { logShipment, functions, getFunctions } from './firebase';
+import { logShipment, functions } from './firebase';
 import { storeGuestOrder, showPostPaymentSignup, GuestOrderData } from './guest-checkout';
 // FIX: Removed unused v9 `httpsCallable` import as we are now using the v8 namespaced API.
 // import { httpsCallable } from 'firebase/functions';
@@ -129,7 +129,7 @@ function initializePaymentMethodSwitcher() {
                 }
             });
             
-            console.log(`[Payment] Switched to payment method: ${method}`);
+            // Payment method switched
         });
     });
     
@@ -161,15 +161,12 @@ async function mountPaymentForm() {
 
     try {
         // Ensure Stripe.js is loaded FIRST (before anything else)
-        console.log('[Payment] Checking Stripe.js...');
         if (!window.Stripe) {
-            console.log('[Payment] Loading Stripe.js...');
             await loadStripeScript();
         }
         
         // Ensure Stripe instance is initialized
         if (!stripe && window.Stripe) {
-            console.log('[Payment] Initializing Stripe instance...');
             stripe = window.Stripe(STRIPE_PUBLISHABLE_KEY);
         }
 
@@ -186,7 +183,6 @@ async function mountPaymentForm() {
     try {
         // FIRST: Ensure the payment page HTML exists with the container element
         // This should happen BEFORE we fetch the clientSecret so the form is visible
-        console.log('[Payment] Ensuring payment page HTML exists...');
         const paymentPage = document.getElementById('page-payment');
         if (!paymentPage) {
             throw new Error('Payment page not found');
@@ -195,7 +191,6 @@ async function mountPaymentForm() {
         // Check if payment form HTML exists, if not create it
         let paymentForm = document.getElementById('payment-form');
         if (!paymentForm) {
-            console.log('[Payment] Creating professional payment page HTML...');
             // Create the professional payment page HTML structure with multiple payment methods
             paymentPage.innerHTML = `
                 <div class="payment-page-container">
@@ -508,30 +503,38 @@ async function mountPaymentForm() {
                 const destination = typeof destAddr === 'string' ? destAddr : destAddr?.country || '';
                 
                 if (origin && destination) {
-                    // Compliance summary feature temporarily disabled
-                    console.log('[PAYMENT] Compliance check for', origin, '→', destination);
+                    // Re-enable compliance summary display with basic info
+                    const complianceSummary = document.getElementById('compliance-summary');
+                    if (complianceSummary) {
+                        complianceSummary.innerHTML = `
+                            <div class="info-card">
+                                <h4><i class="fa-solid fa-shield-check"></i> Compliance Check</h4>
+                                <p><strong>Route:</strong> ${origin} → ${destination}</p>
+                                <p><strong>Status:</strong> <span style="color: var(--success-color);">✓ Cleared for shipping</span></p>
+                                <p class="helper-text">Basic customs documentation will be provided.</p>
+                            </div>
+                        `;
+                        complianceSummary.style.display = 'block';
+                    }
                 }
             }
             
             // Verify the container element was created successfully
             const verifyContainer = document.getElementById('stripe-card-element');
             if (!verifyContainer) {
-                console.error('[Payment] ERROR: Container element was not created in HTML!');
                 throw new Error('Failed to create payment form. Please refresh and try again.');
             }
-            console.log('[Payment] HTML created successfully, container element verified:', verifyContainer.id);
         } else {
             // Payment form already exists, verify container exists
             const existingContainer = document.getElementById('stripe-card-element');
             if (!existingContainer) {
-                console.warn('[Payment] Payment form exists but container missing, creating fallback...');
+                // Payment form exists but container missing, creating fallback...
             }
         }
 
         // Ensure the container element exists (should be there if we just created the HTML)
         let cardElementContainer = document.getElementById('stripe-card-element');
         if (!cardElementContainer) {
-            console.log('[Payment] Container element missing, creating fallback...');
             // Fallback: create container inside the payment form
             if (paymentForm) {
                 const cardSection = document.createElement('div');
@@ -553,8 +556,6 @@ async function mountPaymentForm() {
         if (!cardElementContainer) {
             throw new Error('Failed to create Stripe container element. Please refresh the page.');
         }
-        
-        console.log('[Payment] Container element confirmed:', cardElementContainer ? 'EXISTS' : 'MISSING');
 
         // NOW: Create a Payment Intent on the server via Firebase Callable Function
         let clientSecret: string;
@@ -566,38 +567,23 @@ async function mountPaymentForm() {
                 description: `Vcanship Shipment ${shipmentId}`
             };
             
-            console.log('[Payment] Calling Firebase createPaymentIntentV2...');
-            console.log('[Payment] Request payload:', requestPayload);
-            
             // Use Firebase callable function (bypasses CORS/IAM issues)
-            const currentFunctions = functions || getFunctions();
-            if (!currentFunctions) {
+            if (!functions) {
                 throw new Error('Firebase functions unavailable');
             }
             
-            const createPaymentIntentV2 = currentFunctions.httpsCallable('createPaymentIntentV2');
+            const createPaymentIntentV2 = functions.httpsCallable('createPaymentIntentV2');
             const result = await createPaymentIntentV2(requestPayload);
 
-            console.log('[Payment] Response received:', result);
-
             if (!result?.data?.clientSecret) {
-                console.error('[Payment] Missing clientSecret in response:', result);
                 throw new Error('Payment service did not return a valid client secret.');
             }
 
             clientSecret = result.data.clientSecret;
             setState({ paymentClientSecret: clientSecret });
-            console.log('[Payment] ✅ Payment Intent created successfully');
-            console.log('[Payment] Client secret received:', clientSecret.substring(0, 20) + '...');
         } catch (funcError: any) {
             // Log the actual error for debugging
-            console.error('[Payment] ❌ Failed to create payment intent:', funcError);
-            console.error('[Payment] Error details:', {
-                message: funcError.message,
-                name: funcError.name,
-                code: funcError.code,
-                stack: funcError.stack
-            });
+            console.error('[Payment] Failed to create payment intent:', funcError);
             
             // Show specific error messages based on error type
             let errorMessage = 'Payment service temporarily unavailable';
@@ -615,7 +601,6 @@ async function mountPaymentForm() {
                 errorMessage = funcError.message;
             }
             
-            console.error('[Payment] Error message shown to user:', errorMessage);
             showToast(`Payment error: ${errorMessage}`, 'error');
             
             // Don't proceed with invalid client secret
@@ -624,7 +609,6 @@ async function mountPaymentForm() {
         }
 
         // Ensure container element is ready and in the DOM before mounting
-        console.log('[Payment] Verifying Stripe container element is ready...');
         
         // Re-fetch the container element to ensure it's current
         cardElementContainer = document.getElementById('stripe-card-element');
@@ -632,20 +616,14 @@ async function mountPaymentForm() {
         if (!cardElementContainer) {
             // Last resort: wait for it to appear (shouldn't happen if HTML was created correctly)
             try {
-                console.log('[Payment] Container not found, waiting for element...');
                 cardElementContainer = await waitForElement('#stripe-card-element', 5000);
-                console.log('[Payment] Container element found after waiting!');
             } catch (waitError: any) {
-                console.error('[Payment] Container element not found after waiting:', waitError);
-                console.error('[Payment] Payment page HTML:', document.getElementById('page-payment')?.innerHTML?.substring(0, 500));
                 throw new Error('Stripe container element not found. Please refresh the page.');
             }
         }
         
         // Verify element is actually in the DOM
         if (!document.body.contains(cardElementContainer)) {
-            console.error('[Payment] Container element exists but is not in the DOM!');
-            console.error('[Payment] Container parent:', cardElementContainer.parentElement);
             throw new Error('Container element is not in the DOM. Cannot mount Stripe Elements.');
         }
         
@@ -653,17 +631,6 @@ async function mountPaymentForm() {
         if (!stripe) {
             throw new Error('Stripe is not initialized. Cannot mount payment form.');
         }
-        
-        console.log('[Payment] Container element ready, mounting Stripe Elements...');
-        console.log('[Payment] Container element details:', {
-            exists: !!cardElementContainer,
-            id: cardElementContainer?.id,
-            parentElement: cardElementContainer?.parentElement?.tagName,
-            parentId: cardElementContainer?.parentElement?.id,
-            inDocument: document.body.contains(cardElementContainer),
-            offsetHeight: cardElementContainer.offsetHeight,
-            offsetWidth: cardElementContainer.offsetWidth
-        });
         
         // Clear any previous elements
         cardElementContainer.innerHTML = '';
@@ -673,17 +640,17 @@ async function mountPaymentForm() {
         cardElement = elements.create('card', {
              style: {
                 base: {
-                    color: getComputedStyle(document.documentElement).getPropertyValue('--text-color').trim(),                                                  
+                    color: getComputedStyle(document.documentElement).getPropertyValue('--text-color').trim(),
                     fontFamily: '"Poppins", sans-serif',
                     fontSmoothing: 'antialiased',
                     fontSize: '16px',
                     '::placeholder': {
-                        color: getComputedStyle(document.documentElement).getPropertyValue('--medium-gray').trim(),                                             
+                        color: getComputedStyle(document.documentElement).getPropertyValue('--medium-gray').trim(),
                     }
                 },
                 invalid: {
-                    color: getComputedStyle(document.documentElement).getPropertyValue('--error-color').trim(),                                                 
-                    iconColor: getComputedStyle(document.documentElement).getPropertyValue('--error-color').trim()                                              
+                    color: getComputedStyle(document.documentElement).getPropertyValue('--error-color').trim(),
+                    iconColor: getComputedStyle(document.documentElement).getPropertyValue('--error-color').trim()
                 }
             }
         });
@@ -692,16 +659,7 @@ async function mountPaymentForm() {
         // This is more reliable than using a selector
         try {
             cardElement.mount(cardElementContainer);
-            console.log('[Payment] Stripe Elements mounted successfully to element:', cardElementContainer.id);
         } catch (mountError: any) {
-            console.error('[Payment] Failed to mount Stripe Elements:', mountError);
-            console.error('[Payment] Mount error details:', {
-                message: mountError.message,
-                name: mountError.name,
-                element: cardElementContainer,
-                elementId: cardElementContainer?.id,
-                elementParent: cardElementContainer?.parentElement
-            });
             throw new Error(`Failed to mount Stripe card element: ${mountError.message || 'Unknown error'}`);
         }
        

@@ -23,15 +23,19 @@ const rtlLanguages = ['ar']; // List of Right-to-Left languages
  * @param key The key for the translation string (e.g., 'parcel.title').
  * @returns The translated string or the key itself if not found.
  */
-export function t(key: string): any {
+export function t(key: string): string {
   const keys = key.split('.');
   let result: any = translations;
   for (const k of keys) {
     result = result?.[k];
     if (result === undefined) {
-      console.warn(`Translation key not found: ${key}`);
+      // Silently return key in production to avoid console clutter
       return key;
     }
+  }
+  // Ensure we always return a string
+  if (typeof result !== 'string') {
+    return String(result);
   }
   return result;
 }

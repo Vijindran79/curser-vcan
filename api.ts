@@ -2,7 +2,7 @@
 // All Gemini API calls are now proxied through Firebase Functions.
 
 import { State, setState, type Quote, type Address, ApiResponse } from './state';
-import { showToast, showUsageLimitModal, updateLookupCounterUI } from './ui';
+import { showToast, showUsageLimitModal, updateLookupCounterUI, toggleLoading } from './ui';
 import { functions, getFunctions } from './firebase';
 // FIX: Removed unused v9 `httpsCallable` import as we are now using the v8 namespaced API.
 // import { httpsCallable } from 'firebase/functions';
@@ -14,16 +14,8 @@ import { functions, getFunctions } from './firebase';
  * @returns {boolean} - True if the lookup can proceed, false otherwise.
  */
 export function checkAndDecrementLookup(): boolean {
-    console.log('[API DIAGNOSTIC] checkAndDecrementLookup called');
-    console.log('[API DIAGNOSTIC] Current state:', {
-        subscriptionTier: State.subscriptionTier,
-        isLoggedIn: State.isLoggedIn,
-        aiLookupsRemaining: State.aiLookupsRemaining
-    });
-    
     // 🚀 DEMO MODE: Unlimited lookups for business meeting tomorrow
     // TODO: Re-enable limits after demo by uncommenting lines below
-    console.log('[API DIAGNOSTIC] DEMO MODE: Returning true (unlimited lookups)');
     return true;
     
     /* COMMENTED OUT FOR DEMO - RE-ENABLE AFTER MEETING
@@ -66,7 +58,7 @@ export function checkAndDecrementLookup(): boolean {
  */
 function handleFirebaseError(error: any, context: string) {
     // Silently handle CORS/unavailable errors - these will fall back to AI
-    const isCorsError = error.code === 'functions/unavailable' || 
+    const isCorsError = error.code === 'functions/unavailable' ||
                        error.code === 'functions/not-found' ||
                        error.message?.includes('CORS') ||
                        error.message?.includes('network') ||
@@ -77,9 +69,17 @@ function handleFirebaseError(error: any, context: string) {
         return;
     }
     
-    // Only show critical errors
+    // Provide user-friendly error messages based on error code
     if (error.code === 'functions/resource-exhausted') {
-        showToast("API quota exceeded. Using AI estimates.", "warning");
+        showToast("You've reached the usage limit for this feature. Please try again later or upgrade your account.", "warning", 6000);
+    } else if (error.code === 'functions/unauthenticated') {
+        showToast("Please sign in to use this feature. Your session may have expired.", "warning", 6000);
+    } else if (error.code === 'functions/permission-denied') {
+        showToast("Your account doesn't have access to this feature. Please contact support.", "error", 6000);
+    } else if (error.code === 'functions/deadline-exceeded') {
+        showToast("The request took too long to complete. Please check your connection and try again.", "warning", 6000);
+    } else if (error.code === 'functions/unknown') {
+        showToast("An unexpected error occurred. Please try again or contact support if the problem persists.", "error", 6000);
     }
 }
 
@@ -90,21 +90,68 @@ function handleFirebaseError(error: any, context: string) {
  * @returns A validated address object or null on failure.
  */
 export async function validateAddress(address: string): Promise<any | null> {
-    if (!checkAndDecrementLookup()) return null;
+    if (!address || address.trim().length < 10) {
+        showToast('Please enter a complete address for validation.', 'warning', 5000);
+        return null;
+    }
+
+    if (!checkAndDecrementLookup()) {
+        showToast('You have reached your daily address validation limit.', 'info', 6000);
+        return null;
+    }
 
     try {
-        // FIX: Switched to v8 namespaced syntax for calling a Firebase Function.
+        toggleLoading(true, 'Validating address...');
+        
         const currentFunctions = functions || getFunctions();
         if (!currentFunctions) {
-            console.warn('Firebase Functions not available for address validation');
-            return null;
+            throw new Error('Address validation service is temporarily unavailable. Please check your connection.');
         }
-        const validateAddressFn = currentFunctions.httpsCallable('validate-address');
-        const result = await validateAddressFn({ address_string: address });
-        return result.data;
-    } catch (e) {
-        handleFirebaseError(e, "address validation");
+
+        try {
+            const validateAddressFn = currentFunctions.httpsCallable('validate-address');
+            const result = await validateAddressFn({ address_string: address.trim() });
+            
+            if (result.data && result.data.success) {
+                showToast('✅ Address validated successfully!', 'success', 4000);
+                return result.data;
+            } else {
+                const errorMsg = result.data?.error || 'Address validation failed';
+                showToast(`Address validation failed: ${errorMsg}`, 'warning', 6000);
+                return null;
+            }
+        } catch (apiError: any) {
+            console.error('[API Error] Address validation failed:', apiError);
+            
+            // Provide specific error messages
+            if (apiError?.code === 'functions/unauthenticated') {
+                showToast('Please sign in to validate addresses.', 'warning', 6000);
+                throw new Error('Authentication required for address validation.');
+            } else if (apiError?.code === 'functions/resource-exhausted') {
+                showToast('You have reached the address validation limit. Please try again later.', 'warning', 6000);
+                throw new Error('Rate limit exceeded for address validation.');
+            } else if (apiError?.code === 'functions/deadline-exceeded') {
+                showToast('Address validation timed out. Please check the format and try again.', 'warning', 6000);
+                throw new Error('Request timeout. Please try again.');
+            } else {
+                showToast('Failed to validate address. Please check the format and try again.', 'error', 6000);
+                throw new Error(`Address validation failed: ${apiError?.message || 'Unknown error'}`);
+            }
+        }
+    } catch (error: any) {
+        console.error('[API Error] validateAddress failed:', error);
+        
+        // Don't show toast if already shown in inner catch
+        const errorMessage = error.message || 'Address validation failed.';
+        if (!errorMessage.includes('Please sign in') &&
+            !errorMessage.includes('Rate limit exceeded') &&
+            !errorMessage.includes('Request timeout')) {
+            showToast(errorMessage, 'error', 6000);
+        }
+        
         return null;
+    } finally {
+        toggleLoading(false);
     }
 }
 
@@ -115,49 +162,39 @@ export async function validateAddress(address: string): Promise<any | null> {
  * @returns The data from the function or throws an error.
  */
 async function invokeAiFunction(functionName: string, payload: object): Promise<any> {
-    console.log('[API DEBUG] Invoking AI function:', functionName);
-    console.log('[API DEBUG] Payload:', payload);
-    
     if (!checkAndDecrementLookup()) {
-        throw new Error("Usage limit reached.");
+        throw new Error("You have reached your daily usage limit for AI features. Please upgrade your account or try again tomorrow.");
     }
 
     try {
-        // FIX: Switched to v8 namespaced syntax for calling a Firebase Function.
+        toggleLoading(true, 'Processing your request...');
+        
         const currentFunctions = functions || getFunctions();
-        console.log('[API DEBUG] Functions instance:', currentFunctions ? 'Available' : 'Not available');
         
         if (!currentFunctions) {
-            throw new Error('Firebase Functions not available');
+            throw new Error('AI service is temporarily unavailable. Please check your connection and try again.');
         }
         
         const aiFunction = currentFunctions.httpsCallable(functionName);
-        console.log('[API DEBUG] Created callable function:', aiFunction ? 'Success' : 'Failed');
         
         // Set timeout to fail fast if function isn't deployed
         const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Function timeout')), 5000);
+            setTimeout(() => reject(new Error('Request timed out. The service may be busy. Please try again in a moment.')), 8000);
         });
         
-        console.log('[API DEBUG] Calling function with timeout (5s)');
         const result = await Promise.race([
             aiFunction(payload),
             timeoutPromise
         ]) as any;
         
-        console.log('[API DEBUG] Function call result:', result);
-        
         const data: any = result.data;
-        console.log('[API DEBUG] Response data type:', typeof data, 'value:', data);
         
         // The backend function might return a JSON string, which we parse here.
         if (typeof data === 'string') {
              try {
                 const parsed = JSON.parse(data);
-                console.log('[API DEBUG] Parsed JSON response:', parsed);
                 return parsed;
              } catch (e) {
-                console.log('[API DEBUG] Not JSON, returning raw string');
                 // If it's not JSON, return the raw string.
                 return data;
              }
@@ -165,23 +202,34 @@ async function invokeAiFunction(functionName: string, payload: object): Promise<
         return data;
 
     } catch (error: any) {
-        console.log('[API DEBUG] Function call error:', error.code, error.message);
-        // Silently handle CORS/unavailable errors - fall back gracefully
-        const isCorsError = error.code === 'functions/unavailable' ||
-                           error.code === 'functions/not-found' ||
-                           error.code === 'internal' ||
-                           error.message?.includes('CORS') ||
-                           error.message?.includes('network') ||
-                           error.message?.includes('timeout');
+        console.error(`[API Error] ${functionName} failed:`, error);
         
-        if (isCorsError) {
-            console.log('[API DEBUG] CORS/Network error - will use fallback');
-            // Silent fallback - don't throw, just return empty/fallback
-            throw new Error('Function not available - will use AI fallback');
+        // Provide specific error messages for different error codes
+        if (error?.code === 'functions/unauthenticated') {
+            showToast('Please sign in to use AI features. Your session may have expired.', 'warning', 6000);
+            throw new Error('Authentication required for AI features.');
+        } else if (error?.code === 'functions/permission-denied') {
+            showToast('Your account does not have access to this AI feature. Please contact support.', 'error', 6000);
+            throw new Error('Access denied for AI function.');
+        } else if (error?.code === 'functions/resource-exhausted') {
+            showToast('You have reached the usage limit for AI features. Please try again later or upgrade your account.', 'warning', 6000);
+            throw new Error('AI feature usage limit exceeded.');
+        } else if (error?.code === 'functions/deadline-exceeded' || error.message?.includes('timeout')) {
+            showToast('AI request timed out. The service may be busy. Please try again in a moment.', 'warning', 6000);
+            throw new Error('AI service timeout. Please try again.');
+        } else if (error?.code === 'functions/not-found') {
+            showToast('AI service is temporarily unavailable. Our team has been notified.', 'error', 6000);
+            throw new Error('AI service endpoint not found.');
+        } else if (error?.code === 'functions/unavailable') {
+            // Silent fallback for CORS/unavailable errors
+            throw new Error('Function not available - will use fallback');
+        } else {
+            // Generic error
+            showToast('AI service encountered an error. Please try again or contact support if the problem persists.', 'error', 6000);
+            throw new Error(`AI function failed: ${error?.message || 'Unknown error'}`);
         }
-        
-        handleFirebaseError(error, `AI function ${functionName}`);
-        throw error;
+    } finally {
+        toggleLoading(false);
     }
 }
 
@@ -288,11 +336,48 @@ Keep responses concise (2-3 sentences max unless user asks for details). Use fri
  * Fetches HS Code suggestions via the backend.
  */
 export async function getHsCodeSuggestions(description: string): Promise<{ code: string; description: string }[]> {
+    if (!description || description.trim().length < 3) {
+        showToast('Please enter a more detailed item description for accurate HS code suggestions.', 'warning', 5000);
+        return [];
+    }
+
+    if (!checkAndDecrementLookup()) {
+        showToast('You have reached your daily HS code lookup limit. Please upgrade your account or try again tomorrow.', 'info', 6000);
+        return [];
+    }
+
     try {
+        toggleLoading(true, 'Analyzing item description for HS code suggestions...');
+        
         // Firebase function name: getHsCode (camelCase is converted by Firebase)
-        const results = await invokeAiFunction('getHsCode', { description });
-        return results.suggestions || [];
+        const results = await invokeAiFunction('getHsCode', { description: description.trim() });
+        
+        if (results && Array.isArray(results.suggestions) && results.suggestions.length > 0) {
+            showToast(`✅ Found ${results.suggestions.length} HS code suggestions for your item.`, 'success', 4000);
+            return results.suggestions;
+        } else if (results && Array.isArray(results.suggestions) && results.suggestions.length === 0) {
+            showToast('No specific HS codes found for this description. A general classification will be used.', 'info', 5000);
+            return [];
+        } else {
+            console.warn('[HS Code] API returned invalid data structure:', results);
+            showToast('Unable to generate specific HS code suggestions. Using standard classification.', 'info', 5000);
+            return [];
+        }
     } catch (error: any) {
+        console.error('[API Error] HS Code lookup failed:', error);
+        
+        // Provide user-friendly error message
+        const errorMessage = error.message || 'HS code lookup failed.';
+        
+        if (!errorMessage.includes('Usage limit reached') &&
+            !errorMessage.includes('Authentication required') &&
+            !errorMessage.includes('Access denied') &&
+            !errorMessage.includes('Rate limit exceeded') &&
+            !errorMessage.includes('Request timeout') &&
+            !errorMessage.includes('service endpoint')) {
+            showToast('HS code lookup encountered an error. Using standard classification.', 'info', 5000);
+        }
+        
         // Silent fallback - generate basic HS code suggestions locally
         const descriptionLower = description.toLowerCase();
         
@@ -312,5 +397,7 @@ export async function getHsCodeSuggestions(description: string): Promise<{ code:
         
         // Return empty if no match - user can enter manually
         return [];
+    } finally {
+        toggleLoading(false);
     }
 }
