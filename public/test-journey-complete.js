@@ -165,8 +165,9 @@
         let success = false;
 
         // Test Parcel via Shippo
-        if (mode === 'parcel' && window.fetchShippoQuotes) {
-          quotes = await window.fetchShippoQuotes({
+        if (mode === 'parcel' && window.fetchParcelQuotes) {
+          quotes = await window.fetchParcelQuotes({
+            provider: 'shippo',
             originAddress: config.origin,
             destinationAddress: config.destination,
             weight: config.weight,

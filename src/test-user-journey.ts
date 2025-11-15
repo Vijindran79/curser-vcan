@@ -127,10 +127,11 @@ export async function testParcelRatesGuest() {
   console.log('🧪 TEST 4: Parcel Rates (Guest Access)');
   
   try {
-    const { fetchShippoQuotes } = await import('./backend-api');
+    const { fetchParcelQuotes } = await import('./backend-api');
     
     // Test with guest user (no auth)
-    const quotes = await fetchShippoQuotes({
+    const quotes = await fetchParcelQuotes({
+      provider: 'shippo',
       originAddress: TEST_CONFIG.testOrigin,
       destinationAddress: TEST_CONFIG.testDestination,
       weight: TEST_CONFIG.testWeight,

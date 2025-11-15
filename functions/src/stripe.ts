@@ -10,12 +10,6 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 // Initialize Firestore
 const db = admin.firestore();
 
-// Type definitions
-interface SubscriptionData {
-    priceId: string;
-    plan: 'monthly' | 'yearly';
-}
-
 export const stripeWebhook = functions.https.onRequest(async (req, res) => {
     const sig = req.headers['stripe-signature'] as string;
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
@@ -73,7 +67,7 @@ export const stripeWebhook = functions.https.onRequest(async (req, res) => {
     }
 });
 
-export const createSubscriptionCheckout = functions.https.onCall(async (request: functions.https.CallableRequest<SubscriptionData>) => {
+export const createSubscriptionCheckout = functions.https.onCall(async (request: any) => {
     if (!request.auth) {
         throw new functions.https.HttpsError('unauthenticated', 'Must be logged in');
     }
@@ -107,7 +101,7 @@ export const createSubscriptionCheckout = functions.https.onCall(async (request:
     }
 });
 
-export const cancelSubscription = functions.https.onCall(async (request: functions.https.CallableRequest<any>) => {
+export const cancelSubscription = functions.https.onCall(async (request: any) => {
     if (!request.auth) {
         throw new functions.https.HttpsError('unauthenticated', 'Must be logged in');
     }
