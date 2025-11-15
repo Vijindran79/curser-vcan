@@ -123,5 +123,4 @@ export const healthCheck = functions.https.onCall(async (data, context: any) => 
 // Import and export Stripe functions
 export { stripeWebhook, createSubscriptionCheckout, cancelSubscription } from './stripe';
 
-// Import and export SeaRates land transport functions
-export { getRailRates, getTruckRates, getLandTransportRates } from './searates/landTransport';
+// Land transport functions are temporarily removed for deployment
