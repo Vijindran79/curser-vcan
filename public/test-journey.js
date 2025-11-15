@@ -100,10 +100,11 @@
   async function testParcelRates() {
     try {
       // Check if backend API is available
-      if (typeof window !== 'undefined' && window.fetchShippoQuotes) {
-        console.log('✅ fetchShippoQuotes function found');
+      if (typeof window !== 'undefined' && window.fetchParcelQuotes) {
+        console.log('✅ fetchParcelQuotes function found');
         
-        const quotes = await window.fetchShippoQuotes({
+        const quotes = await window.fetchParcelQuotes({
+          provider: 'shippo',
           originAddress: '40 Trevor Road, Portsmouth, PO4 0LW, United Kingdom',
           destinationAddress: '32 Abbey Road, Dudley, DY2 8HE, United Kingdom',
           weight: 2,

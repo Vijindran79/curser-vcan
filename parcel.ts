@@ -1130,9 +1130,9 @@ async function fetchQuotes() {
     toggleLoading(true, 'Finding best rates...');
     
     try {
-        // Try to fetch from Shippo API first (real quotes) - with fast timeout
+        // Try to fetch from the backend API first (real quotes) - with fast timeout
         try {
-            const { fetchShippoQuotes } = await import('./backend-api');
+            const { fetchParcelQuotes } = await import('./backend-api');
             
             // Set timeout to fail fast if backend not deployed (5 seconds)
             const apiTimeout = new Promise((_, reject) => {
@@ -1140,7 +1140,8 @@ async function fetchQuotes() {
             });
             
             const realQuotes = await Promise.race([
-                fetchShippoQuotes({
+                fetchParcelQuotes({
+                    provider: 'shippo', // or 'sendcloud'
                     originAddress: formData.originAddress || '',
                     destinationAddress: formData.destinationAddress || '',
                     weight: formData.weight || 0,
